@@ -51,16 +51,6 @@ alnSeq -multi-base-water -query query.fasta -ref ref.fasta -out prefix
 
 ```
 
-# License information
-
-The actual license is in the informal-actual-LICENSE.md
-  file and is a choice between three licenses; the BSD-0,
-  CC-0, or MIT license. However, since github will
-  only show one license in a search I am using the CC-0
-  license to be the most visible. To see a list of the
-  other two licenses and my informal license please see
-  informal-actual-LICENSE.md.
-
 # Explaining alnSeq
 
 ## What is alnSeq?
