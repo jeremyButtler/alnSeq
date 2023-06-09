@@ -99,10 +99,10 @@ If you do decide to store all directions , then I would
 ## The scoring matrix
 
 AlnSeq also reduces the scoring matrix down to two rows,
-  which are the previous row scores and the current row
-  scores. This effectively removes the scoring matrix, but
-  also removes the ability to scan the scoring matrix for
-  other high scores, which is sometimes done for a
+  which are the previous row of scores and the current row
+  of scores. This effectively removes the scoring matrix,
+  but also removes the ability to scan the scoring matrix
+  for other high scores, which is sometimes done for a
   traditional Waterman Smith alignment. To combat this
   alnSeq will record the best score (or lower right conner
   for a Needleman Wunsch) and the best score for each base
