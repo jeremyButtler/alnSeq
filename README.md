@@ -118,9 +118,16 @@ To reduce the tendency to trace the path of the best
   current best scores for each base and one past best
   scores for each base.
 
-At the end any paths (alignments) that had a high enough
-  score are printed out. One warning is that this might
-  take up a good amount of hard drives space.
+Any bases that had a paths (alignments) that had a high
+  enough score are printed out. The total number of printed
+  alignments can be thought of in terms of n (number of 
+  bases in the reference) and m (number of bases in the
+  query). The maximum of number of alignments is n
+  alignments for the reference and m alignments for the
+  query. This could take up a lot of space, so it would
+  be better to integrate your program into this step. You
+  can use the printAlnWaterAlns (Fun-03) in water.c, which
+  does the printing as an example. 
 
 From this you could get an idea of the complete alignment
   and may even detect duplications that are in only one 
