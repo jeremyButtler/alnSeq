@@ -1,5 +1,5 @@
 /*#########################################################
-# Name: sequenceFun
+# Name: seqStruct
 # Use:
 #  o Holds functions for reading in or manipulating
 #    sequences
@@ -54,7 +54,7 @@
 typedef struct seqStruct
 { // refQueryStruct
   char *idCStr;          // Id of th sequence
-  uint32_t lenIdUC;      // Length of the sequence id
+  uint32_t lenIdUI;      // Length of the sequence id
   uint32_t lenIdBuffUI;  // Lenght of Id buffer
 
   char *seqCStr;          // Sequence
@@ -175,7 +175,7 @@ uint8_t readFaSeq(
 unsigned char addLineToBuffSeqFun(
     char **buffCStr,          // Buffer to add data to
     uint32_t *lenBuffUL,      // Size of the buffer
-    unsigned long *curBuffUL, // Number of chars in buffer
+    uint32_t *curBuffUL,      // Number of chars in buffer
     unsigned long resBuffUL,  // How much to resize buff by
     FILE *inFILE              // File to grab data from
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -218,8 +218,6 @@ void reverseCStr(
 \--------------------------------------------------------*/
 void freeSeqST(
   struct seqStruct *seqST, // Struct to free
-  char freeSeqBl,  // 0: do not free seqCStr
-  char freeIdBl,   // 0: do not free the id
   char heapBl     // 0: seqST on stack only free variables
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-07 TOC: Sec-01: freeSeqST

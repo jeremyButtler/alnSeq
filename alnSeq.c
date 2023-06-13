@@ -6,7 +6,6 @@
 # Includes:
 #  - "waterman.h"
 #  - "needleman.h"
-#  - "sequenceFun.h"
 #  o "generalAlnFun.h"
 #  o "alnStruct.h"
 #  o "alnMatrixStruct.h"
@@ -25,7 +24,6 @@
 
 #include "waterman.h"
 #include "needleman.h"
-#include "sequenceFun.h"
 #include <string.h>
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -301,6 +299,7 @@ int main(
    } // If reference file could not be opened
 
    // Read in the reference sequence
+   initSeqST(&refST);
    errUC = readFaSeq(faFILE, &refST);
    fclose(faFILE);
    faFILE = 0;
@@ -345,6 +344,7 @@ int main(
 
 
    // Read in the query sequence
+   initSeqST(&queryST);
    errUC = readFaSeq(faFILE, &queryST);
    fclose(faFILE);
    faFILE = 0;
@@ -373,6 +373,14 @@ int main(
    ^ Main Sec-05:
    ^  - Do the alingment
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+
+   // Right know these are hardoced in, but at some piont
+   // it might be nice to allow the user the manipulate
+   queryST.endAlnUI = queryST.lenSeqUI;
+   queryST.offsetUI = 0;
+
+   refST.endAlnUI = queryST.lenSeqUI;
+   refST.offsetUI = 0;
 
    if(alnSetST.useNeedleBl != 0)
      alnMtrxST = NeedlemanAln(&queryST, &refST, &alnSetST);

@@ -54,7 +54,7 @@ char * cnvtAlnAryToSeq(
    '    the a sequence to make one part of an alignment
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   char *baseCStr = seqST->seqCStr + seqST->offsetUI - 1;
+   char *baseCStr = seqST->seqCStr + seqST->offsetUI;
    char *tmpBaseCStr = 0;
    char *seqAlnCStr = 0;
    uint8_t *errUCPtr = alnST->alnAryUC;
@@ -156,10 +156,9 @@ void alnAryToLetter(
    '    (I = insertion, D = deletion, = = match, X = snp)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    char *refSeqCStr =
-      refST->seqCStr + refST->offsetUI - 1;
+    char *refSeqCStr = refST->seqCStr + refST->offsetUI;
     char *querySeqCStr =
-      queryST->seqCStr + queryST->offsetUI - 1;
+      queryST->seqCStr + queryST->offsetUI;
 
     uint8_t *alnAryUC = alnST->alnAryUC;
 
@@ -258,15 +257,20 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   unsigned long lenRefUL = refST->lenSeqUI-refST->offsetUI;
 
   char *bestQueryCStr =
-      queryST->seqCStr +(scoreST->indexUL / lenQueryUL) -1;
-    // bestScoreUI / lenRefUI gives the number of rows
-    // till the best score. -1 accounts for the  the
-    // empty row
+      queryST->seqCStr
+    + (scoreST->indexUL / (lenQueryUL + 1)) - 1;
+    // lenQueryUL + 1: gives the length of each column in
+    //   the matrix
+    // bestScoreUI / (column length) gives the index of the
+    //   query base for the best score
+    // -1: converts the index 1 output to index 0
   char *bestRefCStr =
-      refST->seqCStr + (scoreST->indexUL % (lenRefUL)) - 1;
-    // bestScoreUI % lenRefUI gives the number of columns
-    // I am in on the row of the best score. -1 accounts
-    // for the empty column
+      refST->seqCStr + (scoreST->indexUL%(lenRefUL+1)) - 1;
+    // lenRefUL + 1: gives the length of each row in the
+    //   matrix
+    // bestScoreUI % (row length) gives the index of the
+    //   reference base at the best score
+    // -1: converts the index 1 output to index 0
 
   // These recored the ending bases
   char *endQueryAlnCStr = bestQueryCStr;
@@ -304,8 +308,10 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   } // If had a memory error
 
   // Get the ending position for the alignment
-  alnST->refEndUI = endRefAlnCStr - refST->seqCStr;
-  alnST->queryEndUI = endQueryAlnCStr - queryST->seqCStr;
+  alnST->refEndUI = endRefAlnCStr - refST->seqCStr + 1;
+  alnST->queryEndUI =
+    endQueryAlnCStr - queryST->seqCStr + 1;
+    // Need +1 to deal with index issues
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
   ^ Fun-03 Sec-02:
@@ -394,13 +400,12 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
 
   alnST->numBasesUI = alnST->numAlnBasesUI;
 
+  // Recording the starting base of the alignment
   alnST->refStartUI =
-      refST->offsetUI
-    + (endRefAlnCStr - bestRefCStr);
+    alnST->refEndUI - (endRefAlnCStr - bestRefCStr) + 1;
 
   alnST->queryStartUI =
-      queryST->offsetUI
-    + (endQueryAlnCStr - bestQueryCStr);
+    alnST->queryEndUI - (endQueryAlnCStr -bestQueryCStr)+1;
 
   switch(lastBitElmUC)
   { // Switch; check which sequence I am on the off base
@@ -575,8 +580,8 @@ void printAln(
   FILE *outFILE,      // File to print alingment to
   char *queryIdCStr,  // Id/name of query sequence
   char *queryAlnCStr, // Alinged query sequence
-  char *refAlnCStr,   // Aligned reference sequence
   char *refIdCStr,    // Id/name of reference sequence
+  char *refAlnCStr,   // Aligned reference sequence
   long scoreL,        // Score of the alignment
   unsigned short lineWrapUS,
     // Number of characters per line (minimum is 42)
@@ -621,7 +626,7 @@ void printAln(
    if(wrapUS < 42) wrapUS = 42;
 
    fputs(
-     "###########################################",
+     "###########################################\n",
      outFILE
    );
 
@@ -629,7 +634,7 @@ void printAln(
 
    fprintf(
      outFILE,
-     "#   - Query bases %u to %u",
+     "#   - Query bases %u to %u\n",
      alnST->queryStartUI,
      alnST->queryEndUI
    );
@@ -638,13 +643,14 @@ void printAln(
 
    fprintf(
      outFILE,
-     "#   - Reference bases %u to %u",
+     "#   - Reference bases %u to %u\n",
      alnST->refStartUI,
      alnST->refEndUI
    );
  
    fprintf(outFILE, "# Alignment Score = %ld", scoreL);
    fputs(headerCStr, outFILE);
+   fwrite("\n", sizeof(char), 1, outFILE);
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-04 Sec-03:
@@ -682,7 +688,7 @@ void printAln(
    ^  - Print out tail of the alingment (missed by loop)
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   uiBase += 1 + wrapUS;
+   uiBase += 1 - wrapUS;
 
    if(uiBase < alnST->numBasesUI)
    { // If missed the last base
@@ -694,19 +700,21 @@ void printAln(
      } // If I have printed other parts of this alignment
      // Else; the alignment is covered in one wrap
 
+     uiBase = alnST->numBasesUI - uiBase + 1;
+
      fwrite("\n", sizeof(char), 1, outFILE);
 
      fwrite("Ref:     ", sizeof(char), 9, outFILE);
-     fwrite(refAlnCStr, sizeof(char), wrapUS, outFILE);
+     fwrite(refAlnCStr, sizeof(char), uiBase, outFILE);
      fwrite("\n", sizeof(char), 1, outFILE);
 
      fwrite("Query:   ", sizeof(char), 9, outFILE);
-     fwrite(queryAlnCStr, sizeof(char), wrapUS, outFILE);
+     fwrite(queryAlnCStr, sizeof(char), uiBase, outFILE);
      fwrite("\n", sizeof(char), 1, outFILE);
 
      
      fwrite("Eqx:     ", sizeof(char), 9, outFILE);
-     fwrite(alnAryUCPtr, sizeof(char), wrapUS, outFILE);
+     fwrite(alnAryUCPtr, sizeof(char), uiBase, outFILE);
      fwrite("\n", sizeof(char), 1, outFILE);
    } // If missed the last base
 

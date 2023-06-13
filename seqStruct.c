@@ -1,5 +1,5 @@
 /*#########################################################
-# Name: sequenceFun
+# Name: seqStruct
 # Use:
 #  o Holds functions for reading in or manipulating
 #    sequences
@@ -166,7 +166,7 @@ uint8_t readFqSeq(
     char tmpC = 'C';             // initilize sequence loop
 
     uint16_t extraBuffUS = 1024;
-    unsigned long tmpBuffUL = 0;
+    uint32_t tmpBuffUL = 0;
 
     // Holds number of lines in sequence entry
     unsigned char numLinesUC = 0;
@@ -182,13 +182,13 @@ uint8_t readFqSeq(
     if(fqFILE == 0)
         return 2;    /*No file provided*/
 
-    seqST->lenIdUC = 0;
+    seqST->lenIdUI = 0;
 
     errUC =
         addLineToBuffSeqFun(
-            seqST->idCStr,     // C-string to hold header
+            &seqST->idCStr,    // C-string to hold header
             &seqST->lenIdBuffUI,//Length of the header buff
-            &seqST->lenIdUC,    // Number bytes in buffer
+            &seqST->lenIdUI,    // Number bytes in buffer
             extraBuffUS, // Amount to increase full buff by
             fqFILE         // Fastq file to get header from
     ); // Get the header (will resize as needed)
@@ -212,7 +212,7 @@ uint8_t readFqSeq(
 
         errUC =
             addLineToBuffSeqFun(
-                seqST->seqCStr,      // Buff to copy seq to
+                &seqST->seqCStr,     // Buff to copy seq to
                 &seqST->lenSeqBuffUI,// Size of seq buffer
                 &seqST->lenSeqUI,    // Lenth of sequence
                 extraBuffUS,  // How much to resize buff by
@@ -271,7 +271,7 @@ uint8_t readFqSeq(
     { // While I need to read in the Q-score entry
         errUC =
             addLineToBuffSeqFun(
-              seqST->qCStr,     // Buffer for q-score entry
+              &seqST->qCStr,    // Buffer for q-score entry
               &seqST->lenQBuffUI,// Size of buffer
               &seqST->lenQUI,   // Length of Q-score entry
               extraBuffUS,      // For reszing buffer
@@ -345,7 +345,6 @@ uint8_t readFaSeq(
     char tmpC = 'C';
 
     uint16_t extraBuffUS = 1024;
-    unsigned long tmpBuffUL = 0;
     uint8_t errUC = 0;
     char *oldIterCStr = 0;
 
@@ -361,9 +360,9 @@ uint8_t readFaSeq(
 
     errUC =
         addLineToBuffSeqFun(
-            seqST->idCStr,     // Buffer to hold the seq id
+            &seqST->idCStr,    // Buffer to hold the seq id
             &seqST->lenIdBuffUI,// Length of buffer
-            &seqST-lenIdUI,     // Number of chars in id
+            &seqST->lenIdUI,    // Number of chars in id
             extraBuffUS,      // How much to resize buff by
             faFILE             // Fasta file with seq id
     ); // Get the header (will resize as needed)
@@ -383,16 +382,13 @@ uint8_t readFaSeq(
     // Overwrite the older sequence entry
     seqST->lenSeqUI = 0;
 
-    if(seqCStr != 0) *seqCStr = '\0';
+    if(seqST->seqCStr != 0) *seqST->seqCStr = '\0';
 
     while(*oldIterCStr != '>')
     { /*While I have not reached the spacer entry*/
-         // So can get to this position later
-        tmpBuffUL = seqST->lenSeqUI;
-
         errUC =
             addLineToBuffSeqFun(
-                seqST->seqCStr,  // Holds sequence
+                &seqST->seqCStr,  // Holds sequence
                 &seqST->lenSeqBuffUI, // size of seq buff
                 &seqST->lenSeqUI,// Length of sequence
                 extraBuffUS,
@@ -413,14 +409,15 @@ uint8_t readFaSeq(
         if(errUC == 0) break;
 
         /*Get on first character in the new buffer*/
-        oldIterCStr = *seqCStr + tmpBuffUL;
+        oldIterCStr = seqST->seqCStr + seqST->lenSeqUI;
     } /*While I have not reached the spacer entry*/
 
     // Check if is a valid fasta entry
-    if(*seqCStr == 0 || **seqCStr == '\0') return 2;
+    if(seqST->seqCStr == 0 || *seqST->seqCStr == '\0')
+        return 2;
 
     // Make sure the new line at the end is removed
-    oldIterCStr = *seqCStr + bytesInBuffUL;
+    oldIterCStr = seqST->seqCStr + seqST->lenSeqUI;
 
     while(*oldIterCStr < 33)
     { // While I have white space at the end
@@ -453,7 +450,7 @@ uint8_t readFaSeq(
 unsigned char addLineToBuffSeqFun(
     char **buffCStr,          // Buffer to add data to
     uint32_t *lenBuffUL,      // Size of the buffer
-    unsigned long *curBuffUL, // Number of chars in buffer
+    uint32_t *curBuffUL,      // Number of chars in buffer
     unsigned long resBuffUL,  // How much to resize buff by
     FILE *inFILE              // File to grab data from
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -490,12 +487,18 @@ unsigned char addLineToBuffSeqFun(
     { /*If need to resize the buffer (-1 for 0 index)*/
         *lenBuffUL += resBuffUL - 1;
             // -1 to account for adding two index one items
-        *buffCStr =
-          realloc(
-            *buffCStr,
-            sizeof(char) * (*lenBuffUL + 1)
-        ); // Resize hte buffer
 
+        if(*lenBuffUL == 0)
+          *buffCStr = malloc(sizeof(char) *(*lenBuffUL+1));
+        else
+        { // Else I need to resize the buffer
+            *buffCStr =
+              realloc(
+                *buffCStr,
+                sizeof(char) * (*lenBuffUL + 1)
+            ); // Resize hte buffer
+        } // Else I need to resize the buffer
+       
         if(*buffCStr == 0)
             return 64; /*Memory allocation error*/
 
@@ -625,7 +628,7 @@ void freeSeqST(
    '  - Frees the seqST strucuter
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   if(freeIdBl != 0) free(seqST->idCStr);
+   if(seqST->idCStr != 0) free(seqST->idCStr);
    if(seqST->seqCStr != 0) free(seqST->seqCStr);
    if(seqST->qCStr != 0) free(seqST->qCStr);
    
@@ -656,7 +659,7 @@ void initSeqST(
 
    seqST->seqCStr = 0;
    seqST->lenSeqUI = 0;
-   seqST->lenSeqBuffUI;
+   seqST->lenSeqBuffUI = 0;
 
    seqST->qCStr = 0;
    seqST->lenQUI = 0;

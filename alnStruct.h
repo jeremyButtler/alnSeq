@@ -149,8 +149,8 @@ void printAln(
   FILE *outFILE,      // File to print alingment to
   char *queryIdCStr,  // Id/name of query sequence
   char *queryAlnCStr, // Alinged query sequence
-  char *refAlnCStr,   // Aligned reference sequence
   char *refIdCStr,    // Id/name of reference sequence
+  char *refAlnCStr,   // Aligned reference sequence
   long scoreL,        // Score of the alignment
   unsigned short lineWrapUS,
     // Number of characters per line (minimum is 42)

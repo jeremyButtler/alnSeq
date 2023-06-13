@@ -96,9 +96,9 @@ uint8_t getTwoBitAryElm(
        case 1:     // third element in limb 5th & 6th bits
          return (*twoBitST->limbOnUCPtr & (16 | 32)) >> 4;
        case 2:     // 2nd element in limb 3rd & 4th bits
-         return (*twoBitST->limbOnUCPtr & (4 | 8)) >> 4;
+         return (*twoBitST->limbOnUCPtr & (4 | 8)) >> 2;
        case 3:     // 1st element in limb (1st & 2nd bit)
-         return (*twoBitST->limbOnUCPtr & (1 | 2)) >> 4;
+         return (*twoBitST->limbOnUCPtr & (1 | 2));
     } // Switch: find the element on
 
     return 0;
@@ -506,7 +506,7 @@ struct twoBitAry * makeTwoBitArry(
 
    if(twoBitST->firstLimbUCPtr == 0) return 0;
 
-   twoBitST->lenAryUL = (lenArryUL << 2) + 1;
+   twoBitST->lenAryUL = ((lenArryUL >> 2) << 2) + 4;
    twoBitST->limbOnUCPtr = twoBitST->firstLimbUCPtr;
 
    return twoBitST;
@@ -585,7 +585,7 @@ void moveXElmFromStart(
      twoBitST->firstLimbUCPtr + (shiftByI >> 2);
 
    // Move the bit above 
-   switch(twoBitST->elmOnUC + (shiftByI & (1 | 2)))
+   switch(shiftByI & (1 | 2))
    { // Switch; check if need to move to a new element
        case 0:
            twoBitST->elmOnUC = 0;
@@ -972,7 +972,7 @@ char moveXElmFromStartBoundsCheck(
      twoBitST->firstLimbUCPtr + (shiftByI >> 2);
 
    // Move the bit above 
-   switch(twoBitST->elmOnUC + (shiftByI & (1 | 2)))
+   switch(shiftByI & (1 | 2))
    { // Switch; check if need to move to a new element
        case 0:
            twoBitST->elmOnUC = 0;

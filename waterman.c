@@ -83,29 +83,20 @@ struct alnMatrixStruct * WatermanAln(
    \******************************************************/
 
    // Get the start of the query and reference sequences
-   char *refStartCStr =
-       refST->seqCStr
-     + refST->offsetUI
-     - 1;
+   char *refStartCStr = refST->seqCStr + refST->offsetUI;
 
    char *queryStartCStr =
-        queryST->seqCStr
-      + queryST->offsetUI
-      - 1;
+        queryST->seqCStr + queryST->offsetUI;
 
    char *tmpQueryCStr = queryStartCStr;
    char *tmpRefCStr = refStartCStr;
 
    // Find the length of the reference and query
    unsigned long lenQueryUL =
-       queryST->endAlnUI
-     - queryST->offsetUI
-     + 1; // +1 converts to index 1 (subtraction makes 0)
+       queryST->endAlnUI - queryST->offsetUI;
 
    unsigned long lenRefUL =
-       refST->endAlnUI
-     - refST->offsetUI
-     + 1; // +1 converts to index 1 (subtraction makes 0)
+       refST->endAlnUI - refST->offsetUI;
 
    // Set up counters for the query and reference base
    // index

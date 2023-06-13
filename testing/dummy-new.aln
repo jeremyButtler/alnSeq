@@ -1,0 +1,17 @@
+###########################################
+# Query = >query
+#   - Query bases 1 to 10
+# Ref = >ref
+#   - Reference bases 1 to 10
+# Alignment Score = 21     
+# Eqx = Error line     
+#   - = is match     
+#   - X is mismatch     
+#   - I is insertion     
+#   - D is deletion     
+#   - S is soft mask     
+###########################################
+
+Ref:     atgcgatgc-a-
+Query:   attcg-t-ccag
+Eqx:     ==X==D=D=I=S

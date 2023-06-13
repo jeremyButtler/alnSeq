@@ -57,29 +57,20 @@ struct alnMatrixStruct * NeedlemanAln(
    char swapBuffBl = 1;   // Swap buffers when finshed every 2nd row
 
    // Get the start of the query and reference sequences
-   char *refStartCStr =
-       refST->seqCStr
-     + refST->offsetUI
-     - 1;
+   char *refStartCStr = refST->seqCStr + refST->offsetUI;
 
    char *queryStartCStr =
-        queryST->seqCStr
-      + queryST->offsetUI
-      - 1;
+        queryST->seqCStr + queryST->offsetUI;
 
    char *tmpQueryCStr = queryStartCStr;
    char *tmpRefCStr = refStartCStr;
 
    // Find the length of the reference and query
    unsigned long lenQueryUL =
-       queryST->endAlnUI
-     - queryST->offsetUI
-     + 1; // +1 converts to index 1 (subtraction makes 0)
+       queryST->endAlnUI - queryST->offsetUI;
 
    unsigned long lenRefUL =
-       refST->endAlnUI
-     - refST->offsetUI
-     + 1; // +1 converts to index 1 (subtraction makes 0)
+       refST->endAlnUI - refST->offsetUI;
 
    long snpScoreL = 0;     // Score for single base pair
    long scoreTopL = 0;     // Score when using the top cell
@@ -148,10 +139,8 @@ struct alnMatrixStruct * NeedlemanAln(
    changeTwoBitElm(dirMatrix, defMoveStop);
    twoBitAryMoveToNextElm(dirMatrix);
 
-   changeTwoBitElm(dirMatrix, defMoveLeft);
-   twoBitAryMoveToNextElm(dirMatrix);
-
-   tmpRefCStr = refStartCStr + 1; // Move off the first base (is done)
+   // Set up to loop through the reference bases
+   tmpRefCStr = refStartCStr;
 
    // Already filled in two cells in this row so, it is lenRef - 1
    while(*tmpRefCStr != '\0')
@@ -180,11 +169,17 @@ struct alnMatrixStruct * NeedlemanAln(
    * Fun-01 Sec-4 Sub-1: Fill in the indel column
    \*******************************************************************/
 
-   // Marks the last cell in the score matrix (just to make sure)
+   // One element back will put me on the previous value
    cpTwoBitPos(dirMatrix, &leftDir);
    twoBitAryMoveBackOneElm(&leftDir);
-   cpTwoBitPos(dirMatrix, &topDir);
 
+   // The start of the limb is hte cell above the currnt
+   // cell
+   cpTwoBitPos(dirMatrix, &topDir);
+   moveXElmFromStart(&topDir, 0);
+
+   // Set up the previous score
+   lastBaseLPtr = scoreMatrixL; // Last base is on first row
    firstRoundBl = 1; // Mark need to add a gap start penalty at start
    swapBuffBl = 1;   // Swap buffers when finsh every 2nd row
 
@@ -228,7 +223,6 @@ struct alnMatrixStruct * NeedlemanAln(
        // First reference bases column (indel column already handled)
        while(*tmpRefCStr != '\0')
        { // loop; compare one query to one reference base
-
            snpScoreL =
               getBasePairScore(
                   tmpQueryCStr,

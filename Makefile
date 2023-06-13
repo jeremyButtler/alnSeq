@@ -1,3 +1,5 @@
+PREFIX=/usr/local/bin
+
 CC=gcc
 
 CFLAGS=\
@@ -14,7 +16,6 @@ SOURCE=\
   generalAlnFun.c\
   alnMatrixStruct.c\
   alnStruct.c\
-  sequenceFun.c \
   waterman.c\
   needleman.c\
   alnSeq.c
@@ -32,3 +33,10 @@ debugOpenBsd:
 	egcc -Wall -O0 -ggdb $(SOURCE) -o alnSeqDebug
 	# Used to use -g, but -ggdb provides more info for gdb
 	bash debug.sh
+
+clean:
+	rm alnSeqDebug; # Only thing to clean up
+
+install:
+	mv alnSeq $(PREFIX) || printf "Unable to install alnSeq at %s\n Change this with make PREFIX=/path/to/install install\n" $(PREFIX) && exit;
+	chmod a+x $(PREFIX)/alnSeq;
