@@ -1,35 +1,46 @@
 /*#########################################################
-# Name: seqStruct
+# Name: sequenceFun
 # Use:
-#  - Holds the seqStruct and functions to manipulate
-#    the seqStruct strucuter
+#  o Holds functions for reading in or manipulating
+#    sequences
 # Libraries:
-# C Standard Libraries:
-#  - <stdint.h>
+# C standard libraries:
 #  - <stdlib.h>
+#  - <stdio.h>
+#  - <stdint.h>
 #########################################################*/
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-' SOH: Start Of Header
-'  o struct-01: seqStruct
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+' SOF: Start Of Functions
+'  - struct-01: seqStruct
 '    - Holds sequence and length of a input sequence
-'  o fun-01 initSeqST:
-'     - Sets vlues in seqST to zero
-'  o fun-02 setSeqSTSequence:
-'     - Sets vlues in seqST to zero
-'  o fun-03 setSeqSTQScore:
-'    - Sets the Q-score for a sequence and finds the
-'  o fun-04 addStartEndToSeqST:
-'     - Sets the start and ending corrdinates of a region
-'       of interest in a sequence
-'  o fun-05 addSeqId:
-'    - Adds the sequence id to the seqST struct
-\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+'  - fun-01 reverseComplementSeq:
+'     o Reverse complement a sequence
+'  - fun-02 complementBase:
+'     o Returns the complement of a base
+'  - fun-03 readFqSeq:
+'    o Reads a fastq sequence from a fastq file
+'  - fun-04 readFaSeq:
+'     o Grabs the next read in the fasta file
+'  - fun-05 addLineToBuffSeqFun:
+'     o Add characters from file to buffer, if needed resize. This
+'       will only read in till the end of the line
+'  - fun-06 reverseCStr;
+'     o Reverse a c-string to be backwards (here for Q-score entries)
+'  o fun-07 freeSeqST:
+'     - Frees the seqST strucuter
+'  o fun-08 TOC: Sec-01: initSeqST
+'    - Sets vlues in seqST to zero
+'  o fun-09 addStartEndToSeqST:
+'    - Sets the start and ending corrdinates of a region
+'      of interest in a sequence
+\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #ifndef SEQSTRUCT_H
 #define SEQSTRUCT_H
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /*--------------------------------------------------------\
@@ -54,6 +65,152 @@ typedef struct seqStruct
   uint32_t endAlnUI;     // Marks end of alignment
 }seqStruct;
 
+/*---------------------------------------------------------------------\
+| Output: Modfies seqCStr to be the reverse complement sequence
+\---------------------------------------------------------------------*/
+void reverseComplementSeq(
+    char *seqCStr,    // Sequence to refeverse complement
+    uint32_t lenSeqUI // Length of input sequence (index 1)
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-01 TOC: Sec-1 Sub-1: reverseComplementSeq
+   '  - Reverse complement a sequence
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*---------------------------------------------------------------------\
+| Output: Returns the complement of the input base (0 if invalid base)
+\---------------------------------------------------------------------*/
+char complementBase(
+    const char *baseC
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-02 TOC: Sec-1 Sub-1: complementBase
+   '  - Return the complement of a base
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*---------------------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o refStruct to hold the read in fastq entry & sets its pointers
+|  - Returns:
+|     o 0: if EOF
+|     o 1: if succeded
+|     o 2: If file was not a fastq file
+|     o 130: If file had an invalide entry
+|         - This error uses to flags, first it uses 2 to specify that
+|           it is not a fastq file (invalid file).
+|         - 2nd it uses 128 to specifty that it is not an blank file
+|     o 64: If malloc failed to find memory
+\---------------------------------------------------------------------*/
+uint8_t readFqSeq(
+    FILE *fqFILE,      // Pointer to fastq file to grab sequence from
+    char **headerCStr,  // Will hold the sequence header
+    uint32_t *lenHeadUI, // Holds the size of the header array
+    char **seqCStr,     // Will Hold the new sequence; resized if needed
+    uint32_t *lenSeqUI, // Length of the sequence c-string
+    char **qCStr,       // Will hold the q-score entry;resized if needed
+    uint32_t *lenQUI,   // Length of the q-score c-string
+    uint32_t *basesInSeqUI  // Will hOld the number of bases in the seq
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-03 TOC: readRefFqSeq
+   '  -  Grabs the next read in the fastq file
+   '    fun-2 sec-1: Variable declarations
+   '    fun-2 sec-2: Check if need to allocate memory for buffer
+   '    fun-2 sec-3: Read in the first data
+   '    fun-2 sec-4: If not at file end, see if have the full entry
+   '    fun-2 sec-5: Read till end of file, check if valid fastq entry
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*---------------------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o refStruct to hold the read in a fasta entry
+|  - Returns:
+|     o 0: if EOF
+|     o 1: if succeded
+|     o 2: for an invalid fasta entry
+|     o 64: If malloc failed to find memory
+| Note:
+|   - This will remove new lines from the sequence.
+|   - This will only remove spaces or tabs at the end of each sequence
+|     entry, so "atg atc \n" will got to "atc atc".
+\---------------------------------------------------------------------*/
+uint8_t readFaSeq(
+    FILE *faFILE,      // Pointer to fastq file to grab sequence from
+    char **headerCStr,  // Will hold the sequence header
+    uint32_t *lenHeadUI, // Holds the size of the header array
+    char **seqCStr,     // Will Hold the new sequence; resized if needed
+    uint32_t *lenSeqUI, // Length of the sequence c-string
+    uint32_t *basesInSeqUI  // Will hOld the number of bases in the seq
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-04 TOC: readFaSeq
+   '  -  Grabs the next read in the fasta file
+   '    fun-04 sec-1: Variable declarations
+   '    fun-04 sec-2: Check if need to allocate memory for buffer
+   '    fun-04 sec-3: Read in the sequence
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*---------------------------------------------------------------------\
+| Output:
+|   - Modifies:
+|     o buffCStr to hold the next line.
+|       - buffCStr is resizied if it is to small to hold the next line.
+|       - buffCStr + lenBuffUL - 2 will be '\0' or '\n'
+|       - buffCStr will be 0 if had a memory allocation error
+|     o curBuffUL: To hold the number of characters read into the buffer
+|     o lenBuffUL: To hold resized buffer size if buffCStr is resized
+|     o inFILE: To point to the next line (fgets does this automaticly)
+|   - Returns:
+|     o 0 if was end of file (EOF)
+|     o 1 if read in the next line
+|     o 64 if had a memory allocation error
+\---------------------------------------------------------------------*/
+unsigned char addLineToBuffSeqFun(
+    char **buffCStr,          /*Buffer to add data to*/
+    uint32_t *lenBuffUL, /*Size of the buffer*/
+    unsigned long *curBuffUL, /*Length buffer with valid data*/
+    unsigned long resBuffUL,  /*Amount to resize buffer by if full*/
+    FILE *inFILE              /*File to grab data from*/
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-05 TOC: addLineToBuffSeqFun
+   '  - Add characters from file to buffer, if needed resize. This
+   '    will only read in till the end of the line
+   '   o fun-3 sec-1: variable declerations
+   '   o fun-3 sec-2: Check if need to resize the buffer
+   '   o fun-3 sec-3: Read in the next line in the buffer
+   '   o fun-3 sec-4: If at end of file, update read in lengths
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+/*---------------------------------------------------------------------\
+| Output: Modifies inCStr to be backwards (end at start, start at end)
+\---------------------------------------------------------------------*/
+void reverseCStr(
+    char *inCStr,       // C-string to refeverse
+    uint32_t lenCStrUI // Length of input string (index 1)
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-06 TOC: Sec-1 Sub-1: reverseCStr
+   '  - Reverse a c-string to be backwards (here for Q-score entries)
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Frees
+|    o seqST from memory
+| Notes:
+|  - You will have to set the pointer to seqST to 0
+|  - Make sure you have a pointer to seqST->seqCStr, and
+|    seqST->idCStr if you did set freeSeqBl or freeIdbl to
+|    0. Otherwise you will loose your handle to the data
+\--------------------------------------------------------*/
+void freeSeqST(
+  struct seqStruct *seqST, // Struct to free
+  char freeSeqBl,  // 0: do not free seqCStr
+  char freeIdBl,   // 0: do not free the id
+  char heapBl     // 0: seqST on stack only free variables
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-07 TOC: Sec-01: freeSeqST
+   '  - Frees the seqST strucuter
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies
@@ -62,80 +219,26 @@ typedef struct seqStruct
 void initSeqST(
   struct seqStruct *seqST // Struct to initialize
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-01 TOC: Sec-01: initSeqST
+   ' Fun-08 TOC: Sec-01: initSeqST
    '  - Sets vlues in seqST to zero
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies
-|    o seqST to point to seqCStr and hold the length of
-|      seqCStr
-|  - Frees
-|    o The old sequence (if there was an old sequence) if
-|      freeOldSeqBl is not  0
-| Note:
-|  - This is a shallow copy (pointer only), so do not free
-|    seqCStr
-|  - Make sure you have a pointer to seqST->seqCStr if
-|    you did set freeOldSeqBl to 0. Otherwise their is
-|    risk of lossing a handle on a pointer.
+|    o seqST to have the start and end corrdiantes of the
+|      target region in the sequence
 \--------------------------------------------------------*/
-void setSeqSTSequence(
-  char *seqCStr,          // Sequence to add to structure
-  uint32_t lenSeqUI,      // Length of seq (0 if not known)
-  char freeOldSeqBl,      // 0: do not free old sequence
-  struct seqStruct *seqST // Struct to add sequence to
+void addStartEndToSeqST(
+  uint32_t startTargetUI, // Start of region of intreset
+  uint32_t endTargetUI,   // End of region of interest
+  struct seqStruct *seqST // Struct to add corrdinates to
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-02 TOC: Sec-01: setSeqSTSequence
-   '  - Sets vlues in seqST to zero
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*--------------------------------------------------------\
-| Output:
-|  - Modifies
-|    o qST to point to qCStr and hold the length of qCStr
-|  - Frees
-|    o The old q-score (if there was an old q-score) if
-|      freeOldQBl is not  0
-| Note:
-|  - This is a shallow copy (pointer only), so do not free
-|    qCStr
-|  - Make sure you have a pointer to seqST->qCStr if
-|    you did set freeOldQBl to 0. Otherwise their is
-|    risk of lossing a handle on a pointer.
-\--------------------------------------------------------*/
-void setSeqSTQScore(
-  char *qCStr,          // Sequence to add to structure
-  char freeOldQBl,      // 0: do not free old sequence
-  uint32_t lenQUI,      // New q entry length (0 to find)
-  struct seqStruct *seqST // Struct to add sequence to
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: Sec-01: setSeqSTQScore
-   '  - Sets the Q-score for a sequence and finds the
-   '    length if 0 is input
+   ' Fun-09 TOC: Sec-01: addStartEndToSeqST
+   '  - Sets the start and ending corrdinates of a region
+   '    of interest in a sequence
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-/*--------------------------------------------------------\
-| Output:
-|  - Modifies
-|    o seqST to hold the input id
-| Note:
-|  - This is a shallow copy (pointer only), so do not free
-|    idCStr
-|  - Make sure you have a pointer to the old seqST->idCStr
-|    if you set freeOldIdBl to 0. Otherwise you will lose
-|    your handle on the old id.
-\--------------------------------------------------------*/
-void addSeqId(
-  char *idCStr,           // Sequence id to add in
-  unsigned char lenIdUC,  // Length of id (0 if unknown)
-  char freeOldIdBl,       // 0: Do not free old seq id
-  struct seqStruct *seqST // Struct to initialize
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-05 TOC: Sec-01: addSeqId
-   '  - Adds the sequence id to the seqST struct
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #endif
