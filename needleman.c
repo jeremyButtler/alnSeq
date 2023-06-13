@@ -113,7 +113,6 @@ struct alnMatrixStruct * NeedlemanAln(
        // lenRefUL + 1 accounts for insertion reference row
        // lenQeurI + 1 accounts for insertion query column
 
-
    if(dirMatrix == 0)
    { // If I do not have a direction matrix for each cell
      free(retMtxST);
@@ -310,10 +309,16 @@ struct alnMatrixStruct * NeedlemanAln(
    twoBitAryMoveBackOneElm(dirMatrix);
 
    // Set the best score to the conor right cell
-   retMtxST->bestScoreST.scoreL = *(scoreOnLPtr - 1);
+   if(swapBuffBl != 0)
+     retMtxST->bestScoreST.scoreL = *(scoreOnLPtr - 1);
+   else
+     retMtxST->bestScoreST.scoreL =
+       *(lastBaseLPtr + lenRefUL);
+
    retMtxST->bestScoreST.indexUL =
      getTwoBitAryIndex(dirMatrix);
 
+   free(scoreMatrixL);
    return retMtxST;
 } // NeeldeManWunschAln
 
