@@ -1,16 +1,19 @@
-/*######################################################################
+/*#########################################################
 # Name: sequenceFun
 # Use:
-#  o Holds functions for reading in or manipulating sequences
-#  o All functions in this file will only use c standard libraries
-# C standard libraries
+#  o Holds functions for reading in or manipulating
+#    sequences
+# Libraries:
+# C standard libraries:
 #  - <stdlib.h>
 #  - <stdio.h>
 #  - <stdint.h>
-######################################################################*/
+#########################################################*/
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOF: Start Of Functions
+'  - struct-01: seqStruct
+'    - Holds sequence and length of a input sequence
 '  - fun-01 reverseComplementSeq:
 '     o Reverse complement a sequence
 '  - fun-02 complementBase:
@@ -24,14 +27,43 @@
 '       will only read in till the end of the line
 '  - fun-06 reverseCStr;
 '     o Reverse a c-string to be backwards (here for Q-score entries)
+'  o fun-07 freeSeqST:
+'     - Frees the seqST strucuter
+'  o fun-08 TOC: Sec-01: initSeqST
+'    - Sets vlues in seqST to zero
+'  o fun-09 addStartEndToSeqST:
+'    - Sets the start and ending corrdinates of a region
+'      of interest in a sequence
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-#ifndef SEQUENCEFUN_H
-#define SEQUENCEFUN_H
+#ifndef SEQSTRUCT_H
+#define SEQSTRUCT_H
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+/*--------------------------------------------------------\
+| Struct-01: seqStruct
+|  - Holds sequence and length of a input sequence
+\--------------------------------------------------------*/
+typedef struct seqStruct
+{ // refQueryStruct
+  char *idCStr;          // Id of th sequence
+  uint32_t lenIdUC;      // Length of the sequence id
+  uint32_t lenIdBuffUI;  // Lenght of Id buffer
+
+  char *seqCStr;          // Sequence
+  uint32_t lenSeqUI;      // Length of the sequence
+  uint32_t lenSeqBuffUI;  // Lenght of sequence buffer
+
+  char *qCStr;           // q-score entry
+  uint32_t lenQUI;       // Length of the Q-score
+  uint32_t lenQBuffUI;   // Length of Q-score buffer
+
+  uint32_t offsetUI;     // Offset for an alignment
+  uint32_t endAlnUI;     // Marks end of alignment
+}seqStruct;
 
 /*---------------------------------------------------------------------\
 | Output: Modfies seqCStr to be the reverse complement sequence
@@ -158,5 +190,55 @@ void reverseCStr(
    ' Fun-06 TOC: Sec-1 Sub-1: reverseCStr
    '  - Reverse a c-string to be backwards (here for Q-score entries)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Frees
+|    o seqST from memory
+| Notes:
+|  - You will have to set the pointer to seqST to 0
+|  - Make sure you have a pointer to seqST->seqCStr, and
+|    seqST->idCStr if you did set freeSeqBl or freeIdbl to
+|    0. Otherwise you will loose your handle to the data
+\--------------------------------------------------------*/
+void freeSeqST(
+  struct seqStruct *seqST, // Struct to free
+  char freeSeqBl,  // 0: do not free seqCStr
+  char freeIdBl,   // 0: do not free the id
+  char heapBl     // 0: seqST on stack only free variables
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-07 TOC: Sec-01: freeSeqST
+   '  - Frees the seqST strucuter
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o all values in seqST to be 0
+\--------------------------------------------------------*/
+void initSeqST(
+  struct seqStruct *seqST // Struct to initialize
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-08 TOC: Sec-01: initSeqST
+   '  - Sets vlues in seqST to zero
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o seqST to have the start and end corrdiantes of the
+|      target region in the sequence
+\--------------------------------------------------------*/
+void addStartEndToSeqST(
+  uint32_t startTargetUI, // Start of region of intreset
+  uint32_t endTargetUI,   // End of region of interest
+  struct seqStruct *seqST // Struct to add corrdinates to
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-09 TOC: Sec-01: addStartEndToSeqST
+   '  - Sets the start and ending corrdinates of a region
+   '    of interest in a sequence
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
 
 #endif

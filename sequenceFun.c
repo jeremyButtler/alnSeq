@@ -24,9 +24,13 @@
 '       will only read in till the end of the line
 '  - fun-06 reverseCStr;
 '     o Reverse a c-string to be backwards (here for Q-score entries)
+'  o fun-07 freeSeqST:
+'     - Frees the seqST strucuter
+'  o fun-08 TOC: Sec-01: initSeqST
+'    - Sets vlues in seqST to zero
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-#include "sequenceFun.h"
+#include "seqStruct.h"
 
 /*---------------------------------------------------------------------\
 | Output: Modfies seqCStr to be the reverse complement sequence
@@ -92,7 +96,7 @@ char complementBase(
     return 0; // Invalid enry
 } // complementBase
 
-/*---------------------------------------------------------------------\
+/*--------------------------------------------------------\
 | Output:
 |  - Modifies:
 |    o refStruct to hold the read in fastq entry & sets its pointers
@@ -105,85 +109,92 @@ char complementBase(
 |           it is not a fastq file (invalid file).
 |         - 2nd it uses 128 to specifty that it is not an blank file
 |     o 64: If malloc failed to find memory
-\---------------------------------------------------------------------*/
+\--------------------------------------------------------*/
 uint8_t readFqSeq(
-    FILE *fqFILE,      // Pointer to fastq file to grab sequence from
-    char **headerCStr,  // Will hold the sequence header
-    uint32_t *lenHeadUI, // Holds the size of the header array
-    char **seqCStr,     // Will Hold the new sequence; resized if needed
-    uint32_t *lenSeqUI, // Length of the sequence c-string
-    char **qCStr,       // Will hold the q-score entry;resized if needed
-    uint32_t *lenQUI,   // Length of the q-score c-string
-    uint32_t *basesInSeqUI  // Will hOld the number of bases in the seq
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+    FILE *fqFILE,       // fastq file to grab sequence from
+    struct seqStruct *seqST // Holds one-score entry
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-03 TOC: readRefFqSeq
    '  -  Grabs the next read in the fastq file
-   '    fun-03 sec-1: Variable declarations
-   '    fun-03 sec-2: Check if need to allocate memory for buffer
-   '    fun-03 sec-3: Read in the first data
-   '    fun-03 sec-4: If not at file end, see if have the full entry
-   '    fun-03 sec-5: Read till end of file, check if valid fastq entry
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   '  o fun-03 sec-1:
+   '    - Variable declarations
+   '  o fun-03 sec-2:
+   '    - Check if need to allocate memory for buffer
+   '  o fun-03 sec-3:
+   '    - Read in the first data
+   '  o fun-03 sec-4:
+   '    - If not at file end, see if have the full entry
+   '  o fun-03 sec-5:
+   '    -Read till end of file, check if valid fastq entry
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
-    ^ Fun-03 Sec-1: Variable declarations
-    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
+    ^ Fun-03 Sec-1:
+    ^  - Variable declarations
+    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-    char tmpC = 'C';               // To initilize the sequence loop
-    unsigned char numLinesUC = 0; /*How many lines in sequence entry*/
+    char tmpC = 'C';             // initilize sequence loop
+
     uint16_t extraBuffUS = 1024;
-    unsigned long bytesInBuffUL = 0;
     unsigned long tmpBuffUL = 0;
+
+    // Holds number of lines in sequence entry
+    unsigned char numLinesUC = 0;
 
     uint8_t errUC = 0;
     char *oldIterCStr = 0;
 
-    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
-    ^ Fun-03 Sec-2: Read in the header
-    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
+    ^ Fun-03 Sec-2:
+    ^  - Read in the header
+    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
     if(fqFILE == 0)
         return 2;    /*No file provided*/
 
+    seqST->lenIdUC = 0;
+
     errUC =
         addLineToBuffSeqFun(
-            headerCStr,            // C-string to hold the header
-            lenHeadUI,             // Length of the header buffer
-            &bytesInBuffUL,        // Number of bytes in the buffer
-            extraBuffUS,           // Amount to resize buffer by if full
-            fqFILE                // Fastq file to get header from
+            seqST->idCStr,     // C-string to hold header
+            &seqST->lenIdBuffUI,//Length of the header buff
+            &seqST->lenIdUC,    // Number bytes in buffer
+            extraBuffUS, // Amount to increase full buff by
+            fqFILE         // Fastq file to get header from
     ); // Get the header (will resize as needed)
 
-    // Check if have EOF (0) or memory allocation error (64)
+    // have EOF (0) or memory allocation error (64)?
     if(!(errUC & 1)) return errUC;
 
-    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
-    ^ Fun-03 Sec-3: Read in the sequence & spacer
-    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
+    ^ Fun-03 Sec-3:
+    ^  - Read in the sequence & spacer
+    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-    bytesInBuffUL = 0; // No bytes in the sequence c-string
-    /*need to set this up so the loop does not error out*/
+    seqST->lenSeqUI = 0;
+    //need to set this up so the loop does not error out//
     oldIterCStr = &tmpC;
 
     while(*oldIterCStr != '+')
     { /*While I have not reached the spacer entry*/
-        tmpBuffUL = bytesInBuffUL; // So can get to this position later
+        // So can get to this position later
+        tmpBuffUL = seqST->lenSeqUI;
 
         errUC =
             addLineToBuffSeqFun(
-                seqCStr,          // Buffer to hold the sequence entry
-                lenSeqUI,         // Size of the sequence buffer
-                &bytesInBuffUL,   // Number of bytes in the buffer
-                extraBuffUS,      // Amount to resize buffer by if full
-                fqFILE           // Fastq file to get sequence from
+                seqST->seqCStr,      // Buff to copy seq to
+                &seqST->lenSeqBuffUI, // Size of seq buffer
+                &seqST->lenSeqUI,     // Lenth of sequence
+                extraBuffUS,    // Amount to resize buffer by if full
+                fqFILE          // Fastq file with sequence
         ); /*Get the header*/
 
         // Make sure new lines are removed on the next read in
-        oldIterCStr = *seqCStr + bytesInBuffUL - 1;
+        oldIterCStr = seqST->seqCStr + seqST->lenSeqUI - 1;
 
         while(*oldIterCStr < 33) // Will catch some white space
         { // While removing new lines
-            --bytesInBuffUL;
+            --seqST->lenSeqUI;
             --oldIterCStr;
         } // While removing new lines
 
@@ -191,56 +202,57 @@ uint8_t readFqSeq(
         if(errUC == 0) return 2 + 128; // Invalid fastq entry
 
         /*Get on first character in the new buffer*/
-        oldIterCStr = *seqCStr + tmpBuffUL;
+        oldIterCStr = seqST->seqCStr + tmpBuffUL;
         ++numLinesUC; /*Count number of new lines in sequence entry*/
     } /*While I have not reached the spacer entry*/
 
     --numLinesUC; /*Account for the overcounting*/
 
-    oldIterCStr = *seqCStr + bytesInBuffUL;
+    oldIterCStr = seqST->seqCStr + seqST->lenSeqUI;
 
     while(*oldIterCStr != '+')
     { // While not at start of spacer entry
         --oldIterCStr;
-        --bytesInBuffUL; // Acount for white space
+        --seqST->lenSeqUI; // Acount for white space
     } // While not at start of spacer entry
 
     *oldIterCStr = '\0';  // Set spacer to null
     --oldIterCStr;
-    --bytesInBuffUL; // Acount for white space
+    --seqST->lenSeqUI; // Acount for white space
 
     while(*oldIterCStr < 33)
     { // While have white space at end to remove
         *oldIterCStr = '\0';
         --oldIterCStr;
-        --bytesInBuffUL; // Acount for white space
+        --seqST->lenSeqUI; // Acount for white space
     } // While have white space at end to remove
     
-    *basesInSeqUI = bytesInBuffUL + 1; // Index 0
+    ++seqST->lenSeqUI; // Account for being one base off
 
     /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
-    ^ Fun-03 Sec-4: Read in the Q-score entry
+    ^ Fun-03 Sec-4:
+    ^  - Read in the Q-score entry
     \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-    bytesInBuffUL = 0;
+    seqST->lenQUI = 0;
 
     while(numLinesUC > 0)
     { // While I need to read in the Q-score entry
         errUC =
             addLineToBuffSeqFun(
-                qCStr,             // Buffer to hold the Q-score entry
-                lenQUI,            // Size of the q-score entry buffer
-                &bytesInBuffUL,    // Number of bytes in q-score buffer
-                extraBuffUS,       // Amount to resize buffer by if full
-                fqFILE            // Fastq file to move past spacer
+              seqST->qCStr,      // Buffer to hold the Q-score entry
+              &seqST->lenQBuffUI,
+              &seqST->lenQUI,    // Length of Q-score entry
+              extraBuffUS,       // For reszing buffer
+              fqFILE             // Fastq file with q-score
         ); /*Get the header*/
 
         // Make sure new lines are removed on the next read in
-        oldIterCStr = *qCStr + bytesInBuffUL - 1;
+        oldIterCStr = seqST->qCStr + seqST->lenQUI - 1;
 
         while(*oldIterCStr < 33) // Will catch some white space
         { // While removing new lines
-            --bytesInBuffUL;
+            --seqST->lenQUI;
             --oldIterCStr;
         } // While removing new lines
 
@@ -251,13 +263,13 @@ uint8_t readFqSeq(
     } // While I need to read in the Q-score entry
 
     // Remove any white space at the end
-    oldIterCStr = *qCStr + bytesInBuffUL;
+    oldIterCStr = seqST->qCStr + seqST->lenQUI;
 
     while(*oldIterCStr < 33)
     { // While have white space at end to remove
         *oldIterCStr = '\0';
         --oldIterCStr;
-        --bytesInBuffUL; // Acount for white space
+        --seqST->lenQUI; // Acount for white space
     } // While have white space at end to remove
 
     return errUC; /*Is 1 for another entry or 0 for EOF*/
@@ -526,3 +538,88 @@ void reverseCStr(
 
     return;
 } // reverseCStr
+
+/*--------------------------------------------------------\
+| Output:
+|  - Frees
+|    o seqST from memory
+| Notes:
+|  - You will have to set the pointer to seqST to 0
+|  - Make sure you have a pointer to seqST->seqCStr if
+|    you did set freeSeqBl to 0. Otherwise you will loose
+|    your handle to the data in seqCStr
+\--------------------------------------------------------*/
+void freeSeqST(
+  struct seqStruct *seqST, // Struct to free
+  char heapBl     // 0: seqST on stack only free variables
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-07 TOC: Sec-01: freeSeqST
+   '  - Frees the seqST strucuter
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+   if(freeIdBl != 0) free(seqST->idCStr);
+   if(seqST->seqCStr != 0) free(seqST->seqCStr);
+   if(seqST->qCStr != 0) free(seqST->qCStr);
+   
+   seqST->idCStr = 0;
+   seqST->seqCStr = 0;
+   seqST->qCStr = 0;
+
+   if(heapBl != 0) free(seqST);
+
+   return;
+} // freeSeqST
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o all values in seqST to be 0
+\--------------------------------------------------------*/
+void initSeqST(
+  struct seqStruct *seqST // Struct to initialize
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-08 TOC: Sec-01: initSeqST
+   '  - Sets vlues in seqST to zero
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+   seqST->idCStr = 0;
+   seqST->lenIdUI = 0;
+   seqST->lenIdBuffUI = 0;
+
+   seqST->seqCStr = 0;
+   seqST->lenSeqUI = 0;
+   seqST->lenSeqBuffUI;
+
+   seqST->qCStr = 0;
+   seqST->lenQUI = 0;
+   seqST->lenQBuffUI = 0;
+
+   seqST->offsetUI = 0;
+   seqST->endAlnUI = 0;
+
+   return;
+} // initSeqST
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o seqST to have the start and end corrdiantes of the
+|      target region in the sequence
+\--------------------------------------------------------*/
+void addStartEndToSeqST(
+  uint32_t startTargetUI, // Start of region of intreset
+  uint32_t endTargetUI,   // End of region of interest
+  struct seqStruct *seqST // Struct to add corrdinates to
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-09 TOC: Sec-01: addStartEndToSeqST
+   '  - Sets the start and ending corrdinates of a region
+   '    of interest in a sequence
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+   seqST->offsetUI = startTargetUI;
+   seqST->endAlnUI = endTargetUI;
+
+   return;
+} // addStartEndToSeqST
+
+

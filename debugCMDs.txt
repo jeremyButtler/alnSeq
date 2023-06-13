@@ -1,0 +1,3 @@
+set confirm off
+break alnSeq.c:215
+run -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta > testing/dummy-new.aln

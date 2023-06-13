@@ -26,6 +26,9 @@ all:
 debug:
 	$(CC) -Wall -O0 -ggdb $(SOURCE) -o alnSeqDebug
 	# Used to use -g, but -ggdb provides more info for gdb
+	bash debug.sh
+
 debugOpenBsd:
 	egcc -Wall -O0 -ggdb $(SOURCE) -o alnSeqDebug
 	# Used to use -g, but -ggdb provides more info for gdb
+	bash debug.sh

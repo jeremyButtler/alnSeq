@@ -17,36 +17,16 @@
 '     - Sets vlues in seqST to zero
 '  o fun-02 setSeqSTSequence:
 '     - Sets vlues in seqST to zero
-'  o fun-03 addStartEndToSeqST:
+'  o fun-03 setSeqSTQScore:
+'    - Sets the Q-score for a sequence and finds the
+'  o fun-04 addStartEndToSeqST:
 '     - Sets the start and ending corrdinates of a region
 '       of interest in a sequence
-'  o fun-04 addSeqId:
+'  o fun-05 addSeqId:
 '    - Adds the sequence id to the seqST struct
-'  o fun-05 freeSeqST:
+'  o fun-06 freeSeqST:
 '     - Frees the seqST strucuter
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*--------------------------------------------------------\
-| Output:
-|  - Modifies
-|    o all values in seqST to be 0
-\--------------------------------------------------------*/
-void initSeqST(
-  struct seqStruct *seqST // Struct to initialize
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-01 TOC: Sec-01: initSeqST
-   '  - Sets vlues in seqST to zero
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-   seqST->idCStr = 0;
-   seqST->lenIdUC = 0;
-   seqST->seqCStr = 0;
-   seqST->lenSeqUI = 0;
-   seqST->offsetUI = 0;
-   seqST->endAlnUI = 0;
-
-   return;
-} // initSeqST
 
 /*--------------------------------------------------------\
 | Output:
@@ -97,24 +77,48 @@ void setSeqSTSequence(
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies
-|    o seqST to have the start and end corrdiantes of the
-|      target region in the sequence
+|    o qST to point to qCStr and hold the length of qCStr
+|  - Frees
+|    o The old q-score (if there was an old q-score) if
+|      freeOldQBl is not  0
+| Note:
+|  - This is a shallow copy (pointer only), so do not free
+|    qCStr
+|  - Make sure you have a pointer to seqST->qCStr if
+|    you did set freeOldQBl to 0. Otherwise their is
+|    risk of lossing a handle on a pointer.
 \--------------------------------------------------------*/
-void addStartEndToSeqST(
-  uint32_t startTargetUI, // Start of region of intreset
-  uint32_t endTargetUI,   // End of region of interest
-  struct seqStruct *seqST // Struct to add corrdinates to
+void setSeqSTQScore(
+  char *qCStr,          // Sequence to add to structure
+  char freeOldQBl,      // 0: do not free old sequence
+  uint32_t lenQUI,      // New q entry length (0 to find)
+  struct seqStruct *seqST // Struct to add sequence to
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: Sec-01: addStartEndToSeqST
-   '  - Sets the start and ending corrdinates of a region
-   '    of interest in a sequence
+   ' Fun-03 TOC: Sec-01: setSeqSTQScore
+   '  - Sets the Q-score for a sequence and finds the
+   '    length if 0 is input
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   seqST->offsetUI = startTargetUI;
-   seqST->endAlnUI = endTargetUI;
+   if(seqST->qCStr != 0 && freeOldQBl != 0)
+     free(seqST->qCStr);
+
+   seqST->qCStr = qCStr;
+
+   if(lenQUI > 0) seqST->lenQUI = lenQUI;
+
+   else
+   { // Else need to find the lenght of the sequence
+     seqST->lenQUI = 0;
+
+     while(*qCStr != '\0') 
+     { // While not at the end of the sequence
+       ++qCStr;
+       ++seqST->lenQUI;
+     } // While not at the end of the sequence
+   } // Else need to find the lenght of the sequence
 
    return;
-} // addStartEndToSeqST
+} // setSeqSTQScore
 
 /*--------------------------------------------------------\
 | Output:
@@ -133,7 +137,7 @@ void addSeqId(
   char freeOldIdBl,       // 0: Do not free old seq id
   struct seqStruct *seqST // Struct to initialize
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-04 TOC: Sec-01: addSeqId
+   ' Fun-05 TOC: Sec-01: addSeqId
    '  - Adds the sequence id to the seqST struct
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -158,36 +162,4 @@ void addSeqId(
    return;
 } // addSeqId
 
-/*--------------------------------------------------------\
-| Output:
-|  - Frees
-|    o seqST from memory
-| Notes:
-|  - You will have to set the pointer to seqST to 0
-|  - Make sure you have a pointer to seqST->seqCStr if
-|    you did set freeSeqBl to 0. Otherwise you will loose
-|    your handle to the data in seqCStr
-\--------------------------------------------------------*/
-void freeSeqST(
-  struct seqStruct *seqST, // Struct to free
-  char freeSeqBl,  // 0: do not free seqCStr
-  char freeIdBl,   // 0: do not free the id
-  char heapBl     // 0: seqST on stack only free variables
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-05 TOC: Sec-01: freeSeqST
-   '  - Frees the seqST strucuter
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   if(freeSeqBl != 0 && seqST->seqCStr != 0)
-     free(seqST->seqCStr);
-   
-   if(freeIdBl != 0 && seqST->idCStr != 0)
-     free(seqST->idCStr);
-
-   seqST->seqCStr = 0;
-   seqST->idCStr = 0;
-
-   if(heapBl != 0) free(seqST);
-
-   return;
-} // freeSeqST
