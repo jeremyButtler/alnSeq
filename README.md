@@ -8,13 +8,11 @@ AlnSeq runs a memory efficient (O(n \* m / 4)), but not
 
 # This code is not running yet
 
-I have written the basic logic out for this code, but am
-  currently in the process of dealing with compiler errors.
-  After compiler errors I will start debugging this code.
-  This means that it currently does not work, but will 
-  hopefully work in a few weeks to months. For an
-  alternative, working version of this code please see the
-  alingSeq folder at
+I have written the basic logic out for this code, but have
+  just started to debug the code. This means this code
+  currently does not work, but hopefully work in a few
+  weeks to months. For an alternative, working version of
+  this code please see the alingSeq folder at
   [https://github.com/jeremybuttler/find--Co-infections](https://github.com/jeremybuttler/find--Co-infections).
   The only major difference between the alternative code
   and this code is that this code will allow the option of

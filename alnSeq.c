@@ -109,7 +109,6 @@ int main(
    // Output aligned sequences
    char *queryAlnCStr = 0;
    char *refAlnCStr = 0;
-   long bestScoreL = 0;
 
    // Caputures error type from functions
    unsigned char errUC = 0;
@@ -323,7 +322,7 @@ int main(
    if(errUC & 2)
    { // Invalid fasta file
        freeSeqST(
-         refST,
+         &refST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // refST on stack (do not free)
@@ -340,7 +339,7 @@ int main(
    if(errUC & 64)
    { // Invalid fasta file
        freeSeqST(
-         refST,
+         &refST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // refST on stack (do not free)
@@ -360,7 +359,7 @@ int main(
    if(faFILE == 0) 
    { // If reference file could not be opened
        freeSeqST(
-         refST,
+         &refST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // refST on stack (do not free)
@@ -380,7 +379,7 @@ int main(
        readFaSeq(
            faFILE,
            &queryST.idCStr,
-           &querySt.lenIdUC,
+           &queryST.lenIdUC,
            &queryST.seqCStr,
            &lenSeqBuffUI,
            &queryST.lenSeqUI
@@ -392,14 +391,14 @@ int main(
    if(errUC & 2)
    { // Invalid fasta file
        freeSeqST(
-         refST,
+         &refST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // refST on stack (do not free)
        );
 
        freeSeqST(
-         queryST,
+         &queryST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // queryST on stack (do not free)
@@ -415,14 +414,14 @@ int main(
    if(errUC & 64)
    { // Invalid fasta file
       freeSeqST(
-         refST,
+         &refST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // refST on stack (do not free)
        );
 
        freeSeqST(
-         queryST,
+         &queryST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // queryST on stack (do not free)
@@ -438,21 +437,21 @@ int main(
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
    if(alnSetST.useNeedleBl != 0)
-     alnMtrxST = NeedlemanAln(queryST, refST, &alnSetST);
+     alnMtrxST = NeedlemanAln(&queryST, &refST, &alnSetST);
 
-   else alnMtrxST = WatermanAln(queryST,refST,&alnSetST);
+   else alnMtrxST = WatermanAln(&queryST,&refST,&alnSetST);
 
    if(alnMtrxST == 0)
    { // If did not have enough memory
       freeSeqST(
-         refST,
+         &refST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // refST on stack (do not free)
        );
 
        freeSeqST(
-         queryST,
+         &queryST,
          1, // Free the sequence array
          1, // Free the read id array
          0  // queryST on stack (do not free)
@@ -474,23 +473,21 @@ int main(
    if(outFileCStr != 0) outFILE = fopen(outFileCStr, "w");
    else outFILE = stdout;
 
-   if(
-     alnSetST->mulitBaseWaterBl == 1 &&
-     alnSetST.useNeedleBl == 0
-   ) { // If doing a multi-aligment extraction
+   if(alnSetST.multiBaseWaterBl == 1)
+   { // If doing a multi-aligment extraction
      if(outFileCStr == 0)
        outFileCStr = "out";
 
-     printAlnWaterAlns(
-       alnMtrxST,
-       &queryST,
-       &refST,
-       alnSetST,
-       outFileCStr // Prefix to name everything
-     );
+      printAltWaterAlns(
+        alnMtrxST,
+        &queryST,
+        &refST,
+        &alnSetST,
+        outFileCStr // Prefix to name everything
+      );
 
-     freeAlnMatrixST(alnMtrxST); // No longer need
-     goto alnSeqCleanup;
+      freeAlnMatrixST(alnMtrxST); // No longer need
+      goto alnSeqCleanup;
    } // If doing a multi-aligment extraction
    
    alnST =
@@ -498,11 +495,10 @@ int main(
        &refST,
        &queryST,
        alnMtrxST->dirMatrixST,
-       alnMtrxST->bestScoreST,
+       &alnMtrxST->bestScoreST,
        1                          // Include soft masking
    );
 
-   bestScoreL = alnSt->bestScoreST->scoreL;
    freeAlnMatrixST(alnMtrxST); // No longer need
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -510,12 +506,12 @@ int main(
    ^  - Make aligned query sequence
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-   queryAlnCStr = cnvtAlnToSeq(queryST, 1, alnST);
+   queryAlnCStr = cnvtAlnAryToSeq(&queryST, 1, alnST);
 
    if(queryAlnCStr == 0)
    { // If had a memory allocation error
-     alnAryToLetter(refST->seqCStr,queryST->seqCStr,alnST);
-     fprintf(outFILE, "%s\n", alnErrUCAry);
+     alnAryToLetter(&refST, &queryST, alnST);
+     fprintf(outFILE, "%s\n", alnST->alnAryUC);
 
      fprintf(
        stderr,
@@ -524,9 +520,9 @@ int main(
 
      fprintf(stderr, "Printed alignment array\n");
 
-     freeSeqST(refST, 1, 1, 0);
-     freeSeqST(queryST, 1, 1, 0);
-     freeAlnST(alnST);
+     freeSeqST(&refST, 1, 1, 0);
+     freeSeqST(&queryST, 1, 1, 0);
+     freeAlnST(alnST, 1);
 
      fclose(outFILE);
      outFILE = 0;
@@ -539,12 +535,12 @@ int main(
    ^  - Make aligned reference sequence
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-   refAlnCStr = cnvtAlnToSeq(refST, 0, alnST);
+   refAlnCStr = cnvtAlnAryToSeq(&refST, 0, alnST);
 
    if(refAlnCStr == 0)
    { // If had a memory allocation error
-     alnAryToLetter(refST->seqCStr,queryST->seqCStr,alnST);
-     fprintf(outFILE, "%s\n%s\n", queryAlnCStr, alnErrUCAry);
+     alnAryToLetter(&refST, &queryST, alnST);
+     fprintf(outFILE, "%s\n", alnST->alnAryUC);
 
      fprintf(
           stderr,
@@ -553,9 +549,9 @@ int main(
 
      fprintf(stderr, "Printed alignment array\n");
 
-     freeSeqST(refST, 1, 1, 0);
-     freeSeqST(queryST, 1, 1, 0);
-     freeAlnST(alnST);
+     freeSeqST(&refST, 1, 1, 0);
+     freeSeqST(&queryST, 1, 1, 0);
+     freeAlnST(alnST, 1);
 
      fclose(outFILE);
      outFILE = 0;
@@ -568,16 +564,16 @@ int main(
    ^  - Print out the alignment and clean up
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-   alnAryToLetter(refST->seqCStr, queryST->seqCStr, alnST);
+   alnAryToLetter(&refST, &queryST, alnST);
 
    printAln(
      outFILE,
-     queryST->idCStr,
+     queryST.idCStr,
      queryAlnCStr,
-     refST->idCStr,
+     refST.idCStr,
      refAlnCStr,
-     scoreL,
-     alnSetST->lineWrapUS,
+     alnMtrxST->bestScoreST.scoreL,
+     alnSetST.lineWrapUS,
      alnST
   );
      
@@ -588,9 +584,9 @@ int main(
 
    free(queryAlnCStr);
    free(refAlnCStr);
-   freeAlnST(alnST); // NEED TO SET UP
-   freeSeqST(refST, 1, 1, 0);
-   freeSeqST(queryST, 1, 1, 0);
+   freeAlnST(alnST, 1); // NEED TO SET UP
+   freeSeqST(&refST, 1, 1, 0);
+   freeSeqST(&queryST, 1, 1, 0);
 
    exit(0);
 } // main
@@ -651,11 +647,11 @@ char * checkInput(
                 strtol(singleArgCStr, &tmpCStr, 10);
 
         else if(strcmp(tmpCStr, "-gapextend") == 0)
-            alnSetST->gapExtendPenaltyI =
+          alnSetST->gapExtendPenaltyI =
                 strtol(singleArgCStr, &tmpCStr, 10);
 
         else if(strcmp(tmpCStr, "-line-wrap") == 0)
-            cStrToUSht(singleArgCStr,alnSetST->lineWrapUS);
+          cStrToUSht(singleArgCStr, &alnSetST->lineWrapUS);
 
         else if(strcmp(tmpCStr, "-use-water") == 0)
         { // Else if disabling match priority
@@ -665,16 +661,16 @@ char * checkInput(
 
         else if(strcmp(tmpCStr, "-multi-base-water") == 0)
         { // Else if doing more than the best alignment
-          alnSetST->mulitBaseWaterBl = !defMultiBaseWater;
+          alnSetST->multiBaseWaterBl = !defMultiBaseWater;
           alnSetST->useNeedleBl = !defUseNeedle;
           --intArg;
         } // Else if doing more than the best alignment
 
         else if(strcmp(tmpCStr, "-min-score") == 0)
-          cStrToUInt(singleArgCStr, alnSetST->minScoreUI);
+          cStrToUInt(singleArgCStr, &alnSetST->minScoreUI);
 
         else if(strcmp(tmpCStr, "-min-bases") == 0)
-          cStrToUInt(singleArgCStr, alnSetST->minBasesUI);
+          cStrToUInt(singleArgCStr, &alnSetST->minBasesUI);
 
         else if(
           strcmp(tmpCStr, "-enable-match-priority") == 0

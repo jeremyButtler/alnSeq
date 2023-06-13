@@ -39,7 +39,7 @@
 typedef struct seqStruct
 { // refQueryStruct
   char *idCStr;          // Id of th sequence
-  unsigned char lenIdUC; // Length of the sequence id
+  uint32_t lenIdUC;      // Length of the sequence id
   char *seqCStr;         // Sequence
   uint32_t lenSeqUI;     // Length of the sequence
   uint32_t offsetUI;     // Offset for an alignment

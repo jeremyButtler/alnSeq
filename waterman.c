@@ -653,9 +653,10 @@ unsigned char printAltWaterAlns(
   ^  - Variable declerations
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+  unsigned short lenFileNameUS = 1024;
   char *queryAlnCStr = 0;
   char *refAlnCStr = 0;
-  char fileNameCStr[1024];
+  char fileNameCStr[lenFileNameUS];
 
   struct scoresStruct *scoreST = 0;
   struct alnStruct *alnST = 0;
@@ -721,14 +722,15 @@ unsigned char printAltWaterAlns(
   \*******************************************************/
 
   // Make the output file and open it
-  sprintf(
+  snprintf(
     fileNameCStr,
+    lenFileNameUS,
     "%s--Best--ref-%u-%u--query-%u-%u.aln",
-     prefxCStr,
-     alnST->refStartUI,
-     alnST->refEndUI,
-     alnST->queryStartUI,
-     alnST->queryEndUI
+    prefxCStr,
+    alnST->refStartUI,
+    alnST->refEndUI,
+    alnST->queryStartUI,
+    alnST->queryEndUI
   ); // Make the new file name
 
   outFILE = fopen(fileNameCStr, "w");
@@ -880,14 +882,15 @@ unsigned char printAltWaterAlns(
     \*******************************************************/
   
     // Make the output file and open it
-    sprintf(
+    snprintf(
       fileNameCStr,
+      lenFileNameUS,
       "%s--Reference--ref-%u-%u--query-%u-%u.aln",
-       prefxCStr,
-       alnST->refStartUI,
-       alnST->refEndUI,
-       alnST->queryStartUI,
-       alnST->queryEndUI
+      prefxCStr,
+      alnST->refStartUI,
+      alnST->refEndUI,
+      alnST->queryStartUI,
+      alnST->queryEndUI
     ); // Make the new file name
   
     outFILE = fopen(fileNameCStr, "w");
@@ -1050,14 +1053,15 @@ unsigned char printAltWaterAlns(
     \*****************************************************/
   
     // Make the output file and open it
-    sprintf(
+    snprintf(
       fileNameCStr,
+      lenFileNameUS,
       "%s--Query--ref-%u-%u--query-%u-%u.aln",
-       prefxCStr,
-       alnST->refStartUI,
-       alnST->refEndUI,
-       alnST->queryStartUI,
-       alnST->queryEndUI
+      prefxCStr,
+      alnST->refStartUI,
+      alnST->refEndUI,
+      alnST->queryStartUI,
+      alnST->queryEndUI
     ); // Make the new file name
   
     outFILE = fopen(fileNameCStr, "w");
