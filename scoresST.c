@@ -8,7 +8,7 @@
 # C Standard Libraries:
 #########################################################*/
 
-#include "sortScores.h"
+#include "scoresST.h"
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOF: Start Of Functions
@@ -36,7 +36,7 @@
 void sortScores(
    struct scoresStruct **scoresST,//array of socres to sort
    unsigned long firstElmUL,//Index of 1st element to sort
-   unsigned long lastElmUL, //Index of last element to sort
+   unsigned long lastElmUL  //Index of last element to sort
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: sortScores
    '  - Sorts an array of scores structs by score using
@@ -92,16 +92,17 @@ void sortScores(
       for(
         unsigned long subAryOnUL = firstElmUL + elmUL;
         subAryOnUL + subAryUL[rndsUL] <= lastElmUL;
-        subAryOnUL += subAryUL[rndsUL];
+        subAryOnUL += subAryUL[rndsUL]
       ) { // Loop; swap each nth element of the subarray
 
-        if(*(scoresST + subAryOnUL)->scoreL <
-             *(scoreST+subAryOnUL+subAryUL[rndsUL])->scoreL
+        if(
+          (*(scoresST + subAryOnUL))->scoreL <
+          (*(scoresST+subAryOnUL+subAryUL[rndsUL]))->scoreL
         ) { // If I need to swap elements
 
           swapScoreSTs(
             *(scoresST + subAryOnUL),
-            *(scoreST + subAryOnUL + subAryUL[rndsUL])
+            *(scoresST + subAryOnUL + subAryUL[rndsUL])
           ); // Swap scores around
 
           lastScoreUL = subAryOnUL;
@@ -109,12 +110,12 @@ void sortScores(
 
           while(
             tmpScoreUL >= firstElmUL &&
-            *(scoresST + lastScoreUL)->scoreL >
-              *(scoreST + tmpScoreUL)->scoreL
+            (*(scoresST + lastScoreUL))->scoreL >
+              (*(scoresST + tmpScoreUL))->scoreL
           ) { // loop; move swapped element back
             swapScoreSTs(
               *(scoresST + lastScoreUL),
-              *(scoreST + lastScoreUL - subAryUL[rndsUL])
+              *(scoresST + lastScoreUL - subAryUL[rndsUL])
             ); // Swap socres around
 
             tmpScoreUL -= subAryUL[rndsUL];
@@ -141,8 +142,8 @@ void swapScoreSTs(
     '  - Swaps values in two score structures
     \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-  unsigned long indexUL = firstScore->indexUL;
-  long scoreL = firstScore->scoreL;
+  unsigned long indexUL = firstScoreST->indexUL;
+  long scoreL = firstScoreST->scoreL;
 
   firstScoreST->indexUL = secScoreST->indexUL;
   firstScoreST->scoreL = secScoreST->scoreL;

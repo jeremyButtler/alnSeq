@@ -23,6 +23,8 @@
 '  o fun-01 WatermanSmithAln:
 '    - Perform a Waterman Smith alignment on input
 '      sequences
+'  o fun-02 addBestBaseScore:
+'    - Adds a score and index to the kept scores list
 '  o fun-03 printAltWaterAlns:
 '    - Prints out the best aligment and the saved
 '       alterantive alignments  (best alignment for each
@@ -66,6 +68,31 @@ struct alnMatrixStruct * WatermanAln(
    '  o fun-01 sec-04:
    '    - Fill the matrix with scores
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifes:
+|    o socresST to hold the new score and index if better
+|      than the old score and index
+|    o oldScoreST to hold the old score if it is part of
+|      a different alignment
+\--------------------------------------------------------*/
+void addBestBaseScore(
+  uint8_t dirUC,                   // Direction travled
+  long indexUL,                 // new index to add in
+  long scoreL,                 // new score to add in
+  unsigned long lenRefUI,  // length of reference sequence
+  struct scoresStruct *refScoreST,//all Kept ref scores
+  unsigned long refBaseUL,       // current ref base on
+  struct scoresStruct *queryScoreST,//all kept query scores
+  unsigned long queryBaseUL,     // Currnetn query base on
+  struct scoresStruct *oldRScoreST,// Has old ref scores
+  struct scoresStruct *oldQScoreST // Has old query scores
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-02 TOC: Sec-01: addBestBaseScore
+   '  - Adds a score and index to the kept scores list
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 
 /*--------------------------------------------------------\
 | Output:
@@ -113,8 +140,7 @@ unsigned char printAltWaterAlns(
 |    o dirOnUC to hold the best direction
 \--------------------------------------------------------*/
 void updateDirScoreWaterSingle(
-    uint8_t *dirOnUCPtr,
-      // Direction on (first two bits are open)
+    struct twoBitAry *dirOnST, // has matrix cell to update
     struct alnSet *alnSetST,
       // Has preference for selecting equal scores
     long *scoreTopL,     // Score for an insertion

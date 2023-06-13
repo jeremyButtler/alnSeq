@@ -35,7 +35,7 @@
 '    - Frees alnST and all variables in alnST
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-#define "alnStruct.h"
+#include "alnStruct.h"
 
 /*--------------------------------------------------------\
 | Output:
@@ -45,7 +45,7 @@
 |    o 0 for memory allocation errors
 \--------------------------------------------------------*/
 char * cnvtAlnAryToSeq(
-    struct seqSturct *seqST, // Has sequence to work with
+    struct seqStruct *seqST, // Has sequence to work with
     char queryBl,            // 1: working on query; 0: ref
     struct alnStruct *alnST  // Has alignment array
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -59,7 +59,7 @@ char * cnvtAlnAryToSeq(
    char *seqAlnCStr = 0;
    uint8_t *errUCPtr = alnST->alnAryUC;
 
-   seqAlnCStr = malloc(sizeof(char)* alnST->lenErrAryUI+2);
+   seqAlnCStr = malloc(sizeof(char)* alnST->lenAlnAryUI+2);
 
    if(seqAlnCStr == 0) return 0;  // memory error
 
@@ -142,13 +142,13 @@ char * cnvtAlnAryToSeq(
 | Note:
 |  - Only call this function after you are done with alnST
 \--------------------------------------------------------*/
-void cnvtAlnErrAryToLetter(
-    char *refSeqCStr,       // Ref sequence for detecting
-                            //  matches; Input 0 to ignore
-    char *querySeqCStr,     // query sequence for detecting
-                            // matches Input 0 to ignore
-    struct alnStruct *alnST // Has alignment array to
-                            // convert to human readable
+void alnAryToLetter(
+    struct seqStruct *refST,  // Ref sequence for detecting
+                              // matches; Input 0 to ignore
+    struct seqStruct *queryST,// query seq for detecting
+                              // matches Input 0 to ignore
+    struct alnStruct *alnST   // Has alignment array to
+                              // convert to human readable
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: Sec-1 Sub-1: cnvtAlnErrAryToLetter
    '  - Converts an alignment array from my alignment
@@ -156,7 +156,12 @@ void cnvtAlnErrAryToLetter(
    '    (I = insertion, D = deletion, = = match, X = snp)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    uint8_t alnAryUC = alnST->alnAryUC;
+    char *refSeqCStr =
+      refST->seqCStr + refST->offsetUI - 1;
+    char *querySeqCStr =
+      queryST->seqCStr + queryST->offsetUI - 1;
+
+    uint8_t *alnAryUC = alnST->alnAryUC;
 
     while(*alnAryUC != 0)
     { // While have codes to convert
@@ -173,12 +178,14 @@ void cnvtAlnErrAryToLetter(
                 break;
 
             case defSoftQueryFlag: // Query base sofmasked
-                *alnAryUC = 's';// mark as query masked
+                *alnAryUC = 'S';// mark as query masked
+                  // Used to be 's'
                 ++querySeqCStr; // Move to next query base
                 break;
 
             case defSoftRefFlag: // Ref base softmasked
-                *alnAryUC = 'P';// Mark as ref softmask
+                *alnAryUC = 'S';// Mark as ref softmask
+                  /// Used to be 'P'
                 ++refSeqCStr;   // Move to next query base
                 break;
 
@@ -245,21 +252,18 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   ^  - Variable declerations
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+  unsigned long lenQueryUL =
+    queryST->lenSeqUI - queryST->offsetUI;
+
+  unsigned long lenRefUL = refST->lenSeqUI-refST->offsetUI;
+
   char *bestQueryCStr =
-      queryST->seqCStr
-    + (   scoreST->indexUL
-        / (queryST->lenRefUI - queryST->offsetUI)
-      )
-    - 1;
+      queryST->seqCStr +(scoreST->indexUL / lenQueryUL) -1;
     // bestScoreUI / lenRefUI gives the number of rows
     // till the best score. -1 accounts for the  the
     // empty row
   char *bestRefCStr =
-      refST->seqCStr
-    + (   scoreST->indexUL
-        % (refST->lenRefUI - refST->offsetUI)
-      )
-    - 1;
+      refST->seqCStr + (scoreST->indexUL % (lenRefUL)) - 1;
     // bestScoreUI % lenRefUI gives the number of columns
     // I am in on the row of the best score. -1 accounts
     // for the empty column
@@ -279,25 +283,29 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   uint8_t *startUCPtr = 0;
   uint8_t *endUCPtr = 0;
   uint8_t swapUC = 0;
+  uint8_t bitElmUC = 0;
+  uint8_t lastBitElmUC = 0;
 
   alnST = malloc(sizeof(alnST));
 
   if(alnST == 0) return 0;
 
-  alnST->lenAlnAryUI = lenQueryUI + lenRefUI;
-  alnST->alnAryUC = calloc(*lenErrAryUI, sizeof(uint8_t));
+  alnST->lenAlnAryUI = lenQueryUL + lenRefUL;
+
+  alnST->alnAryUC =
+    calloc(alnST->lenAlnAryUI, sizeof(uint8_t));
     // calloc initializes all values to 0, so I do not
     // need to mark the end of the alignment array
 
   if(alnST->alnAryUC == 0)
   { // If had a memory error
-     freeAlnST(alnST);
+     freeAlnST(alnST, 1);
      return 0; // Memory error
-  { // If had a memory error
+  } // If had a memory error
 
   // Get the ending position for the alignment
-  alnST->refEndUI = endRefAlnCStr - refCStr;
-  alnST->queryEndUI = endQueryAlnCStr - queryCStr;
+  alnST->refEndUI = endRefAlnCStr - refST->seqCStr;
+  alnST->queryEndUI = endQueryAlnCStr - queryST->seqCStr;
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
   ^ Fun-03 Sec-02:
@@ -331,15 +339,19 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
     switch(bitElmUC)
     { // Switch: check what the next base is in the sequence
       case defMoveUp:
+        *(alnST->alnAryUC + alnST->numAlnBasesUI) =
+          defInsFlag;
+
+        --bestQueryCStr; // insertion only query has a base
         twoBitAryMoveBackXElm(dirMatrxST, lenRefUL + 1);
           // lenRefUL (index 1) cells per row; need + 1 to
           // get to the cell above
-        *(alnErrAryUC + numErrUI) = defInsFlag;
-        --bestQueryCStr; // insertion only query has a base
         break;
 
       case defMoveDiagnol:
-        *(alnErrAryUC + numErrUI) = defBaseFlag;
+        *(alnST->alnAryUC + alnST->numAlnBasesUI) =
+          defBaseFlag;
+
         twoBitAryMoveBackXElm(dirMatrxST, lenRefUL + 2);
             // lenRefUL (index 1) cells per row; need + 2
             // to get to the next diagnol cell
@@ -348,8 +360,10 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
         break;
 
       case defMoveLeft:
+        *(alnST->alnAryUC + alnST->numAlnBasesUI) =
+          defDelFlag; 
+
         twoBitAryMoveBackOneElm(dirMatrxST);
-        *(alnErrAryUC + numErrUI) = defDelFlag; 
         --bestRefCStr; // deletion; reference only has base
       break;
     } // Switch: check what the next base is in the sequence
@@ -357,7 +371,7 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
       // Move back to the selected base
 
       // Get the next direction to move
-      bitElmUC = getTwoBitAryElm(dirMatrixST);
+      bitElmUC = getTwoBitAryElm(dirMatrxST);
 
       ++alnST->numAlnBasesUI; // Add up all aligned bases
   } // While I have more bases to add to the path
@@ -381,11 +395,11 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   alnST->numBasesUI = alnST->numAlnBasesUI;
 
   alnST->refStartUI =
-      alnST->offsetUI
+      refST->offsetUI
     + (endRefAlnCStr - bestRefCStr);
 
   alnST->queryStartUI =
-      alnST->offsetUI
+      queryST->offsetUI
     + (endQueryAlnCStr - bestQueryCStr);
 
   switch(lastBitElmUC)
@@ -413,8 +427,8 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
     case 0: break;
 
     case 1:
-      tmpQueryCStr = queryCStr;
-      tmpRefCStr = refCStr;
+      tmpQueryCStr = queryST->seqCStr + queryST->offsetUI;
+      tmpRefCStr = refST->seqCStr + refST->offsetUI;
       endUCPtr = alnST->alnAryUC + alnST->numAlnBasesUI;
     
       // Apply softmasking to the start region
@@ -590,15 +604,13 @@ void printAln(
      // one line
    uint32_t uiBase = 0; // Base priting out
 
-   char headerCStr = "\
+   char *headerCStr = "\
      \n# Eqx = Error line\
      \n#   - = is match\
      \n#   - X is mismatch\
      \n#   - I is insertion\
      \n#   - D is deletion\
-     \n#   - S is soft mask on query and reference\
-     \n#   - s is soft mask on query only\
-     \n#   - P is soft mask on reference only\
+     \n#   - S is soft mask\
      \n###########################################";
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -631,7 +643,7 @@ void printAln(
      alnST->refEndUI
    );
  
-   fprintf(outFILE, "# Alignment Score = %l", scoreL);
+   fprintf(outFILE, "# Alignment Score = %ld", scoreL);
    fputs(headerCStr, outFILE);
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -673,11 +685,12 @@ void printAln(
    uiBase += 1 + wrapUS;
 
    if(uiBase < alnST->numBasesUI)
+   { // If missed the last base
      if(uiBase > 1)
      { // If I have printed other parts of this alignment
-       refAlnCStr += 1 - warpUS
-       queryAlnCStr += 1 - warpUS
-       alnAryUCPtr += 1 - warpUS
+       refAlnCStr += 1 - wrapUS;
+       queryAlnCStr += 1 - wrapUS;
+       alnAryUCPtr += 1 - wrapUS;
      } // If I have printed other parts of this alignment
      // Else; the alignment is covered in one wrap
 

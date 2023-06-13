@@ -6,6 +6,7 @@
 # Libraries:
 # C Standard Libraries:
 #  - <stdint.h>
+#  - <stdlib.h>
 #########################################################*/
 
 #include "seqStruct.h"
@@ -180,7 +181,7 @@ void freeSeqST(
    if(freeSeqBl != 0 && seqST->seqCStr != 0)
      free(seqST->seqCStr);
    
-   if(freeIdbl != 0 && seqST->idCStr != 0)
+   if(freeIdBl != 0 && seqST->idCStr != 0)
      free(seqST->idCStr);
 
    seqST->seqCStr = 0;

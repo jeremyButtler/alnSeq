@@ -6,6 +6,7 @@
 #    Smith-Waterman direction matrix
 # Libraries:
 # C Standard Libraries:
+#  - <stdlib.h>
 #########################################################*/
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -28,8 +29,10 @@
 '    - Changes the score value in a scores structure
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-#ifndef SCOREST_H
+#ifndef SCORESST_H
 #define SCORESST_H
+
+#include <stdlib.h>
 
 /*--------------------------------------------------------\
 | Struct-01: scoresStruct
@@ -50,7 +53,7 @@ typedef struct scoresStruct
 void sortScores(
    struct scoresStruct **scoresST,//array of socres to sort
    unsigned long firstElmUL,//Index of 1st element to sort
-   unsigned long lastElmUL, //Index of last element to sort
+   unsigned long lastElmUL  //Index of last element to sort
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: sortScores
    '  - Sorts an array of scores structs by score using

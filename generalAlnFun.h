@@ -38,8 +38,7 @@
 |    o the score for an indel
 \--------------------------------------------------------*/
 long getIndelScore(
-    uint8_t *lastDirUC,  // Cell gettign last score from
-    uint8_t *lastBitUC,  // two bit element on in lastDirUC
+    struct twoBitAry *lastDir, // Has last direction
     struct alnSet *alnSetST,
       // Has gap open & extension penalties
     long *lastBaseL      // Has score of the last base

@@ -81,10 +81,6 @@ struct alnMatrixStruct * NeedlemanAln(
      - refST->offsetUI
      + 1; // +1 converts to index 1 (subtraction makes 0)
 
-   unsigned long lenMatrixUL = 0;
-
-       // +1 to convert back to 1 index (subtraction makes 0)
-
    long snpScoreL = 0;     // Score for single base pair
    long scoreTopL = 0;     // Score when using the top cell
    long scoreDiagnolL = 0; // Score when using the diagnol cell
@@ -94,9 +90,7 @@ struct alnMatrixStruct * NeedlemanAln(
    long *scoreOnLPtr = 0;  // Score I am currently working on
    long *lastBaseLPtr = 0; // Pointer to cell with last base
 
-   struct twoBitAry *dirMatrixUC = 0;  // Directions for each score cell
-   uint8_t *dirOnUCPtr = 0;   // Score working on
-
+   struct twoBitAry *dirMatrix = 0;  // Directions for each score cell
    struct twoBitAry topDir;
    struct twoBitAry leftDir;   // Deletion direction
 
@@ -129,7 +123,7 @@ struct alnMatrixStruct * NeedlemanAln(
        // lenQeurI + 1 accounts for insertion query column
 
 
-   if(dirMatrixUC == 0)
+   if(dirMatrix == 0)
    { // If I do not have a direction matrix for each cell
      free(retMtxST);
      free(scoreMatrixL);
@@ -266,27 +260,20 @@ struct alnMatrixStruct * NeedlemanAln(
                case 0:   // Either not using match priority or not match
                    scoreTopL =
                        getIndelScore(
-                           topDirUCPtr,
-                           &topBitUC,
+                           &topDir,
                            settings,
                            lastBaseLPtr
                    ); // Get the score for an insertion
 
-                   // If the limb is not complete the last direction
-                   // will always be one shift back 
-                   if(leftBitUC < 3) tmpLeftBitUC = 2;
-                   else tmpLeftBitUC = 3;
-
                    scoreLeftL =
                        getIndelScore(
-                           leftDirUCPtr,   // part of two bit index
-                           &tmpLeftBitUC,  // part of two bit index
+                           &leftDir, //last cells direction
                            settings,       // Has gap penalties
                            scoreOnLPtr - 1 // Score of the previous base
                    ); // Get the score for an insertion
 
                    updateDirAndScoreNeedle(
-                       dirOnUCPtr,
+                       dirMatrix,
                        settings,   // Has preference for score selection
                        &scoreTopL,     // Score for an insertion
                        &scoreDiagnolL, // Score for an match/snp
@@ -306,12 +293,9 @@ struct alnMatrixStruct * NeedlemanAln(
 
            // Move to the next base pair to score
            twoBitAryMoveToNextElm(dirMatrix);
-           twoBitAryMoveToNextElm(topDir);
-           twoBitAryMoveToNextElm(leftDir);
+           twoBitAryMoveToNextElm(&topDir);
+           twoBitAryMoveToNextElm(&leftDir);
        } // loop; compare one query to one reference base
-
-       // Will end on the corrnor cell
-       *scoreL = *(scoreOnLPtr - 1);
 
        if(swapBuffBl & 1)
        { // If need to swap the buffers
@@ -328,6 +312,14 @@ struct alnMatrixStruct * NeedlemanAln(
        ++tmpQueryCStr; // Move to the next query base
    } // loop; compare one query base against all reference bases
 
+   // Move back to the lower right conor cell
+   twoBitAryMoveBackOneElm(dirMatrix);
+
+   // Set the best score to the conor right cell
+   retMtxST->bestScoreST.scoreL = *(scoreOnLPtr - 1);
+   retMtxST->bestScoreST.indexUL =
+     getTwoBitAryIndex(dirMatrix);
+
    return retMtxST;
 } // NeeldeManWunschAln
 
@@ -335,7 +327,7 @@ struct alnMatrixStruct * NeedlemanAln(
 | Output: Modifies: scoreOnL and dirOnUC to hold best score & direction
 \---------------------------------------------------------------------*/
 void updateDirAndScoreNeedle(
-    uint8_t *dirOnUCPtr,     // Direction on with first two bits cleared
+    struct twoBitAry *dirOnST, // Cell to update
     struct alnSet *alnSetST, // Has preference for score selection
     long *scoreTopL,     // Score for an insertion
     long *scoreDiagnolL, // Score for an match/snp
@@ -373,26 +365,38 @@ void updateDirAndScoreNeedle(
 
                        if(*scoreDiagnolL >= *scoreLeftL)
                        { // If diagnol beats deletions
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                        } // If diagnol beats deletions
 
                        else
                        { // Else the deletion is the best score
-                           *dirOnUCPtr |= defMoveLeft;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveLeft
+                           );
                            *scoreOnL = *scoreLeftL;
                        } // Else the deletion is the best score
                    } // If diagnol beats insertion
 
                    else if(*scoreTopL >= *scoreLeftL)
                    { // Else the insertion is the best score
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveUp
+                      );
                       *scoreOnL = *scoreTopL;
                    } // Else the insertion is the best score
 
                    else
                    { // Else the deletion is the best score
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                    } // Else the deletion is the best score
                        
@@ -410,26 +414,35 @@ void updateDirAndScoreNeedle(
 
                        if(*scoreDiagnolL >= *scoreTopL)
                        { // If diagnol beats insertions
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                        } // If diagnol beats insertions
 
                        else
                        { // Else the insertion is the best score
-                           *dirOnUCPtr |= defMoveUp;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                            *scoreOnL = *scoreTopL;
                        } // Else the insertion is the best score
                    } // If diagnol beats deletion
 
                    else if(*scoreLeftL >= *scoreTopL)
                    { // Else the deletion is the best score
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                    } // Else the deletion is the best score
 
                    else
                    { // Else the insertion is the best score
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(dirOnST, defMoveUp);
                       *scoreOnL = *scoreTopL;
                    } // Else the insertion is the best score
                        
@@ -453,26 +466,32 @@ void updateDirAndScoreNeedle(
 
                        if(*scoreDiagnolL >= *scoreLeftL)
                        { // If diagnol beats deletions
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(dirOnST, defMoveDiagnol);
                            *scoreOnL = *scoreDiagnolL;
                        } // If diagnol beats deletions
 
                        else
                        { // Else the deletion is the best score
-                           *dirOnUCPtr |= defMoveLeft;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveLeft
+                           );
                            *scoreOnL = *scoreLeftL;
                        } // Else the deletion is the best score
                    } // If diagnol beats insertion
 
                    else if(*scoreTopL >= *scoreLeftL)
                    { // Else the insertion is the best score
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(dirOnST, defMoveUp);
                       *scoreOnL = *scoreTopL;
                    } // Else the insertion is the best score
 
                    else
                    { // Else the deletion is the best score
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                    } // Else the deletion is the best score
                        
@@ -490,26 +509,38 @@ void updateDirAndScoreNeedle(
 
                        if(*scoreDiagnolL >= *scoreTopL)
                        { // If diagnol beats insertions
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                        } // If diagnol beats insertions
 
                        else
                        { // Else the insertion is the best score
-                           *dirOnUCPtr |= defMoveUp;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                            *scoreOnL = *scoreTopL;
                        } // Else the insertion is the best score
                    } // If diagnol beats deletion
 
                    else if(*scoreLeftL >= *scoreTopL)
                    { // Else the deletion is the best score
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                    } // Else the deletion is the best score
 
                    else
                    { // Else the insertion is the best score
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveUp
+                      );
                       *scoreOnL = *scoreTopL;
                    } // Else the insertion is the best score
                        
@@ -532,26 +563,38 @@ void updateDirAndScoreNeedle(
 
                        if(*scoreDiagnolL > *scoreTopL)
                        { // If diagnol is the highest score
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                        } // If diagnol is the highest score
 
                        else
                        { // Else the insertion is the best score
-                           *dirOnUCPtr |= defMoveUp;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                            *scoreOnL = *scoreTopL;
                        } // Else the deletion is the best score
                    } // If diagnol beats insertion
 
                    else if(*scoreLeftL >= *scoreDiagnolL)
                    { // Else the deletion is the best score
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                    } // Else the deletion is the best score
 
                    else
                    { // Else the match/snp is the best score
-                      *dirOnUCPtr |= defMoveDiagnol;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveDiagnol
+                      );
                       *scoreOnL = *scoreDiagnolL;
                    } // Else the match/snp is the best score
                        
@@ -569,26 +612,35 @@ void updateDirAndScoreNeedle(
 
                        if(*scoreDiagnolL > *scoreTopL)
                        { // If diagnol beats insertions
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                        } // If diagnol beats insertions
 
                        else
                        { // Else the insertion is the best score
-                           *dirOnUCPtr |= defMoveUp;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                            *scoreOnL = *scoreTopL;
                        } // Else the insertion is the best score
                    } // If insertion beats deletion
 
                    else if(*scoreLeftL >= *scoreDiagnolL)
                    { // Else the deletion is the best score
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(dirOnST,defMoveLeft);
                       *scoreOnL = *scoreLeftL;
                    } // Else the deletion is the best score
 
                    else
                    { // Else the match/snp is the best score
-                      *dirOnUCPtr |= defMoveDiagnol;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveDiagnol
+                      );
                       *scoreOnL = *scoreDiagnolL;
                    } // Else the match/snp is the best score
                        

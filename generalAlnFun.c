@@ -40,8 +40,7 @@
 |    o the score for an indel
 \--------------------------------------------------------*/
 long getIndelScore(
-    uint8_t *lastDirUC,  // Cell gettign last score from
-    uint8_t *lastBitUC,  // two bit element on in lastDirUC
+    struct twoBitAry *lastDir, // Has last direction
     struct alnSet *alnSetST,
       // Has gap open & extension penalties
     long *lastBaseL      // Has score of the last base
@@ -51,7 +50,7 @@ long getIndelScore(
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    // Check if this is the first indel or not
-   switch(getTwoBitAryElm(lastDirUC, lastBitUC))
+   switch(getTwoBitAryElm(lastDir))
    { // Switch; check if this is the first indel
      case defMoveStop:     // At the end of the matrix
      case defMoveDiagnol:  // Top base was a SNP

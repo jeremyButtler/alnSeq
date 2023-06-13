@@ -25,6 +25,8 @@
 '  - fun-01 WatermanSmithAln:
 '     o Perform a Waterman Smith alignment on input
 '       sequences
+'  o fun-02 addBestBaseScore:
+'    - Adds a score and index to the kept scores list
 '  o fun-03 printAltWaterAlns:
 '    - Prints out the best aligment and the saved
 '       alterantive alignments  (best alignment for each
@@ -194,7 +196,7 @@ struct alnMatrixStruct * WatermanAln(
        } // If had memory error
 
        // Make struct array for every base in the query
-       refMtxST->queryScoresST =
+       retMtxST->queryScoresST =
          calloc(lenQueryUL, sizeof(struct scoresStruct));
 
        if(retMtxST->queryScoresST == 0)
@@ -221,7 +223,7 @@ struct alnMatrixStruct * WatermanAln(
 
        if(lastRefScoreST == 0)
        { // If had memory error
-         free(lastQueryScoresST);
+         free(lastQueryScoreST);
          freeAlnMatrixST(retMtxST);
          return 0;
        } // If had memory error
@@ -242,11 +244,11 @@ struct alnMatrixStruct * WatermanAln(
    cpTwoBitPos(dirMatrix, &topDir);
 
    // Move to start of the first sequence indel column
-   twoBitAryMoveXElm(dirMatrix, lenRefUL + 1);
+   twoBitAryMoveForXElm(dirMatrix, lenRefUL + 1);
 
    // Get the left (deletion0 direction positioned
-   cpTwoBitPos(dirMatrix, leftDir);
-   twoBitAryMoveBackOneElm(leftDir);
+   cpTwoBitPos(dirMatrix, &leftDir);
+   twoBitAryMoveBackOneElm(&leftDir);
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-04:
@@ -328,21 +330,14 @@ struct alnMatrixStruct * WatermanAln(
          // Case 0: not using match priority/not match
            scoreTopL =
                getIndelScore(
-                   topDirUCPtr,
-                   &topBitUC,
+                   &topDir, // Direction of last cell
                    settings,
                    lastBaseLPtr
            ); // Get the score for an insertion
 
-           // If the limb is not complete the last
-           // direction will be one shift back 
-           if(leftBitUC < 3) tmpLeftBitUC = 2;
-           else tmpLeftBitUC = 3;
-
            scoreLeftL =
              getIndelScore(
-               leftDirUCPtr,    // two bit limb
-               &tmpLeftBitUC,   // two bit element
+               &leftDir,      // direction of previous cell
                settings,        // gap penalties
                scoreOnLPtr - 1  //Score of last base
            ); // Get the score for an insertion
@@ -372,10 +367,9 @@ struct alnMatrixStruct * WatermanAln(
              *scoreOnLPtr;
 
            // Get the index of the best score
+
            retMtxST->bestScoreST.indexUL =
-               dirMatrix->limbOnUCPtr
-             - dirMatrix->firstLimbUCPtr
-             + dirMatrix->elmOnUC;
+             getTwoBitAryIndex(dirMatrix);
        } // Else if have a new best score
 
        else
@@ -394,8 +388,8 @@ struct alnMatrixStruct * WatermanAln(
                refNtOnUL,
                *retMtxST->queryScoresST,
                queryNtOnUL,
-               lastRefScoresST,
-               lastQueryScoresST 
+               *lastRefScoreST,
+               *lastQueryScoreST 
              ); // Add the new score in
 
              ++refNtOnUL;
@@ -415,8 +409,8 @@ struct alnMatrixStruct * WatermanAln(
 
        // Move to the next base pair to score
        twoBitAryMoveToNextElm(dirMatrix);
-       twoBitAryMoveToNextElm(topDir);
-       twoBitAryMoveToNextElm(leftDir);
+       twoBitAryMoveToNextElm(&topDir);
+       twoBitAryMoveToNextElm(&leftDir);
      } // loop; compare one query to one reference base
 
      if(swapBuffBl & 1)
@@ -439,6 +433,11 @@ struct alnMatrixStruct * WatermanAln(
      ++tmpQueryCStr; // Move to the next query base
    } // loop; compare query base against all ref bases
 
+   // Move back to the lower right conor cell
+   twoBitAryMoveBackOneElm(dirMatrix);
+     // THis is not needed, but it would be nice to keep
+     // things consistent
+
    return retMtxST;
 } // WatermanAln
 
@@ -449,9 +448,6 @@ struct alnMatrixStruct * WatermanAln(
 |      than the old score and index
 |    o oldScoreST to hold the old score if it is part of
 |      a different alignment
-|  - Returns:
-|    o 0 if did nothing (score beneath best score)
-|    0 1 if changed the score
 \--------------------------------------------------------*/
 void addBestBaseScore(
   uint8_t dirUC,                   // Direction travled
@@ -459,9 +455,9 @@ void addBestBaseScore(
   long scoreL,                 // new score to add in
   unsigned long lenRefUI,  // length of reference sequence
   struct scoresStruct *refScoreST,//all Kept ref scores
-  unsigned long refBaseUL        // current ref base on
+  unsigned long refBaseUL,       // current ref base on
   struct scoresStruct *queryScoreST,//all kept query scores
-  unsigned long queryBaseUL      // Currnetn query base on
+  unsigned long queryBaseUL,     // Currnetn query base on
   struct scoresStruct *oldRScoreST,// Has old ref scores
   struct scoresStruct *oldQScoreST // Has old query scores
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -472,13 +468,13 @@ void addBestBaseScore(
   struct scoresStruct *scoreOnST = 0;
   struct scoresStruct *oldScoreOnST = 0;
   
-  if((refScrST + refBaseUL)->scoreL < scoreUL)
+  if((refScoreST + refBaseUL)->scoreL < scoreL)
   { // If replacing the reference score
     scoreOnST = refScoreST + refBaseUL;
-    oldScrOnST = oldRScoreST + refBaseUL;
+    oldScoreOnST = oldRScoreST + refBaseUL;
   } // If replacing the reference score
 
-  else if((queryScrST + queryBaseUL)->scoreL < scoreUL)
+  else if((queryScoreST + queryBaseUL)->scoreL < scoreL)
   { // Else if I am replacing thw query base
     scoreOnST = queryScoreST + queryBaseUL;
     oldScoreOnST = oldQScoreST + queryBaseUL;
@@ -490,7 +486,7 @@ void addBestBaseScore(
   { // Switch: check last direction
     // For stops I know there is no worry about pointing
     // to a previous alignment
-    case devMoveStop:
+    case defMoveStop:
     // Case: This is a stop direction
       oldScoreOnST->indexUL = scoreOnST->indexUL;
       oldScoreOnST->scoreL = scoreOnST->scoreL;
@@ -518,14 +514,14 @@ void addBestBaseScore(
 
         // Still on the same query base, but not same ref
         else if(
-          (queryScoresST + queryBaseUL - 1)->indexUL
+          (queryScoreST + queryBaseUL - 1)->indexUL
          == 
           indexUL - 1
         ) { // Else if contnuing the qury's path
            (queryScoreST + queryBaseUL)->indexUL = 
              (oldQScoreST + queryBaseUL)->indexUL;
 
-           (queryScoresST + queryBaseUL)->scoreL = 
+           (queryScoreST + queryBaseUL)->scoreL = 
              (oldQScoreST + queryBaseUL)->scoreL;
         } // Else if contnuing the qury's path
 
@@ -555,14 +551,14 @@ void addBestBaseScore(
         } // If I am contuning on the same path
 
         else if(
-          (queryScoresST + queryBaseUL - 1)->indexUL
+          (queryScoreST + queryBaseUL - 1)->indexUL
          == 
           indexUL - lenRefUI - 1
         ) { // Else if contnuing the qury's path
            (queryScoreST + queryBaseUL - 1)->indexUL = 
              (oldQScoreST + queryBaseUL - 1)->indexUL;
 
-           (queryScoresST + queryBaseUL - 1)->scoreL = 
+           (queryScoreST + queryBaseUL - 1)->scoreL = 
              (oldQScoreST + queryBaseUL - 1)->scoreL;
         } // Else if contnuing the qury's path
 
@@ -592,14 +588,14 @@ void addBestBaseScore(
         } // If I am contuning on the same path
 
         else if(
-          (queryScoresST + queryBaseUL - 1)->indexUL
+          (queryScoreST + queryBaseUL - 1)->indexUL
          == 
           indexUL - lenRefUI - 2
         ) { // Else if contnuing the qury's path
            (queryScoreST + queryBaseUL - 1)->indexUL = 
              (oldQScoreST + queryBaseUL - 1)->indexUL;
 
-           (queryScoresST + queryBaseUL - 1)->scoreL = 
+           (queryScoreST + queryBaseUL - 1)->scoreL = 
              (oldQScoreST + queryBaseUL - 1)->scoreL;
         } // Else if contnuing the qury's path
 
@@ -660,16 +656,15 @@ unsigned char printAltWaterAlns(
   char *queryAlnCStr = 0;
   char *refAlnCStr = 0;
   char fileNameCStr[1024];
-  char *tmpCStr = 0;
-
-  uint32_t refBaseUI = 0;
 
   struct scoresStruct *scoreST = 0;
-  struct scoresStruct *refScoreST = 0;
-
   struct alnStruct *alnST = 0;
-
   FILE *outFILE = 0;
+
+  // I removed the needed for this. I left the code
+  // that used this commented out for later use
+  //struct scoresStruct *refScoreST = 0;
+  //uint32_t refBaseUI = 0;
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
   ^ Fun-03 Sec-02:
@@ -692,7 +687,8 @@ unsigned char printAltWaterAlns(
     cnvtDirMatrixToAlnAry(
       refST,
       queryST,
-      alnMtxST->bestScoreST,
+      alnMtxST->dirMatrixST,
+      &alnMtxST->bestScoreST,
       1      // Applying a soft mask
   );
 
@@ -703,7 +699,7 @@ unsigned char printAltWaterAlns(
 
   if(refAlnCStr == 0)
   { // If had a memroy error
-    freeAlnST(alnST); // No longer need
+    freeAlnST(alnST, 1); // No longer need
     return 64;
   } // If had a memroy error
 
@@ -712,12 +708,12 @@ unsigned char printAltWaterAlns(
   if(queryAlnCStr == 0)
   { // If had a memroy error
     free(refAlnCStr);
-    freeAlnST(alnST); // No longer need
+    freeAlnST(alnST, 1); // No longer need
     return 64;
   } // If had a memroy error
 
   // Conver the alingment codes to human readable
-  cnvtAlnErryAryToLetter(refST, queryST, alnST);
+  alnAryToLetter(refST, queryST, alnST);
 
   /*******************************************************\
   * Fun-03 Sec-02 Sub-02:
@@ -735,13 +731,13 @@ unsigned char printAltWaterAlns(
      alnST->queryEndUI
   ); // Make the new file name
 
-  outFILE = fopen(fileNameCStr);
+  outFILE = fopen(fileNameCStr, "w");
 
   if(outFILE == 0)
   { // If I could not open the file
     free(refAlnCStr);
     free(queryAlnCStr);
-    freeAlnST(alnST); // No longer need
+    freeAlnST(alnST, 1); // No longer need
 
     return 1;
   } // If I could not open the file
@@ -751,9 +747,9 @@ unsigned char printAltWaterAlns(
     outFILE,
     queryST->idCStr,
     queryAlnCStr,
-    refAlnCStr
+    refAlnCStr,
     refST->idCStr,
-    alnMtxST->bestScoreST->scoreL,
+    alnMtxST->bestScoreST.scoreL,
     settings->lineWrapUS,
     alnST
   );
@@ -769,7 +765,7 @@ unsigned char printAltWaterAlns(
   free(queryAlnCStr);
   queryAlnCStr = 0;
 
-  freeAlnST(alnST); // No longer need
+  freeAlnST(alnST, 1); // No longer need
   alnST = 0;
 
   fclose(outFILE);
@@ -779,6 +775,7 @@ unsigned char printAltWaterAlns(
   ^  - Sort scores to get highest so lowest scores
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+  /* This was for sorthing scores, currently not needed
   // Sort the reference scores (sorts > to least)
   sortScores(
     alnMtxST->refScoresST,
@@ -792,6 +789,7 @@ unsigned char printAltWaterAlns(
     queryST->offsetUI,
     queryST->endAlnUI
   );
+  */
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
   ^ Fun-03 Sec-04:
@@ -811,23 +809,25 @@ unsigned char printAltWaterAlns(
   *  - Make sure the alignment is worth printing out
   \*******************************************************/
   
-  scoreST = alnMtxST->refScoresST;
+  scoreST = *alnMtxST->refScoresST;
 
   for(
     unsigned long ulRefBase = 0;
     ulRefBase < alnMtxST->lenRefScoresUL;
-    ++ulRefBase;
+    ++ulRefBase
   ){ // For all reference bases in the alignment
 
-    // Check if this is the same index as the best score
-    if(scoresST->indexUL == alnMtxST->bestScore->indexUL)
-    { // If on the best score (move to next score)
-      ++scoreST; 
-      continue;
-    } // If on the best score (move to next score)
+    // No longer needed. I mades sure this could never
+    // happen
+    //// Check if this is the same index as the best score
+    //if(scoreST->indexUL == alnMtxST->bestScoreST.indexUL)
+    //{ // If on the best score (move to next score)
+    //  ++scoreST; 
+    //  continue;
+    //} // If on the best score (move to next score)
 
     // Check if even need to print out any reference alns
-    if(scoreST->scoreL <settings->minScoreUI)
+    if(scoreST->scoreL < settings->minScoreUI)
       break; // No more socres to print out
 
     /*****************************************************\
@@ -839,6 +839,7 @@ unsigned char printAltWaterAlns(
       cnvtDirMatrixToAlnAry(
         refST,
         queryST,
+        alnMtxST->dirMatrixST,
         scoreST,
         1      // Applying a soft mask
     );
@@ -847,7 +848,7 @@ unsigned char printAltWaterAlns(
 
     if(alnST->numAlnBasesUI < settings->minBasesUI)
     { // If the alignment does not have enough bases
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
       ++scoreST;
       continue;  // Move to the next alignmetn
     } // If the alignment does not have enough bases
@@ -857,7 +858,7 @@ unsigned char printAltWaterAlns(
   
     if(refAlnCStr == 0)
     { // If had a memroy error
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
       return 64;
     } // If had a memroy error
   
@@ -866,12 +867,12 @@ unsigned char printAltWaterAlns(
     if(queryAlnCStr == 0)
     { // If had a memroy error
       free(refAlnCStr);
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
       return 64;
     } // If had a memroy error
   
     // Conver the alingment codes to human readable
-    cnvtAlnErryAryToLetter(refST, queryST, alnST);
+    alnAryToLetter(refST, queryST, alnST);
   
     /*******************************************************\
     * Fun-03 Sec-04 Sub-03:
@@ -889,13 +890,13 @@ unsigned char printAltWaterAlns(
        alnST->queryEndUI
     ); // Make the new file name
   
-    outFILE = fopen(fileNameCStr);
+    outFILE = fopen(fileNameCStr, "w");
   
     if(outFILE == 0)
     { // If I could not open the file
       free(refAlnCStr);
       free(queryAlnCStr);
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
   
       return 1;
     } // If I could not open the file
@@ -905,9 +906,9 @@ unsigned char printAltWaterAlns(
       outFILE,
       queryST->idCStr,
       queryAlnCStr,
-      refAlnCStr
+      refAlnCStr,
       refST->idCStr,
-      alnMtxST->bestScoreST->scoreL,
+      alnMtxST->bestScoreST.scoreL,
       settings->lineWrapUS,
       alnST
     );
@@ -923,7 +924,7 @@ unsigned char printAltWaterAlns(
     free(queryAlnCStr);
     queryAlnCStr = 0;
   
-    freeAlnST(alnST); // No longer need
+    freeAlnST(alnST, 1); // No longer need
     alnST = 0;
   
     fclose(outFILE);
@@ -950,17 +951,18 @@ unsigned char printAltWaterAlns(
   *  - Set up for query aligment printing
   \*******************************************************/
 
-  scoreST = alnMtxST->queryScoresST;
-  refScoreST = alnMtxST->refScoresST;
-  refBaseUI = offsetUI;
+  scoreST = *alnMtxST->queryScoresST;
+  //refScoreST = *alnMtxST->refScoresST;
+  //refBaseUI = refST->offsetUI;
 
-  if(alnMtxST->queryScoresST->scoreL <settings->minScoreUI)
-    return;
+  // This was for when I had sorted scores
+  //if(scoreST->scoreL < settings->minScoreUI)
+  //  return;
 
   for(
     uint32_t ulQueryBase = 0;
     ulQueryBase < alnMtxST->lenQueryScoresUL;
-    ++ulQueryBase;
+    ++ulQueryBase
   ){ // For all reference bases in the alignment
 
     /*****************************************************\
@@ -968,6 +970,7 @@ unsigned char printAltWaterAlns(
     *  - Check if I have already printed this alignment
     \*****************************************************/
 
+    /* I made sure these cases could never happen
     // Check if this is the same index as the best score
     if(scoresST->indexUL == alnMtxST->bestScore->indexUL)
     { // If on the best score (move to next score)
@@ -976,7 +979,7 @@ unsigned char printAltWaterAlns(
     } // If on the best score (move to next score)
 
     // Check if even need to print out any reference alns
-    if(scoreST->scoreL <settings->minScoreUI)
+    if(scoreST->scoreL < settings->minScoreUI)
       break; // No more socres to print out
 
     if(refBaseUI >= refST->endAlnUI) goto afterRefCheck;
@@ -995,6 +998,7 @@ unsigned char printAltWaterAlns(
     } // If I have already printed this alignment as ref
 
     afterRefCheck: // If no more reference scores to check
+    */
 
     /*****************************************************\
     * Fun-03 Sec-05 Sub-03:
@@ -1005,6 +1009,7 @@ unsigned char printAltWaterAlns(
       cnvtDirMatrixToAlnAry(
         refST,
         queryST,
+        alnMtxST->dirMatrixST,
         scoreST,
         1      // Applying a soft mask
     );
@@ -1013,7 +1018,7 @@ unsigned char printAltWaterAlns(
 
     if(alnST->numAlnBasesUI < settings->minBasesUI)
     { // If the alignment does not have enough bases
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
       ++scoreST;
       continue;  // Move to the next alignmetn
     } // If the alignment does not have enough bases
@@ -1023,7 +1028,7 @@ unsigned char printAltWaterAlns(
   
     if(refAlnCStr == 0)
     { // If had a memroy error
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
       return 64;
     } // If had a memroy error
   
@@ -1032,12 +1037,12 @@ unsigned char printAltWaterAlns(
     if(queryAlnCStr == 0)
     { // If had a memroy error
       free(refAlnCStr);
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
       return 64;
     } // If had a memroy error
   
     // Conver the alingment codes to human readable
-    cnvtAlnErryAryToLetter(refST, queryST, alnST);
+    alnAryToLetter(refST, queryST, alnST);
   
     /*****************************************************\
     * Fun-03 Sec-05 Sub-04:
@@ -1055,13 +1060,13 @@ unsigned char printAltWaterAlns(
        alnST->queryEndUI
     ); // Make the new file name
   
-    outFILE = fopen(fileNameCStr);
+    outFILE = fopen(fileNameCStr, "w");
   
     if(outFILE == 0)
     { // If I could not open the file
       free(refAlnCStr);
       free(queryAlnCStr);
-      freeAlnST(alnST); // No longer need
+      freeAlnST(alnST, 1); // No longer need
   
       return 1;
     } // If I could not open the file
@@ -1071,9 +1076,9 @@ unsigned char printAltWaterAlns(
       outFILE,
       queryST->idCStr,
       queryAlnCStr,
-      refAlnCStr
+      refAlnCStr,
       refST->idCStr,
-      alnMtxST->bestScoreST->scoreL,
+      alnMtxST->bestScoreST.scoreL,
       settings->lineWrapUS,
       alnST
     );
@@ -1089,7 +1094,7 @@ unsigned char printAltWaterAlns(
     free(queryAlnCStr);
     queryAlnCStr = 0;
   
-    freeAlnST(alnST); // No longer need
+    freeAlnST(alnST, 1); // No longer need
     alnST = 0;
   
     fclose(outFILE);
@@ -1106,8 +1111,7 @@ unsigned char printAltWaterAlns(
 |    o dirOnUC to hold the best direction
 \--------------------------------------------------------*/
 void updateDirScoreWaterSingle(
-    uint8_t *dirOnUCPtr,
-      // Direction on (first two bits are open)
+    struct twoBitAry *dirOnST, // has matrix cell to update
     struct alnSet *alnSetST,
       // Has preference for selecting equal scores
     long *scoreTopL,     // Score for an insertion
@@ -1145,12 +1149,15 @@ void updateDirScoreWaterSingle(
                        { // If diagnol beats deletions
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(dirOnST, defMoveStop);
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                            return;
                        } // If diagnol beats deletions
@@ -1159,12 +1166,15 @@ void updateDirScoreWaterSingle(
                        { // Else deletion is the best score
                            if(*scoreLeftL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(dirOnST, defMoveStop);
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveLeft;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveLeft
+                           );
                            *scoreOnL = *scoreLeftL;
                            return;
                        } // Else the deletion is the best
@@ -1174,12 +1184,15 @@ void updateDirScoreWaterSingle(
                    { // Else the insertion is best score
                       if(*scoreTopL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(dirOnST, defMoveUp);
                       *scoreOnL = *scoreTopL;
                       return;
                    } // Else the insertion is best score
@@ -1188,12 +1201,15 @@ void updateDirScoreWaterSingle(
                    { // Else the deletion is best score
                       if(*scoreLeftL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(dirOnST, defMoveLeft);
                       *scoreOnL = *scoreLeftL;
                       return;
                    } // Else the deletion is best score
@@ -1213,12 +1229,15 @@ void updateDirScoreWaterSingle(
                        { // If diagnol beats insertions
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(dirOnST, defMoveStop);
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                            return;
                        } // If diagnol beats insertions
@@ -1227,12 +1246,18 @@ void updateDirScoreWaterSingle(
                        { // Else insertion is best score
                           if(*scoreTopL <= 0)
                           { // If need to make a stop
-                              *dirOnUCPtr |= defMoveStop;
+                              changeTwoBitElm(
+                                dirOnST,
+                                defMoveStop
+                              );
                               *scoreOnL = 0;
                               return;
                           } // If need to make a stop
 
-                          *dirOnUCPtr |= defMoveUp;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                           *scoreOnL = *scoreTopL;
                           return;
                        } // Else insertion is best score
@@ -1242,12 +1267,15 @@ void updateDirScoreWaterSingle(
                    { // Else the deletion is best score
                       if(*scoreLeftL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(dirOnST, defMoveStop);
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                       return;
                    } // Else deletion is best score
@@ -1256,12 +1284,18 @@ void updateDirScoreWaterSingle(
                    { // Else insertion is best score
                       if(*scoreTopL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveUp
+                      );
                       *scoreOnL = *scoreTopL;
                       return;
                    } // Else insertion is best score
@@ -1287,12 +1321,18 @@ void updateDirScoreWaterSingle(
                        { // If diagnol beats deletions
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                            return;
                        } // If diagnol beats deletions
@@ -1301,12 +1341,18 @@ void updateDirScoreWaterSingle(
                        { // Else deletion is best score
                            if(*scoreLeftL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveLeft;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveLeft
+                           );
                            *scoreOnL = *scoreLeftL;
                            return;
                        } // Else deletion is best score
@@ -1316,12 +1362,18 @@ void updateDirScoreWaterSingle(
                    { // Else insertion is best score
                       if(*scoreTopL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveUp
+                      );
                       *scoreOnL = *scoreTopL;
                       return;
                    } // Else insertion is best score
@@ -1330,12 +1382,18 @@ void updateDirScoreWaterSingle(
                    { // Else deletion is best score
                       if(*scoreLeftL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                       return;
                    } // Else deletion is best score
@@ -1356,12 +1414,18 @@ void updateDirScoreWaterSingle(
                        { // If diagnol beats insertions
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                            return;
                        } // If diagnol beats insertions
@@ -1370,12 +1434,18 @@ void updateDirScoreWaterSingle(
                        { // Else ins is the best score
                            if(*scoreTopL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(
+                                  dirOnST,
+                                  defMoveStop
+                                );
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveUp;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                            *scoreOnL = *scoreTopL;
                            return;
                        } // Else insertion is best score
@@ -1385,12 +1455,18 @@ void updateDirScoreWaterSingle(
                    { // Else del is the best score
                       if(*scoreLeftL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                       return;
                    } // Else deletion is best score
@@ -1399,12 +1475,18 @@ void updateDirScoreWaterSingle(
                    { // Else insertion is best score
                       if(*scoreTopL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveUp;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveUp
+                      );
                       *scoreOnL = *scoreTopL;
                       return;
                    } // Else insertion is best score
@@ -1429,12 +1511,18 @@ void updateDirScoreWaterSingle(
                        { // If diagnol is highest score
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                            return;
                        } // If diagnol is highest score
@@ -1443,12 +1531,15 @@ void updateDirScoreWaterSingle(
                        { // Else insertion is best score
                            if(*scoreTopL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(dirOnST, defMoveStop);
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveUp;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                            *scoreOnL = *scoreTopL;
                            return;
                        } // Else deletion is best score
@@ -1458,12 +1549,18 @@ void updateDirScoreWaterSingle(
                    { // Else deletion is the best score
                       if(*scoreLeftL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                    } // Else deletion is the best score
 
@@ -1471,12 +1568,18 @@ void updateDirScoreWaterSingle(
                    { // Else match/snp is the best score
                       if(*scoreDiagnolL <= 0)
                       { // If need to make a stopping point
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stopping point
 
-                      *dirOnUCPtr |= defMoveDiagnol;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveDiagnol
+                      );
                       *scoreOnL = *scoreDiagnolL;
                       return;
                    } // Else match/snp is the best score
@@ -1496,12 +1599,18 @@ void updateDirScoreWaterSingle(
                        { // If diagnol beats insertions
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(
+                                  dirOnST,
+                                  defMoveStop
+                                );
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveDiagnol;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
                            *scoreOnL = *scoreDiagnolL;
                            return;
                        } // If diagnol beats insertions
@@ -1510,12 +1619,18 @@ void updateDirScoreWaterSingle(
                        { // Else insertion is best score
                            if(*scoreTopL <= 0)
                            { // If need to make a stop
-                               *dirOnUCPtr |= defMoveStop;
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
 
-                           *dirOnUCPtr |= defMoveUp;
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveUp
+                           );
                            *scoreOnL = *scoreTopL;
                            return;
                        } // Else insertion is best score
@@ -1525,12 +1640,15 @@ void updateDirScoreWaterSingle(
                    { // Else deletion is the best score
                       if(*scoreLeftL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveLeft;
+                      changeTwoBitElm(dirOnST,defMoveLeft);
                       *scoreOnL = *scoreLeftL;
                       return;
                    } // Else deletion is the best score
@@ -1539,12 +1657,18 @@ void updateDirScoreWaterSingle(
                    { // Else match/snp is the best score
                       if(*scoreDiagnolL <= 0)
                       { // If need to make a stop
-                          *dirOnUCPtr |= defMoveStop;
+                          changeTwoBitElm(
+                             dirOnST,
+                             defMoveStop
+                           );
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
 
-                      *dirOnUCPtr |= defMoveDiagnol;
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveDiagnol
+                      );
                       *scoreOnL = *scoreDiagnolL;
                       return;
                    } // Else match/snp is the best score

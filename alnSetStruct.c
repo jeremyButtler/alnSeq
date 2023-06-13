@@ -56,7 +56,7 @@ void initAlnSet(
 
    // Min settings to keep an non-best alternateve
    // alignment for eac base
-   alnSetST->minBasesUI = defMinBasesUI
+   alnSetST->minBasesUI = defMinBasesUI;
    alnSetST->minScoreUI = defMinScore;
   
    // Set the default output line wrapping

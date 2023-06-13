@@ -3,23 +3,22 @@
 # Use:
 #  o Holds functions for doing pairwise alignments (Needleman/waterman)
 # Includes:
-#   - "defaultSettings.h"
+#   - "alnSeqDefaults.h"
 #   - "cStrToNumberFun.h"
 #   - "twoBitArrays.h"
 # C Standard libraries:
-#   - <stdlib.h>
 #   - <stdio.h>
+#   o <stdlib.h>
 #   o <stdint.h>
 ######################################################################*/
 
 #ifndef ALIGNMENTSFUN_H
 #define ALIGNMENTSFUN_H
 
-#include "defaultSettings.h"
+#include "alnSeqDefaults.h"
 #include "cStrToNumberFun.h"
 #include "twoBitArrays.h"
 
-#include <stdlib.h>
 #include <stdio.h>
 
 #define defClearNonAlph (1 | 2 | 4 | 8 | 16) // clear 64 bit and case
@@ -68,12 +67,6 @@
 '     o Reads in a file of scores for a scoring matrix
 '  - fun-19 getIndelScore:
 '     o Gets an indel score for the current cell
-'  - fun-20 updateDirAndScore:
-'     o Picks the best score and direction for the current base pairs
-'       being compared in a Needleman Wunsch alignment
-'  - fun-21 updateDirAndScoreWater:
-'     o Picks the best score and direction for the current base pairs
-'       being compared in a Waterman Smith alignment
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*---------------------------------------------------------------------\
@@ -105,6 +98,7 @@ typedef struct alnSet
    int32_t gapStartPenaltyI;     // Penalty for starting an indel
    int32_t gapExtendPenaltyI;    // Penalty for extending an indel
    uint32_t minScoreUI;        // Minimum score needed to keep alignment
+   uint32_t minBasesUI;
 }alnSet;
 
 /*---------------------------------------------------------------------\
@@ -123,84 +117,6 @@ char * cnvtAlnErrToSeq(
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*---------------------------------------------------------------------\
-| Output:
-|  - Returns:
-|    o array with flags for snp/match, insertion, and deletions at each
-|      position. (1 = snp/match, 2 = insertion, 4 = deletion)
-|    o 0 for memory allocation errors
-|  - Modifies:
-|    o lenErrAryUI to hold the length of the returned array
-\---------------------------------------------------------------------*/
-uint8_t * WatermanSmithAln(
-    char *queryCStr,        // Full query sequence as c-string
-    int32_t queryStartI,    // Starting query coordinate for alignment
-    int32_t queryEndI,      // Ending query coordinate for alignment
-    char *refCStr,          // Full reference sequence as c-string
-    int32_t refStartI,      // Starting reference coordinate for aln
-    int32_t refEndI,        // Ending reference coordinate for alignment
-    struct alnSet *settings,// Settings for the alignment
-    uint32_t *lenErrAryUI,  // Will hold the return arrays length
-    long *scoreL        // Score for the alignment (bottom right)
-    // *startI and *endI paramaters should be index 1
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-04 TOC: WatermanSmithAln
-   '  - Perform a Waterman Smith alignment on input sequences
-   '  o fun-04 sec-1: Variable declerations
-   '  o fun-04 sec-2: Allocate memory for alignment
-   '  o fun-04 sec-3: Fill in the initial negatives for the reference
-   '  o fun-04 sec-4: Fill the matrix with scores
-   '  o fun-04 sec-5: Find the best path
-   '  o fun-04 sec-6: Clean up and add softmasking to start
-   '  o fun-04 sec-7: Invert the error type array
-   '  o fun-04 sec-8: Add softmasking to the end and return the array
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-/*---------------------------------------------------------------------\
-| Output:
-|  - Returns:
-|    o array with flags for snp/match, insertion, and deletions at each
-|      position. (1 = snp/match, 2 = insertion, 4 = deletion)
-|    o 0 for memory allocation errors
-|  - Modifies:
-|    o lenErrAryUI to hold the length of the returned array
-\---------------------------------------------------------------------*/
-uint8_t * NeedleManWunschAln(
-    char *queryCStr,        // Full query sequence as c-string
-    int32_t queryStartI,    // Starting query coordinate for alignment
-    int32_t queryEndI,      // Ending query coordinate for alignment
-    char *refCStr,          // Full reference sequence as c-string
-    int32_t refStartI,      // Starting reference coordinate for aln
-    int32_t refEndI,        // Ending reference coordinate for alignment
-    struct alnSet *settings,// Settings for the alignment
-    uint32_t *lenErrAryUI,  // Will hold the return arrays length
-    long *scoreL            // Score for the alignment (bottom right)
-    // *startI and *endI paramaters should be index 1
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-05 TOC: NeedleManWunschAln
-   '  - Perform a Needleman-Wunsch alignment on input sequences
-   '  o fun-05 sec-1: Variable declerations
-   '  o fun-05 sec-2: Allocate memory for alignment
-   '  o fun-05 sec-3: Fill in the initial negatives for the reference
-   '  o fun-05 sec-4: Fill the matrix with scores
-   '  o fun-05 sec-5: Find the best path
-   '  o fun-05 sec-6: Clean up and invert error array
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
-| Output: 1: if bases were a match; 0 if not
-\---------------------------------------------------------------------*/
-char checkIfBasesMatch(
-    char *queryBaseC, // Query base to see if same as reference
-    char *refBaseC    // Reference base to see if same as query
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-07 TOC: Sec-1 Sub-1: checkIfBasesMatch
-   '  - Check if two bases are the same (includes anonymous bases)
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-
-
-/*---------------------------------------------------------------------\
 | Output: Returns: Initalized alnSet structer or 0 for memory error
 | Note: I prefer using stack, so this is more here for someone else
 \---------------------------------------------------------------------*/
@@ -208,18 +124,6 @@ struct alnSet * makeAlnSetST(
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-12 TOC: Sec-1 Sub-1: makeAlnSet
    '  - Makes & initalizes an alnSet structer on the heap
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
-| Output: Returns score of a single pair of bases
-\---------------------------------------------------------------------*/
-int16_t getBasePairScore(
-    const char *queryBaseC, // Query base of pair to get score for
-    const char *refBaseC,   // Reference base of pair to get score for
-    struct alnSet *alnSetST // structure with scoring matrix to change
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-13 TOC: Sec-1 Sub-1: getBasePairScore
-   '  - Get the score for a pair of bases from an alignment structure
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*---------------------------------------------------------------------\
@@ -283,63 +187,5 @@ unsigned long readInScoreFile(
     '  o fun-18 sec-2: Read in line and check if comment
     '  o fun-18 sec-3: Get score, update matrix, & move to next line
     \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
-| Output: Returns the score for an Needleman Wunsch indel
-\---------------------------------------------------------------------*/
-long getIndelScore(
-    uint8_t *lastDirUC,      // Cell gettign last score from
-    uint8_t *lastBitUC,      // two bit element on in lastDirUC
-    struct alnSet *alnSetST, // Holds the gap open & extension penalties
-    long *lastBaseL          // Has score of the last base
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-19 TOC: Sec-1 Sub-1: getIndelScore
-   '  - Gets an indel score for the current cell
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
-| Output: Modifies: scoreOnL and dirOnUC to hold best score & direction
-\---------------------------------------------------------------------*/
-void updateDirAndScoreNeedle(
-    uint8_t *dirOnUCPtr,    // Direction on with first two bits cleared
-    struct alnSet *alnSetST, // Has preference for score selection
-    long *scoreTopL,     // Score for an insertion
-    long *scoreDiagnolL, // Score for an match/snp
-    long *scoreLeftL,    // The score for an deletion
-    long *scoreOnL       // Score to update
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-20 TOC: updateDirAndScore
-   '  - Picks the best score and direction for the current base pairs
-   '    being compared in a Needleman Wunsch alignment
-   '  o fun-20 sec-1: Matches->insertions->deletions
-   '  o fun-20 sec-2: Matches->deletions->insertions
-   '  o fun-20 sec-3: Insertions->matches->deletions
-   '  o fun-20 sec-4: Deletions->matches->insertions
-   '  o fun-20 sec-5: Insertions->deletions->matches
-   '  o fun-20 sec-6: Deletions->insertions->matches
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
-| Output: Modifies: scoreOnL and dirOnUC to hold best score & direction
-\---------------------------------------------------------------------*/
-void updateDirAndScoreWater(
-    uint8_t *dirOnUCPtr,     // Direction on with first two bits cleared
-    struct alnSet *alnSetST, // Has preference for score selection
-    long *scoreTopL,     // Score for an insertion
-    long *scoreDiagnolL, // Score for an match/snp
-    long *scoreLeftL,    // The score for an deletion
-    long *scoreOnL       // Score to update
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-21 TOC: updateDirAndScoreWater
-   '  - Picks the best score and direction for the current base pairs
-   '    being compared in a Waterman Smith alignment
-   '  o fun-21 sec-1: Matches->insertions->deletions
-   '  o fun-21 sec-2: Matches->deletions->insertions
-   '  o fun-21 sec-3: Insertions->matches->deletions
-   '  o fun-21 sec-4: Deletions->matches->insertions
-   '  o fun-21 sec-5: Insertions->deletions->matches
-   '  o fun-21 sec-6: Deletions->insertions->matches
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
 
 #endif

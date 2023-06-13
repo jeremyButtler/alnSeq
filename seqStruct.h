@@ -6,6 +6,7 @@
 # Libraries:
 # C Standard Libraries:
 #  - <stdint.h>
+#  - <stdlib.h>
 #########################################################*/
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -29,6 +30,7 @@
 #define SEQSTRUCT_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 /*--------------------------------------------------------\
 | Struct-01: seqStruct
@@ -113,7 +115,7 @@ void addSeqId(
   unsigned char lenIdUC,  // Length of id (0 if unknown)
   char freeOldIdBl,       // 0: Do not free old seq id
   struct seqStruct *seqST // Struct to initialize
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-04 TOC: Sec-01: addSeqId
    '  - Adds the sequence id to the seqST struct
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

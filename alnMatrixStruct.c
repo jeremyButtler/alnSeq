@@ -1,4 +1,4 @@
-#define "alnMatrixStruct.h"
+#include "alnMatrixStruct.h"
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOF: Start Of Functions
@@ -25,7 +25,7 @@ void initAlnMatrixST(
    matrixST->lenRefScoresUL = 0;
    matrixST->queryScoresST = 0;
    matrixST->lenQueryScoresUL = 0;
-   matrixST->bestScoreST = 0;
+   initScoresST(&matrixST->bestScoreST);
 
    return;
 } // initAlnMatrixST
@@ -50,7 +50,7 @@ void freeAlnMatrixST(
 
    if(matrixST->refScoresST != 0)
    { // if I need to free the reference scores
-     scoreST = matrixST->refScoresST
+     scoreST = *matrixST->refScoresST;
 
      for(
        unsigned long ulScore = 0;
@@ -62,9 +62,9 @@ void freeAlnMatrixST(
      } // for loop free all scores structs
    } // if I need to free the reference scores
 
-   if(matrixST->qeuryScoresST != 0)
+   if(matrixST->queryScoresST != 0)
    { // if I need to free the query scores
-     scoreST = matrixST->queryScoresST
+     scoreST = *matrixST->queryScoresST;
 
      for(
        unsigned long ulScore = 0;

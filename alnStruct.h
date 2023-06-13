@@ -5,14 +5,15 @@
 #    alignment. This also includes the functions needed
 #    to maintain and print out the alignment
 # Libraries:
-#  - "twoBitArrays.h"
 #  - "seqStruct.h"
 #  - "scoresST.h"
 #  - "alnSetStruct.h"
+#  - "generalAlnFun.h"
+#  o "twoBitArrays.h"
 #  o "alnSeqDefaults.h"
 # C Standard Libraries:
-#  o <stdlib.h>
 #  o <stdio.h>
+#  o <stdlib.h>
 #  o <stdint.h>
 #########################################################*/
 
@@ -41,10 +42,9 @@
 #ifndef ALNSTRUCT_H
 #define ALNSTRUCT_H
 
-#include "twoBitArrays.h"
 #include "seqStruct.h" // Need to set up
 #include "scoresST.h"
-#include "alnSettings.h" // Default settings
+#include "generalAlnFun.h"
 
 // Flags for the alignment array (struct-01)
 #define defDelFlag 1    // deletion
@@ -81,7 +81,7 @@ typedef struct alnStruct
 |    o 0 for memory allocation errors
 \--------------------------------------------------------*/
 char * cnvtAlnAryToSeq(
-    struct seqSturct *seqST, // Has sequence to work with
+    struct seqStruct *seqST, // Has sequence to work with
     char queryBl,            // 1: working on query; 0: ref
     struct alnStruct *alnST  // Has alignment array
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -99,10 +99,10 @@ char * cnvtAlnAryToSeq(
 |  - Only call this function after you are done with alnST
 \--------------------------------------------------------*/
 void alnAryToLetter(
-    char *refSeqCStr,       // Ref sequence for detecting
-                            //  matches; Input 0 to ignore
-    char *querySeqCStr,     // query sequence for detecting
-                            // matches Input 0 to ignore
+    struct seqStruct *refST,  // Ref sequence for detecting
+                              // matches; Input 0 to ignore
+    struct seqStruct *queryST,// query seq for detecting
+                              // matches Input 0 to ignore
     struct alnStruct *alnST // Has alignment array to
                             // convert to human readable
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\

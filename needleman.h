@@ -62,7 +62,7 @@ struct alnMatrixStruct * NeedlemanAln(
 | Output: Modifies: scoreOnL and dirOnUC to hold best score & direction
 \---------------------------------------------------------------------*/
 void updateDirAndScoreNeedle(
-    uint8_t *dirOnUCPtr,     // Direction on with first two bits cleared
+    struct twoBitAry *dirOnST, // has matrix cell to update
     struct alnSet *alnSetST, // Has preference for score selection
     long *scoreTopL,     // Score for an insertion
     long *scoreDiagnolL, // Score for an match/snp
