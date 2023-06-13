@@ -102,10 +102,6 @@ int main(
    struct seqStruct refST;
    struct seqStruct queryST;
 
-   // Temporay variables for getting the sequence from the
-   // fasta file (holds sequence buffer size)
-   uint32_t lenSeqBuffUI = 0;
-
    // Output aligned sequences
    char *queryAlnCStr = 0;
    char *refAlnCStr = 0;
@@ -304,29 +300,14 @@ int main(
        exit(-1);
    } // If reference file could not be opened
 
-   lenSeqBuffUI = 0;
-
-   errUC = 
-       readFaSeq(
-           faFILE,
-           &refST.idCStr,
-           &refST.lenIdUC,
-           &refST.seqCStr,
-           &lenSeqBuffUI,
-           &refST.lenSeqUI
-   ); // Read in the reference sequence
-
+   // Read in the reference sequence
+   errUC = readFaSeq(faFILE, &refST);
    fclose(faFILE);
    faFILE = 0;
 
    if(errUC & 2)
    { // Invalid fasta file
-       freeSeqST(
-         &refST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // refST on stack (do not free)
-       );
+       freeSeqST(&refST, 0); // 0 to makr on the stack
 
        printf(
          "Reference (-ref %s) is not valid\n",
@@ -338,13 +319,7 @@ int main(
 
    if(errUC & 64)
    { // Invalid fasta file
-       freeSeqST(
-         &refST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // refST on stack (do not free)
-       );
-
+       freeSeqST(&refST, 0); // 0 to makr on the stack
        printf("Memory allocation error\n");
        exit(-1);
    } // Invalid fasta file
@@ -358,12 +333,7 @@ int main(
 
    if(faFILE == 0) 
    { // If reference file could not be opened
-       freeSeqST(
-         &refST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // refST on stack (do not free)
-       );
+       freeSeqST(&refST, 0); // 0 to makr on the stack
 
        printf(
          "Query (-query %s) could not be opend\n",
@@ -373,36 +343,16 @@ int main(
        exit(-1);
    } // If reference file could not be opened
 
-   lenSeqBuffUI = 0;
 
-   errUC = 
-       readFaSeq(
-           faFILE,
-           &queryST.idCStr,
-           &queryST.lenIdUC,
-           &queryST.seqCStr,
-           &lenSeqBuffUI,
-           &queryST.lenSeqUI
-   ); // Read in the reference sequence
-
+   // Read in the query sequence
+   errUC = readFaSeq(faFILE, &queryST);
    fclose(faFILE);
    faFILE = 0;
 
    if(errUC & 2)
    { // Invalid fasta file
-       freeSeqST(
-         &refST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // refST on stack (do not free)
-       );
-
-       freeSeqST(
-         &queryST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // queryST on stack (do not free)
-       );
+       freeSeqST(&refST, 0); // 0 to makr on the stack
+       freeSeqST(&queryST, 0); // 0 to makr on the stack
 
        printf(
          "Query (-query %s) is not valid\n",
@@ -413,20 +363,8 @@ int main(
 
    if(errUC & 64)
    { // Invalid fasta file
-      freeSeqST(
-         &refST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // refST on stack (do not free)
-       );
-
-       freeSeqST(
-         &queryST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // queryST on stack (do not free)
-       );
-
+      freeSeqST(&refST, 0); // 0 to makr on the stack
+      freeSeqST(&queryST, 0); // 0 to makr on the stack
       printf("Memory allocation error\n");
       exit(-1);
    } // Invalid fasta file
@@ -443,19 +381,8 @@ int main(
 
    if(alnMtrxST == 0)
    { // If did not have enough memory
-      freeSeqST(
-         &refST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // refST on stack (do not free)
-       );
-
-       freeSeqST(
-         &queryST,
-         1, // Free the sequence array
-         1, // Free the read id array
-         0  // queryST on stack (do not free)
-       );
+      freeSeqST(&refST, 0); // 0 to makr on the stack
+      freeSeqST(&queryST, 0); // 0 to makr on the stack
 
        fprintf(
          stderr,
@@ -520,8 +447,8 @@ int main(
 
      fprintf(stderr, "Printed alignment array\n");
 
-     freeSeqST(&refST, 1, 1, 0);
-     freeSeqST(&queryST, 1, 1, 0);
+     freeSeqST(&refST, 0); // 0 to makr on the stack
+     freeSeqST(&queryST, 0); // 0 to makr on the stack
      freeAlnST(alnST, 1);
 
      fclose(outFILE);
@@ -549,8 +476,8 @@ int main(
 
      fprintf(stderr, "Printed alignment array\n");
 
-     freeSeqST(&refST, 1, 1, 0);
-     freeSeqST(&queryST, 1, 1, 0);
+     freeSeqST(&refST, 0); // 0 to makr on the stack
+     freeSeqST(&queryST, 0); // 0 to makr on the stack
      freeAlnST(alnST, 1);
 
      fclose(outFILE);
@@ -585,8 +512,8 @@ int main(
    free(queryAlnCStr);
    free(refAlnCStr);
    freeAlnST(alnST, 1); // NEED TO SET UP
-   freeSeqST(&refST, 1, 1, 0);
-   freeSeqST(&queryST, 1, 1, 0);
+   freeSeqST(&refST, 0); // 0 to makr on the stack
+   freeSeqST(&queryST, 0); // 0 to makr on the stack
 
    exit(0);
 } // main

@@ -1,15 +1,16 @@
-/*######################################################################
+/*#########################################################
 # Name: sequenceFun
 # Use:
-#  o Holds functions for reading in or manipulating sequences
-#  o All functions in this file will only really on c standard libraries
-# C standard libraries
+#  o Holds functions for reading in or manipulating
+#    sequences
+# Libraries:
+# C standard libraries:
 #  - <stdlib.h>
 #  - <stdio.h>
 #  - <stdint.h>
-######################################################################*/
+#########################################################*/
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOF: Start Of Functions
 '  - fun-01 reverseComplementSeq:
 '     o Reverse complement a sequence
@@ -20,58 +21,85 @@
 '  - fun-04 readFaSeq:
 '     o Grabs the next read in the fasta file
 '  - fun-05 addLineToBuffSeqFun:
-'     o Add characters from file to buffer, if needed resize. This
-'       will only read in till the end of the line
+'     o Add characters from file to buffer, if needed 
+'       resize. This will only read in till the end of the
+'       line
 '  - fun-06 reverseCStr;
-'     o Reverse a c-string to be backwards (here for Q-score entries)
+'     o Reverse a c-string to be backwards (here for
+'       Q-score entries)
 '  o fun-07 freeSeqST:
 '     - Frees the seqST strucuter
 '  o fun-08 TOC: Sec-01: initSeqST
 '    - Sets vlues in seqST to zero
-\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+'  o fun-10 initSeqST:
+'     - Sets values in seqST to blank values
+\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #include "seqStruct.h"
 
-/*---------------------------------------------------------------------\
-| Output: Modfies seqCStr to be the reverse complement sequence
-\---------------------------------------------------------------------*/
+/*--------------------------------------------------------\
+| Output:
+|  - Modfies
+|    o Reverse complements the sequence entry and if
+|      reverses the Q-score entry
+\--------------------------------------------------------*/
 void reverseComplementSeq(
-    char *seqCStr,    // Sequence to refeverse complement
-    uint32_t lenSeqUI // Length of input sequence (index 1)
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+  struct seqStruct *seqST  // Sequence to reverse comp
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: Sec-1 Sub-1: reverseComplementSeq
    '  - Reverse complement a sequence
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    char *endCStr = seqCStr + lenSeqUI - 1;
+    char *seqCStr = seqST->seqCStr;
+    char *endCStr = seqST->seqCStr + seqST->lenSeqUI - 1;
+    char *qCStr = 0;
+    char *qEndCStr = 0;
     char swapC = 0;
+
+    if(seqST->qCStr != 0 && *seqST->qCStr != '\0')
+    { // If have a Q-score entry
+      qCStr = seqST->qCStr;
+      qEndCStr = seqST->qCStr + seqST->lenQUI;
+    } // If have a Q-score entry
 
     while(endCStr > seqCStr)
     { // While I have bases to reverse complement
         swapC = *seqCStr;
-
         *seqCStr = complementBase(endCStr);
         *endCStr = complementBase(&swapC);
+        
+        if(seqST->qCStr != 0 && *seqST->qCStr != '\0')
+        { // If I also need to swap Q-scores
+          swapC = *qCStr;
+          *qCStr = *qEndCStr;
+          *qEndCStr = swapC;
+
+          ++qCStr;
+          --endCStr;
+        } // If I also need to swap Q-scores
+        
         ++seqCStr;
         --endCStr;
     } // While I have bases to reverse complement
 
-    // Check if ended on the same base (if so complement the base)
+    // Check if ended on same base (if so complement base)
     if(endCStr == seqCStr)
         *seqCStr = complementBase(seqCStr);
 
     return;
 } // reverseComplementSeq
 
-/*---------------------------------------------------------------------\
-| Output: Returns the complement of the input base (0 if invalid base)
-\---------------------------------------------------------------------*/
+/*--------------------------------------------------------\
+| Output:
+|  - Returns
+|    o the complement of the input base (0 if invalid base)
+\--------------------------------------------------------*/
 char complementBase(
     const char *baseC
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: Sec-1 Sub-1: complementBase
    '  - Returns the complement of a base
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     switch(*baseC & (~32)) // remove 32 to convert to upper case
     { // switch, reverse complement
@@ -80,8 +108,8 @@ char complementBase(
         case 'G': return 'C';
         case 'T': return 'A';
         case 'U': return 'A';
-        case 'W': return 'W'; // W is its reverse complement (AT=TA)
-        case 'S': return 'S'; // S is its reverse complement (CG=GC)
+        case 'W': return 'W'; // W is its own complement
+        case 'S': return 'S'; // S is its own complement
         case 'M': return 'K'; // A/C to T/G
         case 'K': return 'M'; // T/G to A/C
         case 'R': return 'Y'; // A/G to T/C
@@ -99,20 +127,22 @@ char complementBase(
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies:
-|    o refStruct to hold the read in fastq entry & sets its pointers
+|    o refStruct to hold the read in fastq entry & sets
+|      its pointers
 |  - Returns:
 |     o 0: if EOF
 |     o 1: if succeded
 |     o 2: If file was not a fastq file
 |     o 130: If file had an invalide entry
-|         - This error uses to flags, first it uses 2 to specify that
-|           it is not a fastq file (invalid file).
-|         - 2nd it uses 128 to specifty that it is not an blank file
+|       - This error uses to flags, first it uses 2 to
+|         specify that it is not a fastq file
+|       - 2nd it uses 128 to specifty that it is not an
+|         blank file
 |     o 64: If malloc failed to find memory
 \--------------------------------------------------------*/
 uint8_t readFqSeq(
-    FILE *fqFILE,       // fastq file to grab sequence from
-    struct seqStruct *seqST // Holds one-score entry
+  FILE *fqFILE,           // fastq file with sequence
+  struct seqStruct *seqST // Will hold one fastq entry
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-03 TOC: readRefFqSeq
    '  -  Grabs the next read in the fastq file
@@ -183,27 +213,28 @@ uint8_t readFqSeq(
         errUC =
             addLineToBuffSeqFun(
                 seqST->seqCStr,      // Buff to copy seq to
-                &seqST->lenSeqBuffUI, // Size of seq buffer
-                &seqST->lenSeqUI,     // Lenth of sequence
-                extraBuffUS,    // Amount to resize buffer by if full
-                fqFILE          // Fastq file with sequence
+                &seqST->lenSeqBuffUI,// Size of seq buffer
+                &seqST->lenSeqUI,    // Lenth of sequence
+                extraBuffUS,  // How much to resize buff by
+                fqFILE        // Fastq file with sequence
         ); /*Get the header*/
 
-        // Make sure new lines are removed on the next read in
+        // Set up new lines to be removed on the next read
         oldIterCStr = seqST->seqCStr + seqST->lenSeqUI - 1;
 
-        while(*oldIterCStr < 33) // Will catch some white space
+        while(*oldIterCStr < 33)
         { // While removing new lines
             --seqST->lenSeqUI;
             --oldIterCStr;
         } // While removing new lines
 
-        if(errUC & 64) return errUC;   // Memory allocation error (64)
-        if(errUC == 0) return 2 + 128; // Invalid fastq entry
+        // Check for memory errors (64) & invalid entries
+        if(errUC & 64) return errUC; 
+        if(errUC == 0) return 2 + 128;
 
         /*Get on first character in the new buffer*/
         oldIterCStr = seqST->seqCStr + tmpBuffUL;
-        ++numLinesUC; /*Count number of new lines in sequence entry*/
+        ++numLinesUC; //number of '\n' in sequence entry
     } /*While I have not reached the spacer entry*/
 
     --numLinesUC; /*Account for the overcounting*/
@@ -229,10 +260,10 @@ uint8_t readFqSeq(
     
     ++seqST->lenSeqUI; // Account for being one base off
 
-    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
+    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
     ^ Fun-03 Sec-4:
     ^  - Read in the Q-score entry
-    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
     seqST->lenQUI = 0;
 
@@ -240,14 +271,14 @@ uint8_t readFqSeq(
     { // While I need to read in the Q-score entry
         errUC =
             addLineToBuffSeqFun(
-              seqST->qCStr,      // Buffer to hold the Q-score entry
-              &seqST->lenQBuffUI,
-              &seqST->lenQUI,    // Length of Q-score entry
-              extraBuffUS,       // For reszing buffer
-              fqFILE             // Fastq file with q-score
+              seqST->qCStr,     // Buffer for q-score entry
+              &seqST->lenQBuffUI,// Size of buffer
+              &seqST->lenQUI,   // Length of Q-score entry
+              extraBuffUS,      // For reszing buffer
+              fqFILE            // Fastq file with q-score
         ); /*Get the header*/
 
-        // Make sure new lines are removed on the next read in
+        // Set up white space to removed on next read
         oldIterCStr = seqST->qCStr + seqST->lenQUI - 1;
 
         while(*oldIterCStr < 33) // Will catch some white space
@@ -256,10 +287,11 @@ uint8_t readFqSeq(
             --oldIterCStr;
         } // While removing new lines
 
-        if(errUC & 64) return errUC;   /*memory allocation error (64)*/
-        if(errUC == 0) return 2 + 128; /*Invalid fastq entry*/
+        // Check for errors; memory (64)/invalid file (130)
+        if(errUC & 64) return errUC;
+        if(errUC == 0) return 2 + 128;
 
-        --numLinesUC; /*Count number of new lines in sequence entry*/
+        --numLinesUC; // Number of lines to read in
     } // While I need to read in the Q-score entry
 
     // Remove any white space at the end
@@ -275,10 +307,10 @@ uint8_t readFqSeq(
     return errUC; /*Is 1 for another entry or 0 for EOF*/
 } /*readFqSeq*/
 
-/*---------------------------------------------------------------------\
+/*--------------------------------------------------------\
 | Output:
 |  - Modifies:
-|    o refStruct to hold the read in a fasta entry
+|    o seqST to hold one fasta entry
 |  - Returns:
 |     o 0: if EOF
 |     o 1: if succeded
@@ -286,174 +318,200 @@ uint8_t readFqSeq(
 |     o 64: If malloc failed to find memory
 | Note:
 |   - This will remove new lines from the sequence.
-|   - This will only remove spaces or tabs at the end of each sequence
-|     entry, so "atg atc \n" will got to "atc atc".
-\---------------------------------------------------------------------*/
+|   - This will only remove spaces or tabs at the end of
+|     each sequence entry, so "atg atc \n" will got to
+|     "atc atc".
+\--------------------------------------------------------*/
 uint8_t readFaSeq(
-    FILE *faFILE,      // Pointer to fastq file to grab sequence from
-    char **headerCStr,  // Will hold the sequence header
-    uint32_t *lenHeadUI, // Holds the size of the header array
-    char **seqCStr,     // Will Hold the new sequence; resized if needed
-    uint32_t *lenSeqUI, // Length of the sequence c-string
-    uint32_t *basesInSeqUI  // Will hOld the number of bases in the seq
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+  FILE *faFILE,           // Fasta file with sequence
+  struct seqStruct *seqST // Will hold one fastq entry
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-04 TOC: readFaSeq
    '  -  Grabs the next read in the fasta file
-   '    fun-04 sec-1: Variable declarations
-   '    fun-04 sec-2: Check if need to allocate memory for buffer
-   '    fun-04 sec-3: Read in the sequence
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   '  o fun-04 sec-1:
+   '    - Variable declarations
+   '  o fun-04 sec-2:
+   '    - Check if need to allocate memory for buffer
+   '  o fun-04 sec-3:
+   '    - Read in the sequence
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
-    ^ Fun-04 Sec-1: Variable declarations
-    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
+    ^ Fun-04 Sec-1:
+    ^  - Variable declarations
+    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-    char tmpC = 'C';               // To initilize the sequence loop
+    // Used To initilize the sequence loop
+    char tmpC = 'C';
+
     uint16_t extraBuffUS = 1024;
-    unsigned long bytesInBuffUL = 0;
     unsigned long tmpBuffUL = 0;
-
     uint8_t errUC = 0;
     char *oldIterCStr = 0;
 
-    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
-    ^ Fun-04 Sec-2: Read in the header
-    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
+    ^ Fun-04 Sec-2:
+    ^  - Read in the header
+    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
     if(faFILE == 0)
         return 2;    /*No file provided*/
 
+    seqST->lenIdUI = 0;
+
     errUC =
         addLineToBuffSeqFun(
-            headerCStr,            // C-string to hold the header
-            lenHeadUI,             // Length of the header buffer
-            &bytesInBuffUL,        // Number of bytes in the buffer
-            extraBuffUS,           // Amount to resize buffer by if full
-            faFILE                // Fastq file to get header from
+            seqST->idCStr,     // Buffer to hold the seq id
+            &seqST->lenIdBuffUI,// Length of buffer
+            &seqST-lenIdUI,     // Number of chars in id
+            extraBuffUS,      // How much to resize buff by
+            faFILE             // Fasta file with seq id
     ); // Get the header (will resize as needed)
 
-    // Check if have EOF (0) or memory allocation error (64)
+    // Check for EOF (0) or memory allocation error (64)
     if(!(errUC & 1)) return errUC;
 
-    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
-    ^ Fun-04 Sec-3: Read in the sequence
-    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+    /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\
+    ^ Fun-04 Sec-3:
+    ^  - Read in the sequence
+    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-    bytesInBuffUL = 0; // No bytes in the sequence c-string
+
     /*need to set this up so the loop does not error out*/
     oldIterCStr = &tmpC;
-    if(seqCStr != 0) *seqCStr = '\0'; // So know if missed a sequence
+
+    // Overwrite the older sequence entry
+    seqST->lenSeqUI = 0;
+
+    if(seqCStr != 0) *seqCStr = '\0';
 
     while(*oldIterCStr != '>')
     { /*While I have not reached the spacer entry*/
-        tmpBuffUL = bytesInBuffUL; // So can get to this position later
+         // So can get to this position later
+        tmpBuffUL = seqST->lenSeqUI;
 
         errUC =
             addLineToBuffSeqFun(
-                seqCStr,          // Buffer to hold the sequence entry
-                lenSeqUI,         // Size of the sequence buffer
-                &bytesInBuffUL,   // Number of bytes in the buffer
-                extraBuffUS,      // Amount to resize buffer by if full
-                faFILE           // Fastq file to get sequence from
+                seqST->seqCStr,  // Holds sequence
+                &seqST->lenSeqBuffUI, // size of seq buff
+                &seqST->lenSeqUI,// Length of sequence
+                extraBuffUS,
+                faFILE          // Fasta file with sequence
         ); /*Get the header*/
 
         // Make sure new lines are removed on the next read in
-        oldIterCStr = *seqCStr + bytesInBuffUL - 1;
+        oldIterCStr = seqST->seqCStr + seqST->lenSeqUI - 1;
 
         while(*oldIterCStr < 33) // Will catch some white space
         { // While removing new lines
-            --bytesInBuffUL;
+            --seqST->lenSeqUI;
             --oldIterCStr;
         } // While removing new lines
 
-        if(errUC & 64) return errUC;   // Memory allocation error (64)
-        if(errUC == 0) break;          // End of file (finsh processing)
+        // Check for errors: memory (64), EOF (0)
+        if(errUC & 64) return errUC;
+        if(errUC == 0) break;
 
         /*Get on first character in the new buffer*/
         oldIterCStr = *seqCStr + tmpBuffUL;
     } /*While I have not reached the spacer entry*/
 
-    if(*seqCStr == 0 || **seqCStr == '\0') return 2; //Not a valid fasta
+    // Check if is a valid fasta entry
+    if(*seqCStr == 0 || **seqCStr == '\0') return 2;
 
     // Make sure the new line at the end is removed
     oldIterCStr = *seqCStr + bytesInBuffUL;
 
-    while(*oldIterCStr < 33) // Will catch some white space
+    while(*oldIterCStr < 33)
     { // While I have white space at the end
         *oldIterCStr = '\0';
         --oldIterCStr;
-        --bytesInBuffUL;
+        --seqST->lenSeqUI;
     } // While I have white space at the end
 
-    *basesInSeqUI = bytesInBuffUL + 1;
+    ++seqST->lenSeqUI; // Account for being one base off
+
     return errUC; /*Is 1 for another entry or 0 for EOF*/
 } /*readFaSeq*/
 
-/*---------------------------------------------------------------------\
+/*--------------------------------------------------------\
 | Output:
 |   - Modifies:
 |     o buffCStr to hold the next line.
-|       - buffCStr is resizied if it is to small to hold the next line.
+|       - buffCStr is resizied if it is to small to hold
+|         the next line.
 |       - buffCStr + lenBuffUL - 2 will be '\0' or '\n'
-|       - buffCStr will be 0 if had a memory allocation error
-|     o curBuffUL: To hold the number of characters read into the buffer
-|     o lenBuffUL: To hold resized buffer size if buffCStr is resized
-|     o inFILE: To point to the next line (fgets does this automaticly)
+|       - buffCStr set to 0 for memory allocation errors
+|     o curBuffUL: Has the number of chars in the buffer
+|     o lenBuffUL: Has the buffer size
+|     o inFILE: Points to next line in file
 |   - Returns:
 |     o 0 if was end of file (EOF)
 |     o 1 if read in the next line
 |     o 64 if had a memory allocation error
-\---------------------------------------------------------------------*/
+\--------------------------------------------------------*/
 unsigned char addLineToBuffSeqFun(
-    char **buffCStr,          /*Buffer to add data to*/
-    uint32_t *lenBuffUL, /*Size of the buffer*/
-    unsigned long *curBuffUL, /*Length buffer with valid data*/
-    unsigned long resBuffUL,  /*Amount to resize buffer by if full*/
-    FILE *inFILE              /*File to grab data from*/
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+    char **buffCStr,          // Buffer to add data to
+    uint32_t *lenBuffUL,      // Size of the buffer
+    unsigned long *curBuffUL, // Number of chars in buffer
+    unsigned long resBuffUL,  // How much to resize buff by
+    FILE *inFILE              // File to grab data from
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-05 TOC: addLineToBuffSeqFun
-   '  - Add characters from file to buffer, if needed resize. This
-   '    will only read in till the end of the line
-   '   o fun-05 sec-1: variable declerations
-   '   o fun-05 sec-2: Check if need to resize the buffer
-   '   o fun-05 sec-3: Read in the next line in the buffer
-   '   o fun-05 sec-4: If at end of file, update read in lengths
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   '  - Read line of characters into the buffer.If needed
+   '    this will resize the buffer.
+   '   o fun-05 sec-1:
+   '     - variable declerations
+   '   o fun-05 sec-2:
+   '     - Check if need to resize the buffer
+   '   o fun-05 sec-3:
+   '     - Read in the next line in the buffer
+   '   o fun-05 sec-4:
+   '     - If at end of file, update read in lengths
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-    ^ Fun-05 Sec-1: variable declerations
-    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+    ^ Fun-05 Sec-1:
+    ^  - variable declerations
+    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
     char *tmpCStr = 0;
     unsigned long spareBuffUL = 0;
 
-    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-    ^ Fun-05 Sec-2: Check if need to resize the buffer
-    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+    ^ Fun-05 Sec-2:
+    ^  - Check if need to resize the buffer
+    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
     if(*curBuffUL == 0 && *lenBuffUL > 0)
         spareBuffUL = *lenBuffUL;
 
-    else if(*lenBuffUL == 0 || *curBuffUL - 1 >= *lenBuffUL)
+    else if(*lenBuffUL == 0 || *curBuffUL -1 >= *lenBuffUL)
     { /*If need to resize the buffer (-1 for 0 index)*/
         *lenBuffUL += resBuffUL - 1;
-            /*-1 to account for adding two index one items*/
-        *buffCStr = realloc(*buffCStr, sizeof(char) * (*lenBuffUL + 1));
+            // -1 to account for adding two index one items
+        *buffCStr =
+          realloc(
+            *buffCStr,
+            sizeof(char) * (*lenBuffUL + 1)
+        ); // Resize hte buffer
 
         if(*buffCStr == 0)
             return 64; /*Memory allocation error*/
 
-        spareBuffUL = resBuffUL; /*Amount of extra space in the buffer*/
+        /*Amount of extra space in the buffer*/
+        spareBuffUL = resBuffUL;
     } /*If need to resize the buffer*/
 
     else
         spareBuffUL = *lenBuffUL - *curBuffUL;
 
-    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-    ^ Fun-05 Sec-3: Read in the next line in the buffer
-    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+    ^ Fun-05 Sec-3:
+    ^  - Read in the next line in the buffer
+    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
     
-    /*Set up marker to mark when the entire line read was in*/
+    // Set up marker to catch when read in the entire line
     *(*buffCStr + *lenBuffUL - 2) = '\0';
     tmpCStr = *buffCStr + *curBuffUL;
 
@@ -464,8 +522,9 @@ unsigned char addLineToBuffSeqFun(
            *(*buffCStr + *lenBuffUL - 2) == '\n'
         ) { /*If read in the line*/
 
+            // Check if I used the entire buffer
             if(*(*buffCStr + *lenBuffUL - 2) == '\n')
-                *curBuffUL = *lenBuffUL; /*used entire buffer*/
+                *curBuffUL = *lenBuffUL;
             else
             { /*Else only read in part of the buffer*/
                 while(*tmpCStr != '\0')
@@ -475,28 +534,34 @@ unsigned char addLineToBuffSeqFun(
                 } /*While have characters in the buffer*/
             } /*Else only read in part of the buffer*/
 
-            return 1; /*Read in entire line, return end of buff*/
+            return 1; // Finshed with the line
         } /*If read in the line*/
 
         /*Else resize the buffer*/
-        *curBuffUL = *lenBuffUL - 1; /*Filled up the buffer*/
+        *curBuffUL = *lenBuffUL - 1; // Filled up buffer
             /*-1 to account for 0 index*/
         *lenBuffUL += resBuffUL - 1;
            /*-1 to account for adding two index 1 items*/
-        *buffCStr = realloc(*buffCStr, sizeof(char) * (*lenBuffUL + 1));
+
+        *buffCStr =
+          realloc(
+            *buffCStr,
+            sizeof(char) * (*lenBuffUL + 1)
+        ); // Resize the buffer
 
         if(*buffCStr == 0)
             return 64; /*Memory allocation error*/
 
         /*Reset my maker for entire line read in*/
         *(*buffCStr + *lenBuffUL - 2) = '\0';
-        spareBuffUL = resBuffUL; /*Amount of extra space in the buffer*/
+        spareBuffUL = resBuffUL;
         tmpCStr = *buffCStr + *curBuffUL;
     } /*While I have lines to read*/
 
-    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-    ^ Fun-05 Sec-4: If at end of file, update read in lengths
-    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+    ^ Fun-05 Sec-4:
+    ^  - If at end of file, update read in lengths
+    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
     if(*(*buffCStr + *lenBuffUL - 2) == '\n')
         *curBuffUL = *lenBuffUL; /*used entire buffer*/
@@ -512,16 +577,19 @@ unsigned char addLineToBuffSeqFun(
     return 0; /*End of file*/
 } /*addLineToBuffSeqFun*/
 
-/*---------------------------------------------------------------------\
-| Output: Modifies inCStr to be backwards (end at start, start at end)
-\---------------------------------------------------------------------*/
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o inCStr to be backwards (end at start, start at end)
+\--------------------------------------------------------*/
 void reverseCStr(
     char *inCStr,       // C-string to refeverse
-    uint32_t lenCStrUI // Length of input string (index 1)
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+    uint32_t lenCStrUI  // Length of input string (index 1)
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-06 TOC: Sec-1 Sub-1: reverseCStr
-   '  - Reverse a c-string to be backwards (here for Q-score entries)
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   '  - Reverse a c-string to be backwards
+   '    (here for Q-score entries)
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     char *endCStr = inCStr + lenCStrUI - 1;
     char swapC = 0;
@@ -622,4 +690,33 @@ void addStartEndToSeqST(
    return;
 } // addStartEndToSeqST
 
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o Sets id, sequence, and Q-score entreis to start
+|      with '\0' and the id, sequence, and Q-score lengths
+|      to 0. This does not change the buffer lengths.
+\--------------------------------------------------------*/
+void blankSeqST(
+  struct seqStruct *seqST // Struct to Blank
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-10 TOC: Sec-01: initSeqST
+   '  - Sets values in seqST to blank values
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+   if(seqST->idCStr != 0) *seqST->idCStr = '\0';
+   seqST->lenIdUI = 0;
+
+   if(seqST->seqCStr != 0) *seqST->seqCStr = '\0';
+   seqST->seqCStr = 0;
+   seqST->lenSeqUI = 0;
+
+   if(seqST->qCStr != 0) *seqST->qCStr = '\0';
+   seqST->qCStr = 0;
+   seqST->lenQUI = 0;
+
+   seqST->offsetUI = 0;
+   seqST->endAlnUI = 0;
+
+   return;
+} // initSeqST
