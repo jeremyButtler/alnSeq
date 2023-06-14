@@ -1,7 +1,22 @@
 set confirm off
 #break alnSeq.c:215
 #break alnSeq.c:377
-break needleman.c:310
-break alnSeq.c:428
-#run -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta > testing/dummy-new.aln
-run -query testing/TickBornEncephalitis-query.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/Tick.aln
+#break needleman.c:159
+#break needleman.c:194
+#break needleman.c:330
+break alnSeq.c:425
+run -use-water -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta > testing/dummy-new.aln
+#run -query testing/TickBornEncephalitis-query.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/Tick-new.aln
+
+# Quick function to get length of a string
+define lenstr
+  set $tmpStr = $arg0
+  set $lenI = 0
+
+  while(*$tmpStr != '\0')
+    set $tmpStr = $tmpStr + 1
+    set $lenI = $lenI + 1
+  end
+
+  p $lenI
+end

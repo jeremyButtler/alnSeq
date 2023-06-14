@@ -1,38 +1,42 @@
 /*#########################################################
 # Name alignmentsFun
 # Use:
-#  o Holds functions for doing pairwise alignments (Needleman/waterman)
-# Includes:
-#   - "defaultSettings.h"
-#   - "cStrToNumberFun.h"
-#   - "twoBitArrays.h"
-# C Standard libraries:
-#   - <stdlib.h>
-#   - <stdio.h>
+#  o Holds functions for doing a pairwise Needleman Wunsch
+#    alignment
+# Libraries:
+#   - "generalAlnFun.h"
+#   - "alnStruct.h"
+#   - "alnMatrixStruct.h"
+#   o "twoBitArrays.h"
+#   o "scoresST.h"
+#   o "seqStruct.h"
+#   o "alnSetStruct.h"
+#   o "alnSeqDefaults.h"
+# C Standard libraries Used:
+#   o <stdlib.h>
 #   o <stdint.h>
+#   o <stdio.h>
 #########################################################*/
 
 #include "needleman.h"
 
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOF: Start Of Functions
 '  - fun-01 NeedleManWunschAln:
-'     o Perform a Needleman-Wunsch alignment on input sequences
+'    o Perform a Needleman-Wunsch alignment on the two
+'      input sequences
 '  - fun-02 updateDirAndScore:
-'     o Picks the best score and direction for the current base pairs
-'       being compared in a Needleman Wunsch alignment
-\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+'    o Picks best score and direction for the current base
+'      pairs being compared in a Needleman Wunsch alignment
+\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-
-/*---------------------------------------------------------------------\
+/*--------------------------------------------------------\
 | Output:
 |  - Returns:
-|    o array with flags for snp/match, insertion, and deletions at each
-|      position. (1 = snp/match, 2 = insertion, 4 = deletion)
-|    o 0 for memory allocation errors
-|  - Modifies:
-|    o lenErrAryUI to hold the length of the returned array
-\---------------------------------------------------------------------*/
+|    o alnMatrixStruct with the directoin matrix and best
+|      score struct pointing to the connor left cell in
+|      the direction matrix
+\--------------------------------------------------------*/
 struct alnMatrixStruct * NeedlemanAln(
     struct seqStruct *queryST,
       // query sequence, length, & bounds for alignment
@@ -40,21 +44,24 @@ struct alnMatrixStruct * NeedlemanAln(
       // reference sequence, length, & bounds for alignment
     struct alnSet *settings // Settings for the alignment
     // *startI and *endI paramaters should be index 1
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: NeedlemanAln
-   '  - Perform a Needleman-Wunsch alignment on input sequences
-   '  o fun-01 sec-1: Variable declerations
-   '  o fun-01 sec-2: Allocate memory for alignment
-   '  o fun-01 sec-3: Fill in the initial negatives for the reference
-   '  o fun-01 sec-4: Fill the matrix with scores
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   '  - Perform a Needleman-Wunsch alignment on the two
+   '    input sequences
+   '  o fun-01 sec-01:
+   '    - Variable declerations
+   '  o fun-01 sec-02:
+   '    - Allocate memory for alignment
+   '  o fun-01 sec-03:
+   '    - Fill in the initial negatives for the reference
+   '  o fun-01 sec-04:
+   '    - Fill the matrix with scores
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-01 Sec-1: Variable declerations
-   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
-
-   char firstRoundBl = 1;
-   char swapBuffBl = 1;   // Swap buffers when finshed every 2nd row
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-01 Sec-01:
+   ^  - Variable declerations
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    // Get the start of the query and reference sequences
    char *refStartCStr = refST->seqCStr + refST->offsetUI;
@@ -62,8 +69,8 @@ struct alnMatrixStruct * NeedlemanAln(
    char *queryStartCStr =
         queryST->seqCStr + queryST->offsetUI;
 
-   char *tmpQueryCStr = queryStartCStr;
-   char *tmpRefCStr = refStartCStr;
+   char *tmpQueryCStr = 0;
+   char *tmpRefCStr = 0;
 
    // Find the length of the reference and query
    unsigned long lenQueryUL =
@@ -72,34 +79,40 @@ struct alnMatrixStruct * NeedlemanAln(
    unsigned long lenRefUL =
        refST->endAlnUI - refST->offsetUI;
 
+   // Scoring variables 
    long snpScoreL = 0;     // Score for single base pair
-   long scoreTopL = 0;     // Score when using the top cell
-   long scoreDiagnolL = 0; // Score when using the diagnol cell
-   long scoreLeftL = 0;    // Score when using the left cell
+   long scoreTopL = 0;     // Score of the top cell
+   long scoreDiagnolL = 0; // Score of the diagnol cell
+   long scoreLeftL = 0;    // Score of the left cell
 
    long *scoreMatrixL = 0; // matrix to use in alignment
-   long *scoreOnLPtr = 0;  // Score I am currently working on
-   long *lastBaseLPtr = 0; // Pointer to cell with last base
+   long *scoreOnLPtr = 0;  // Score I am working on
+   long *lastBaseLPtr = 0; // Pointer to score above base
 
-   struct twoBitAry *dirMatrix = 0;  // Directions for each score cell
-   struct twoBitAry topDir;
-   struct twoBitAry leftDir;   // Deletion direction
+   // For Swaping score buffers each round
+   char swapBuffBl = 1;
+
+   // Direction matrix (one cell holds a single direction)
+   struct twoBitAry *dirMatrix = 0;// Direction matrix
+   struct twoBitAry topDir;        // Direction above cell
+   struct twoBitAry leftDir;       // Direction before cell
 
    struct alnMatrixStruct *retMtxST =
      calloc(1, sizeof(struct alnMatrixStruct));
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-01 Sec-2: Allocate memory for alignment
-   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-01 Sec-02:
+   ^  - Allocate memory for alignment
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    if(retMtxST == 0) return 0;
 
    initAlnMatrixST(retMtxST);
 
    scoreMatrixL =
-     calloc(2 * (lenRefUL + 1), sizeof(unsigned long));
+     calloc(2 * (lenRefUL + 1) + 2, sizeof(unsigned long));
        // I need two rows to keep track of the scores (2x)
-       // lenRefUL + 1 is to account for insertion zero query column
+       // lenRefUL + 1 is to account for insertion column
 
    if(scoreMatrixL == 0)
    { // If I had a memory error
@@ -108,7 +121,10 @@ struct alnMatrixStruct * NeedlemanAln(
    } // If I had a memory error
 
    dirMatrix =
-     makeTwoBitArry((lenRefUL + 1) * (lenQueryUL + 1), 0);
+     makeTwoBitArry(
+       (lenRefUL + 1) * (lenQueryUL + 1) + 2,
+       0
+   );
      // Calls calloc and adds an extra element at end
        // lenRefUL + 1 accounts for insertion reference row
        // lenQeurI + 1 accounts for insertion query column
@@ -122,51 +138,60 @@ struct alnMatrixStruct * NeedlemanAln(
 
    retMtxST->dirMatrixST = dirMatrix;
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-01 Sec-3: Fill in the initial negatives for the reference
-   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-01 Sec-03:
+   ^  - Fill in the initial negatives for the reference
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    // Build up the indels for the reference row
    scoreOnLPtr = scoreMatrixL;
-   *scoreOnLPtr = 0;         // Top left cell
-   ++scoreOnLPtr;            // Move to first reference base cell
-   *scoreOnLPtr = settings->gapStartPenaltyI;
-       // Second column of the first row holds the first indel
-   ++scoreOnLPtr;            // Move to first reference base cell
+   *scoreOnLPtr = 0;         // Top left cell starts at 0
+   ++scoreOnLPtr;            // Move to next cell (score)
 
-   // Get direction matrix in sync with scoring matrix
    changeTwoBitElm(dirMatrix, defMoveStop);
    twoBitAryMoveToNextElm(dirMatrix);
 
-   // Set up to loop through the reference bases
-   tmpRefCStr = refStartCStr;
+   // 2nd score (first indel in matrix)
+   *scoreOnLPtr = settings->gapStartPenaltyI;
+   ++scoreOnLPtr;      // Move to the 2nd reference base
 
-   // Already filled in two cells in this row so, it is lenRef - 1
+   changeTwoBitElm(dirMatrix, defMoveLeft);
+   twoBitAryMoveToNextElm(dirMatrix);
+
+   // Set up scores for the remaning cells in the first row
+   tmpRefCStr = refStartCStr + 1;
+
    while(*tmpRefCStr != '\0')
    { // loop; till have initalized the first row
-       *scoreOnLPtr =
-         *(scoreOnLPtr - 1) + settings->gapExtendPenaltyI;
+     *scoreOnLPtr =
+       *(scoreOnLPtr - 1) + settings->gapExtendPenaltyI;
 
-       ++scoreOnLPtr; // Move to the next element
-       // Move past elements in the bit array
-       // Not worried about specifiying left shift (0),
-       // since calloc already set everything to 0.
-
-       changeTwoBitElm(dirMatrix, defMoveLeft);
-       twoBitAryMoveToNextElm(dirMatrix);
-       ++tmpRefCStr;
+     // Move to the next cell (ref base)
+     ++scoreOnLPtr;
+     changeTwoBitElm(dirMatrix, defMoveLeft);
+     twoBitAryMoveToNextElm(dirMatrix);
+     ++tmpRefCStr;
    } // loop; till have initalized the first row
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-01 Sec-4: Fill the matrix with scores
-   ^  o fun-01 sec-4 sub-1: Fill in the indel column
-   ^  o fun-01 sec-4 sub-2: Get scores for insertion, deletion, match
-   ^  o fun-01 sec-4 sub-3: Move to the next refernce/query base
-   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-01 Sec-04:
+   ^  - Fill the matrix with scores
+   ^  o fun-01 sec-04 sub-01:
+   ^    - Set up for filling the rest of the matrix
+   ^  o fun-01 sec-04 sub-02:
+   ^    - Fill in the first cell (indel column)
+   ^  o fun-01 sec-04 sub-03:
+   ^    - Get scores for insertion, deletion, match
+   ^  o fun-01 sec-04 sub-04:
+   ^    - Move to the next refernce/query base
+   ^  o fun-01 sec-04 sub-05:
+   ^    - Handle the first cell (indel col) in new row
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   /*******************************************************************\
-   * Fun-01 Sec-4 Sub-1: Fill in the indel column
-   \*******************************************************************/
+   /******************************************************\
+   ^ Fun-01 Sec-04 Sub-01:
+   ^  - Set up for filling the rest of the matrix
+   \******************************************************/
 
    // One element back will put me on the previous value
    cpTwoBitPos(dirMatrix, &leftDir);
@@ -178,50 +203,44 @@ struct alnMatrixStruct * NeedlemanAln(
    moveXElmFromStart(&topDir, 0);
 
    // Set up the previous score
-   lastBaseLPtr = scoreMatrixL; // Last base is on first row
-   firstRoundBl = 1; // Mark need to add a gap start penalty at start
-   swapBuffBl = 1;   // Swap buffers when finsh every 2nd row
+   lastBaseLPtr = scoreMatrixL; // Set to first row
+   swapBuffBl = 1;
 
    tmpQueryCStr = queryStartCStr;
    tmpRefCStr = refStartCStr;
 
+   /******************************************************\
+   * Fun-01 Sec-04 Sub-02:
+   *  - Fill in the first cell (indel column)
+   \******************************************************/
+
+    *scoreOnLPtr =
+      *lastBaseLPtr + settings->gapExtendPenaltyI;
+
+    changeTwoBitElm(dirMatrix, defMoveUp);
+
+    twoBitAryMoveToNextElm(dirMatrix);
+    twoBitAryMoveToNextElm(&topDir);
+    twoBitAryMoveToNextElm(&leftDir);
+
+    // Move to the first base comparison
+    ++scoreOnLPtr;  // Move of the indel column
+    ++lastBaseLPtr; // Move off the indel column
+
+    /*****************************************************\
+    * Fun-01 Sec-04 Sub-03:
+    *  - Get scores for insertion, deletion, match
+    \*****************************************************/
+
    // Starting on the first sequence row
    while(*tmpQueryCStr != '\0')
-   { // loop; compare one query base against all reference bases
-
-       switch(firstRoundBl)
-       { // Switch, check if on the 1st cell of the 2nd row
-           case 1:
-             *scoreOnLPtr =
-               *lastBaseLPtr + settings->gapStartPenaltyI;
-             firstRoundBl = 0; // Never will be reset
-             break;
-
-           case 0:
-             *scoreOnLPtr =
-               *lastBaseLPtr + settings->gapExtendPenaltyI;
-             break;
-           // Else is the first indel for the indel column
-       } // Switch, check if on the 1st cell of the 2nd row
- 
-       changeTwoBitElm(dirMatrix, defMoveUp);
-       twoBitAryMoveToNextElm(dirMatrix);
-       twoBitAryMoveToNextElm(&topDir);
-       twoBitAryMoveToNextElm(&leftDir);
-
-       // Move to the first base comparison
-       ++scoreOnLPtr;  // Get of negative column for the new query base
-       ++lastBaseLPtr; // Get of negative column for last query base
+   { // loop; fill the direction matrix with socres
 
        tmpRefCStr = refStartCStr;
 
-       /***************************************************************\
-       * Fun-01 Sec-4 Sub-2: Get scores for insertion, deletion, match
-       \***************************************************************/
-
-       // First reference bases column (indel column already handled)
+       // Find scores & directions for all basepairs in row
        while(*tmpRefCStr != '\0')
-       { // loop; compare one query to one reference base
+       { // loop; compare one query to all reference bases
            snpScoreL =
               getBasePairScore(
                   tmpQueryCStr,
@@ -229,127 +248,145 @@ struct alnMatrixStruct * NeedlemanAln(
                   settings
            ); // Find the score for the two base pairs
 
-           // Find the score for the diagnol cell (snp/match)
+           // Find the score for diagnol cell (snp/match)
            scoreDiagnolL = *(lastBaseLPtr - 1) + snpScoreL;
 
-           switch(settings->matchPriorityBl) 
-           { // Switch: check if matches have priority
+           scoreTopL =
+             getIndelScore(
+               &topDir,
+               settings,
+               lastBaseLPtr
+           ); // Get the score for an insertion
 
-               case 1:
-                   if(
-                     checkIfBasesMatch(
-                       tmpQueryCStr,
-                       tmpRefCStr
-                     ) != 0
-                   ) { // If had matching bases
-                       changeTwoBitElm(
-                         dirMatrix,
-                         defMoveDiagnol
-                       );
-                       *scoreOnLPtr = scoreDiagnolL;
-                       break;
-                   } // If had matching bases
+           scoreLeftL =
+             getIndelScore(
+               &leftDir,       //last cells direction
+               settings,       // Has gap penalties
+               scoreOnLPtr - 1 // Score of previous base
+           ); // Get the score for an insertion
 
-               case 0:   // Either not using match priority or not match
-                   scoreTopL =
-                       getIndelScore(
-                           &topDir,
-                           settings,
-                           lastBaseLPtr
-                   ); // Get the score for an insertion
+           updateDirAndScoreNeedle(
+             dirMatrix,       // Direction matrix
+             settings,        // has direction preference
+             &scoreTopL,      // Score for an insertion
+             &scoreDiagnolL,  // Score for an deletion
+             &scoreLeftL,     // Score for an match/snp
+             scoreOnLPtr      // Cell on in score matrxi
+           ); // Update the scores
 
-                   scoreLeftL =
-                       getIndelScore(
-                           &leftDir, //last cells direction
-                           settings,       // Has gap penalties
-                           scoreOnLPtr - 1 // Score of the previous base
-                   ); // Get the score for an insertion
-
-                   updateDirAndScoreNeedle(
-                       dirMatrix,
-                       settings,   // Has preference for score selection
-                       &scoreTopL,     // Score for an insertion
-                       &scoreDiagnolL, // Score for an match/snp
-                       &scoreLeftL,    // The score for an deletion
-                       scoreOnLPtr
-                   ); // Update the scores
-           } // Switch: check if matches have priority
-
-           /************************************************************\
-           * Fun-01 Sec-4 Sub-3: Move to the next refernce/query base
-           \************************************************************/
+           /**********************************************\
+           * Fun-01 Sec-04 Sub-04:
+           *  - Move to the next refernce/query base
+           \**********************************************/
        
            // Move to the next cell to score
-           ++scoreOnLPtr; // Move to next comparison for this query base
-           ++lastBaseLPtr; // Move to next element
-           ++tmpRefCStr;   // Move to the next reference base
+           ++scoreOnLPtr;  // Move to the next open score
+           ++lastBaseLPtr; // Move to the score I just did
+           ++tmpRefCStr;   // Move to next reference base
 
            // Move to the next base pair to score
            twoBitAryMoveToNextElm(dirMatrix);
            twoBitAryMoveToNextElm(&topDir);
            twoBitAryMoveToNextElm(&leftDir);
-       } // loop; compare one query to one reference base
+       } // loop; compare one query to all reference bases
 
+       // Check if I still need to first row of scores
+       // THis is to see what I can overwrite/reuse
        if(swapBuffBl & 1)
        { // If need to swap the buffers
-           scoreOnLPtr = scoreMatrixL; // Restarting scoring
+           scoreOnLPtr = scoreMatrixL;
            swapBuffBl = 0;
        } // If need to swap the buffers
 
-       else
+       else // Else 2nd row of scores is no longer needed
        { // Else need to reset the score part
-           lastBaseLPtr = scoreMatrixL; // Last base is on first row
+           lastBaseLPtr = scoreMatrixL;
            swapBuffBl = 1;
        } // Else need to reset the score part
 
        ++tmpQueryCStr; // Move to the next query base
-   } // loop; compare one query base against all reference bases
 
-   // Move back to the lower right conor cell
+       /**************************************************\
+       *  Fun-01 Sec-04 Sub-05:
+       *    - Handle the first cell (indel col) in new row
+       \**************************************************/
+
+       *scoreOnLPtr =
+         *lastBaseLPtr + settings->gapExtendPenaltyI;
+
+       changeTwoBitElm(dirMatrix, defMoveUp);
+       twoBitAryMoveToNextElm(dirMatrix);
+       twoBitAryMoveToNextElm(&topDir);
+       twoBitAryMoveToNextElm(&leftDir);
+
+       // Move to the first base comparison
+       ++scoreOnLPtr;  // Move to first base pair in row
+       ++lastBaseLPtr; // Move to last base pair
+   } // loop; fill the direction matrix with socres
+
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-01 Sec-05:
+   ^  - Set up for returing the matrix (clean up/wrap up)
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   // Account for being two cells out of bounds
+   twoBitAryMoveBackOneElm(dirMatrix);
+   changeTwoBitElm(dirMatrix, defMoveStop);
    twoBitAryMoveBackOneElm(dirMatrix);
 
    // Set the best score to the conor right cell
    if(swapBuffBl != 0)
-     retMtxST->bestScoreST.scoreL = *(scoreOnLPtr - 1);
+     retMtxST->bestScoreST.scoreL = *(scoreOnLPtr - 2);
    else
      retMtxST->bestScoreST.scoreL =
-       *(lastBaseLPtr + lenRefUL);
+       *(lastBaseLPtr + lenRefUL - 1);
 
    retMtxST->bestScoreST.indexUL =
      getTwoBitAryIndex(dirMatrix);
 
    free(scoreMatrixL);
+
    return retMtxST;
 } // NeeldeManWunschAln
 
-/*---------------------------------------------------------------------\
-| Output: Modifies: scoreOnL and dirOnUC to hold best score & direction
-\---------------------------------------------------------------------*/
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o scoreOnL and dirOnUC to hold best score & direction
+\--------------------------------------------------------*/
 void updateDirAndScoreNeedle(
-    struct twoBitAry *dirOnST, // Cell to update
-    struct alnSet *alnSetST, // Has preference for score selection
-    long *scoreTopL,     // Score for an insertion
-    long *scoreDiagnolL, // Score for an match/snp
-    long *scoreLeftL,    // The score for an deletion
-    long *scoreOnL       // Score to update
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+    struct twoBitAry *dirOnST,// Cell to update
+    struct alnSet *alnSetST,  // for score selection
+    long *scoreTopL,          // Score for an insertion
+    long *scoreDiagnolL,      // Score for an match/snp
+    long *scoreLeftL,         // The score for an deletion
+    long *scoreOnL            // Score to update
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: updateDirAndScoreNeedle
-   '  - Picks the best score and direction for the current base pairs
-   '    being compared in a Needleman Wunsch alignment
-   '  o fun-02 sec-1: Matches->insertions->deletions
-   '  o fun-02 sec-2: Matches->deletions->insertions
-   '  o fun-02 sec-3: Insertions->matches->deletions
-   '  o fun-02 sec-4: Deletions->matches->insertions
-   '  o fun-02 sec-5: Insertions->deletions->matches
-   '  o fun-02 sec-6: Deletions->insertions->matches
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+   '  - Picks the best score and direction for the current
+   '    base pairs being compared in a Needleman
+   '    Wunsch alignment
+   '  o fun-02 sec-01:
+   '    - Matches->insertions->deletions
+   '  o fun-02 sec-02:
+   '    - Matches->deletions->insertions
+   '  o fun-02 sec-03:
+   '    - Insertions->matches->deletions
+   '  o fun-02 sec-04:
+   '    - Deletions->matches->insertions
+   '  o fun-02 sec-05:
+   '    - Insertions->deletions->matches
+   '  o fun-02 sec-06:
+   '    - Deletions->insertions->matches
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   // I decide the best path as I score since all equal scores create
-   // an equally valid alignment.
+   // I decide the best path as I score since all equal
+   // scores create an equally valid alignment.
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-02 Sec-1: Matches and then insertions
-   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-02 Sec-01:
+   ^  - Matches and then insertions
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    switch(alnSetST->diagnolPriorityC)
    { // Switch; get an snp/match priority
@@ -358,7 +395,7 @@ void updateDirAndScoreNeedle(
            switch(alnSetST->topPriorityC)
            { // Priority for insertions
                case 1:
-               // Case: priority is matches/snps and then insertions
+               // Case: prefer matches/snps then insertions
                    if(*scoreDiagnolL >= *scoreTopL)
                    { // If diagnol beats insertion
 
@@ -372,23 +409,23 @@ void updateDirAndScoreNeedle(
                        } // If diagnol beats deletions
 
                        else
-                       { // Else the deletion is the best score
+                       { // Else the deletion is best score
                            changeTwoBitElm(
                              dirOnST,
                              defMoveLeft
                            );
                            *scoreOnL = *scoreLeftL;
-                       } // Else the deletion is the best score
+                       } // Else deletion is the best score
                    } // If diagnol beats insertion
 
                    else if(*scoreTopL >= *scoreLeftL)
-                   { // Else the insertion is the best score
+                   { // Else insertion is the best score
                       changeTwoBitElm(
                         dirOnST,
                         defMoveUp
                       );
                       *scoreOnL = *scoreTopL;
-                   } // Else the insertion is the best score
+                   } // Else insertion is the best score
 
                    else
                    { // Else the deletion is the best score
@@ -400,14 +437,15 @@ void updateDirAndScoreNeedle(
                    } // Else the deletion is the best score
                        
                    return;
-               // Case: priority is matches/snps and then insertions
+               // Case: prefer matches/snps then insertions
 
-               /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-               ^ Fun-02 Sec-2: Matches->deletions->insertions
-               \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+               /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+               ^ Fun-02 Sec-02:
+               ^  - Matches->deletions->insertions
+               \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
                case 2:
-               // Case: priority is matches/snps and then deletions
+               // Case: prefer matches/snps then deletions
                    if(*scoreDiagnolL >= *scoreLeftL)
                    { // If diagnol beats deletion
 
@@ -421,13 +459,13 @@ void updateDirAndScoreNeedle(
                        } // If diagnol beats insertions
 
                        else
-                       { // Else the insertion is the best score
+                       { // Else insertion is best score
                            changeTwoBitElm(
                              dirOnST,
                              defMoveUp
                            );
                            *scoreOnL = *scoreTopL;
-                       } // Else the insertion is the best score
+                       } // Else insertion is best score
                    } // If diagnol beats deletion
 
                    else if(*scoreLeftL >= *scoreTopL)
@@ -440,50 +478,55 @@ void updateDirAndScoreNeedle(
                    } // Else the deletion is the best score
 
                    else
-                   { // Else the insertion is the best score
+                   { // Else insertion is the best score
                       changeTwoBitElm(dirOnST, defMoveUp);
                       *scoreOnL = *scoreTopL;
-                   } // Else the insertion is the best score
+                   } // Else insertion is the best score
                        
                    return;
-               // Case: priority is matches/snps and then deletions
+               // Case: prefer matches/snps then deletions
            } // Priority for insertions
        // Case; bases or matches are top priority
 
-       /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-       ^ Fun-02 Sec-3: Insertions->matches->deletions
-       \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+       /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+       ^ Fun-02 Sec-03:
+       ^  - Insertions->matches->deletions
+       \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
        case 1:
        // Case; bases or matches are second priority
            switch(alnSetST->topPriorityC)
            { // Priority for insertions
                case 0:
-               // Case: priority is insertions and then matches/snps
+               // Case: prefer insertions then matches/snps
                    if(*scoreDiagnolL > *scoreTopL)
                    { // If diagnol beats insertion
 
                        if(*scoreDiagnolL >= *scoreLeftL)
                        { // If diagnol beats deletions
-                           changeTwoBitElm(dirOnST, defMoveDiagnol);
+                           changeTwoBitElm(
+                             dirOnST,
+                             defMoveDiagnol
+                           );
+
                            *scoreOnL = *scoreDiagnolL;
                        } // If diagnol beats deletions
 
                        else
-                       { // Else the deletion is the best score
+                       { // Else deletion is the best score
                            changeTwoBitElm(
                              dirOnST,
                              defMoveLeft
                            );
                            *scoreOnL = *scoreLeftL;
-                       } // Else the deletion is the best score
+                       } // Else deletion is the best score
                    } // If diagnol beats insertion
 
                    else if(*scoreTopL >= *scoreLeftL)
-                   { // Else the insertion is the best score
+                   { // Else insertion is the best score
                       changeTwoBitElm(dirOnST, defMoveUp);
                       *scoreOnL = *scoreTopL;
-                   } // Else the insertion is the best score
+                   } // Else insertion is the best score
 
                    else
                    { // Else the deletion is the best score
@@ -495,14 +538,15 @@ void updateDirAndScoreNeedle(
                    } // Else the deletion is the best score
                        
                    return;
-               // Case: priority is matches/snps and then insertions
+               // Case: prefer insertions then matches/snps
 
-               /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-               ^ Fun-02 Sec-4: Deletions->matches->insertions
-               \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+               /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+               ^ Fun-02 Sec-04:
+               ^  - Deletions->matches->insertions
+               \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
                case 2:
-               // Case: priority is deletions and then matches/snps
+               // Case: prefer deletions then matches/snps
                    if(*scoreDiagnolL > *scoreLeftL)
                    { // If diagnol beats deletion
 
@@ -516,13 +560,13 @@ void updateDirAndScoreNeedle(
                        } // If diagnol beats insertions
 
                        else
-                       { // Else the insertion is the best score
+                       { // Else insertion is best score
                            changeTwoBitElm(
                              dirOnST,
                              defMoveUp
                            );
                            *scoreOnL = *scoreTopL;
-                       } // Else the insertion is the best score
+                       } // Else insertion is best score
                    } // If diagnol beats deletion
 
                    else if(*scoreLeftL >= *scoreTopL)
@@ -535,28 +579,29 @@ void updateDirAndScoreNeedle(
                    } // Else the deletion is the best score
 
                    else
-                   { // Else the insertion is the best score
+                   { // Else insertion is the best score
                       changeTwoBitElm(
                         dirOnST,
                         defMoveUp
                       );
                       *scoreOnL = *scoreTopL;
-                   } // Else the insertion is the best score
+                   } // Else insertion is the best score
                        
                    return;
-               // Case: priority is matches/snps and then deletions
+               // Case: prefer deletions then matches/snps
            } // Priority for insertions
 
-       /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-       ^ Fun-02 Sec-5: Insertions->deletions->matches
-       \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+       /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+       ^ Fun-02 Sec-05:
+       ^  - Insertions->deletions->matches
+       \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
        case 2:
        // Case; bases or matches are last priority
            switch(alnSetST->topPriorityC)
            { // Priority for insertions
                case 0:
-               // Case: priority is insertions and then deletions
+               // Case: prefer insertions then deletions
                    if(*scoreTopL >= *scoreLeftL)
                    { // If diagnol beats insertion
 
@@ -570,13 +615,13 @@ void updateDirAndScoreNeedle(
                        } // If diagnol is the highest score
 
                        else
-                       { // Else the insertion is the best score
+                       { // Else insertion is the best score
                            changeTwoBitElm(
                              dirOnST,
                              defMoveUp
                            );
                            *scoreOnL = *scoreTopL;
-                       } // Else the deletion is the best score
+                       } // Else deletion is the best score
                    } // If diagnol beats insertion
 
                    else if(*scoreLeftL >= *scoreDiagnolL)
@@ -589,23 +634,24 @@ void updateDirAndScoreNeedle(
                    } // Else the deletion is the best score
 
                    else
-                   { // Else the match/snp is the best score
+                   { // Else match/snp is the best score
                       changeTwoBitElm(
                         dirOnST,
                         defMoveDiagnol
                       );
                       *scoreOnL = *scoreDiagnolL;
-                   } // Else the match/snp is the best score
+                   } // Else match/snp is the best score
                        
                    return;
-               // Case: priority is insertions then deletions
+               // Case: prefer insertions then deletions
 
-               /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-               ^ Fun-02 Sec-6: Deletions->insertions->matches
-               \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+               /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+               ^ Fun-02 Sec-06:
+               ^  - Deletions->insertions->matches
+               \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
                case 2:
-               // Case: priority is deletions and then insertions
+               // Case: prefer deletions then insertions
                    if(*scoreTopL > *scoreLeftL)
                    { // If insertion beats deletion
 
@@ -619,13 +665,13 @@ void updateDirAndScoreNeedle(
                        } // If diagnol beats insertions
 
                        else
-                       { // Else the insertion is the best score
+                       { // Else insertion is best score
                            changeTwoBitElm(
                              dirOnST,
                              defMoveUp
                            );
                            *scoreOnL = *scoreTopL;
-                       } // Else the insertion is the best score
+                       } // Else insertion is best score
                    } // If insertion beats deletion
 
                    else if(*scoreLeftL >= *scoreDiagnolL)
@@ -635,20 +681,19 @@ void updateDirAndScoreNeedle(
                    } // Else the deletion is the best score
 
                    else
-                   { // Else the match/snp is the best score
+                   { // Else match/snp is the best score
                       changeTwoBitElm(
                         dirOnST,
                         defMoveDiagnol
                       );
                       *scoreOnL = *scoreDiagnolL;
-                   } // Else the match/snp is the best score
+                   } // Else match/snp is the best score
                        
                    return;
-               // Case: priority is insertions and then deletions
+               // Case: prefer deletions then insertions
            } // Priority for insertions
        // Case; bases or matches are last priority
    } // Switch; get an snp/match priority
 
    return;
 } // updateDirAndScoreNeedle
-

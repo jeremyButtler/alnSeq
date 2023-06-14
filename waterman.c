@@ -61,6 +61,8 @@ struct alnMatrixStruct * WatermanAln(
    '    - Fill in initial negatives for ref
    '  o fun-01 sec-04:
    '    - Fill the matrix with scores
+   '  o fun-01 sec-05:
+   '    - Set up for returing the matrix (clean up/wrap up)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -306,45 +308,28 @@ struct alnMatrixStruct * WatermanAln(
        // Find the score for diagnol cell (snp/match)
        scoreDiagnolL = *(lastBaseLPtr - 1) + snpScoreL;
 
-       switch(settings->matchPriorityBl) 
-       { // Switch: check if matches have priority
-         case 1:
-           if(checkIfBasesMatch(tmpQueryCStr, tmpRefCStr)
-              != 0
-            ){ // If had matching bases
-              changeTwoBitElm(dirMatrix, defMoveDiagnol);
-              *scoreOnLPtr = scoreDiagnolL;
-              break;
-            } // If had matching bases
+       scoreTopL =
+           getIndelScore(
+               &topDir, // Direction of last cell
+               settings,
+               lastBaseLPtr
+       ); // Get the score for an insertion
 
-         case 0:
-         // Case 0: not using match priority/not match
-           scoreTopL =
-               getIndelScore(
-                   &topDir, // Direction of last cell
-                   settings,
-                   lastBaseLPtr
-           ); // Get the score for an insertion
+       scoreLeftL =
+         getIndelScore(
+           &leftDir,      // direction of previous cell
+           settings,        // gap penalties
+           scoreOnLPtr - 1  //Score of last base
+       ); // Get the score for an insertion
 
-           scoreLeftL =
-             getIndelScore(
-               &leftDir,      // direction of previous cell
-               settings,        // gap penalties
-               scoreOnLPtr - 1  //Score of last base
-           ); // Get the score for an insertion
-
-           updateDirScoreWaterSingle(
-             dirMatrix,
-             settings,    // preference for scoring
-             &scoreTopL,     // Score for insertion
-             &scoreDiagnolL, // Score for match/snp
-             &scoreLeftL,    // score for deletion
-             scoreOnLPtr
-           ); // Update the scores
-
-           break;
-         // Case 0: not using match priority/not match
-       } // Switch: check if matches have priority
+       updateDirScoreWaterSingle(
+         dirMatrix,
+         settings,    // preference for scoring
+         &scoreTopL,     // Score for insertion
+         &scoreDiagnolL, // Score for match/snp
+         &scoreLeftL,    // score for deletion
+         scoreOnLPtr
+       ); // Update the scores
 
      /**************************************************\
      * Fun-01 Sec-04 Sub-03:
@@ -424,10 +409,14 @@ struct alnMatrixStruct * WatermanAln(
      ++tmpQueryCStr; // Move to the next query base
    } // loop; compare query base against all ref bases
 
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-01 Sec-05:
+   ^  - Set up for returing the matrix (clean up/wrap up)
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
    // Move back to the lower right conor cell
-   twoBitAryMoveBackOneElm(dirMatrix);
-     // THis is not needed, but it would be nice to keep
-     // things consistent
+   twoBitAryMoveBackOneElm(dirMatrix); // not needed
+   free(scoreMatrixL);
 
    return retMtxST;
 } // WatermanAln
@@ -1144,7 +1133,11 @@ void updateDirScoreWaterSingle(
                        { // If diagnol beats deletions
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               changeTwoBitElm(dirOnST, defMoveStop);
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
+
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
@@ -1153,6 +1146,7 @@ void updateDirScoreWaterSingle(
                              dirOnST,
                              defMoveDiagnol
                            );
+
                            *scoreOnL = *scoreDiagnolL;
                            return;
                        } // If diagnol beats deletions
@@ -1161,7 +1155,11 @@ void updateDirScoreWaterSingle(
                        { // Else deletion is the best score
                            if(*scoreLeftL <= 0)
                            { // If need to make a stop
-                               changeTwoBitElm(dirOnST, defMoveStop);
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
+
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
@@ -1204,7 +1202,10 @@ void updateDirScoreWaterSingle(
                           return;
                       } // If need to make a stop
 
-                      changeTwoBitElm(dirOnST, defMoveLeft);
+                      changeTwoBitElm(
+                        dirOnST,
+                        defMoveLeft
+                      );
                       *scoreOnL = *scoreLeftL;
                       return;
                    } // Else the deletion is best score
@@ -1224,7 +1225,11 @@ void updateDirScoreWaterSingle(
                        { // If diagnol beats insertions
                            if(*scoreDiagnolL <= 0)
                            { // If need to make a stop
-                               changeTwoBitElm(dirOnST, defMoveStop);
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
+
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop
@@ -1262,7 +1267,11 @@ void updateDirScoreWaterSingle(
                    { // Else the deletion is best score
                       if(*scoreLeftL <= 0)
                       { // If need to make a stop
-                          changeTwoBitElm(dirOnST, defMoveStop);
+                          changeTwoBitElm(
+                            dirOnST,
+                            defMoveStop
+                          );
+
                           *scoreOnL = 0;
                           return;
                       } // If need to make a stop
@@ -1526,7 +1535,11 @@ void updateDirScoreWaterSingle(
                        { // Else insertion is best score
                            if(*scoreTopL <= 0)
                            { // If need to make a stop
-                               changeTwoBitElm(dirOnST, defMoveStop);
+                               changeTwoBitElm(
+                                 dirOnST,
+                                 defMoveStop
+                               );
+
                                *scoreOnL = 0;
                                return;
                            } // If need to make a stop

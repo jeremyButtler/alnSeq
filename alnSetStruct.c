@@ -49,7 +49,6 @@ void initAlnSet(
    alnSetST->gapStartPenaltyI = defGapStartPenalty;
    alnSetST->gapExtendPenaltyI = defGapExtendPenalty;
 
-   alnSetST->matchPriorityBl = defMatchPriority;
    alnSetST->diagnolPriorityC = defDiagnolPriority;
    alnSetST->topPriorityC = defTopPriority;
    alnSetST->leftPriorityC = defLeftPriority;

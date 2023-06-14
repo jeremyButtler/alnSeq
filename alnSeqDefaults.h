@@ -36,8 +36,6 @@
 #define defMultiBaseWater 0
    // 0: Only recored the best score in a Waterman Smith
    //    alnigment
-#define defMatchPriority 0
-    // 1: Always uses matches when possible; 0 do not
 
 // Settings for which direction to keep when their are
 // multiple equal directions

@@ -34,6 +34,13 @@ debugOpenBsd:
 	# Used to use -g, but -ggdb provides more info for gdb
 	bash debug.sh
 
+egcc:
+	egcc $(CFLAGS) $(SOURCE) -o alnSeq
+gcc:
+	gcc $(CFLAGS) $(SOURCE) -o alnSeq
+cc:
+	cc $(CFLAGS) $(SOURCE) -o alnSeq
+
 clean:
 	rm alnSeqDebug; # Only thing to clean up
 

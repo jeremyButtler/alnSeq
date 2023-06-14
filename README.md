@@ -6,27 +6,54 @@ AlnSeq runs a memory efficient (O(n \* m / 4)), but not
   for multiple local alignments to be output from a single
   alignment.
 
+One thing I should add. I am not well read on the alignment
+  literature, so I have no idea if some one has already
+  done this. My impression is no, because I do not see
+  anything like this done in emboss, mentioned on
+  Wikipedia, or mentioned in the two or three reviews I
+  have read on the Smith Waterman algorithm.
+
 # This code is not running yet
 
-I have written the basic logic out for this code, but have
-  just started to debug the code. This means this code
-  currently does not work, but hopefully work in a few
-  weeks to months. For an alternative, working version of
-  this code please see the alingSeq folder at
+I am currently debugging this code and will hopefully be
+  done in a few weeks to months. For an alternative,
+  working version of this code please see the alingSeq
+  folder at
   [https://github.com/jeremybuttler/find--Co-infections](https://github.com/jeremybuttler/find--Co-infections).
   The only major difference between the alternative code
-  and this code is that this code will allow the option of
-  saving more then one alignment for the Smith Waterman
-  alignment.
+  and this code will be that this code will allow the
+  option of saving more then one alignment for the Smith
+  Waterman alignment.
+
+Here is my current status
+
+- The Needleman Wunsch alignment has be tested and is now
+  working on OpenBSD (the OS I mainly use), but it is only
+  working on the Debain Linux machine I am testing with
+  non-stdout output. Use a ">", "|", or "-out file.aln" to
+  get the proper output.
+- The Smith Waterman alignment is not working and is what
+  I am currently working on. I am not sure if the errors
+  I am dealing with are in the alignment or the printing.
+- The multi-output Smith Water alignment is what I will
+  move onto next. Currently not working.
 
 # Building and running alnSeq
 
 ## How to build alnSeq
 
 ```
-# This is currnetly not working, but will be the commands
-# for when I have a working version
+# How to install this program
 
+# Install at /usr/local/bin (need root privilage)
+make
+sudo make install
+
+# Use a different install path
+make
+make install PREFIX=/path/to/install
+
+# Manual install
 make
 mv alnSeq /path/to/install
 chmod a+x /path/to/install/alnSeq
@@ -41,10 +68,10 @@ alnSeq -h
 # For a global alignment (Needleman Wunsch)
 alnSeq -query query.fasta -ref ref.fasta > alignment.aln
 
-# For a single local alignment (Waterman Smith)
+# For a single local alignment (Waterman Smith) (not working)
 alnSeq -use-water -query query.fasta -ref ref.fasta > out.aln
 
-# For a multi local alignment (Waterman Smith)
+# For a multi local alignment (Waterman Smith) (not working)
 alnSeq -multi-base-water -query query.fasta -ref ref.fasta -out prefix 
 
 ```
@@ -203,6 +230,39 @@ For multi-threading my thought was to do rows and have each
   previous scores in the scoring matrix for each cell they
   complete. You would need a lock when recording the best
   score(s).
+
+This would take some work, but you could do a full scan of
+  the directional matrix if you recalculated all the
+  scores. However, this will likely take more time than a
+  traditional Smith Waterman. This should take less time
+  than the original calculations though because, you only
+  need to find one score per cell and already know the
+  chosen direction for each cell.
+
+1. Check direction
+  - If match/snp compare bases to get score
+  - Otherwise check previous direction to see if applying
+    an indel starting or indel extension penalty
+2. Get score of cell by adding match/snp or the indel
+   penalty to the previous this cell pointed to (the cell
+   in its path)
+3. If the score is within range, then skip rest of row and
+   complete the alignment path
+   - use a separate scoring array for this
+   - Ignore all cells not in the path of this alignment
+4. Once the path is complete, print, check, or doing what
+   you want with the alignment
+   - Path is complete once at a stop or hit a cell with
+     a lower then minimum score
+   - This may require you to skip some alternative paths
+5. Mark all cells in the traveled path as a stops, so this
+   path is not traveled again
+   - As you come up, travel down all missed valid
+     alternative paths and repeat 3 to 5 till no
+     alternative paths exist.
+6. Return back to start of path to complete the row/skipped
+   cells, repeating steps 1 to 6 until all cells have been
+   checked.
 
 # Thanks
 

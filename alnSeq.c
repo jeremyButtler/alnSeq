@@ -166,10 +166,6 @@ int main(
        \n   - Minimum number unique bases needed for\
        \n     reference or query to keep an non-best\
        \n     alignment when -multi-base-water is used.\
-       \n  -enable-match-priority: [No]\
-       \n     o Always select matches, even when an indel\
-       \n       would give a better score.\
-       \n     o This does not apply to SNPs.\
        \n  -match-ins-del: [match-ins-del]\
        \n     o For equal scores choose matches/SNPs over\
        \n       insertions and insertions over deletions.\
@@ -379,7 +375,7 @@ int main(
    queryST.endAlnUI = queryST.lenSeqUI;
    queryST.offsetUI = 0;
 
-   refST.endAlnUI = queryST.lenSeqUI;
+   refST.endAlnUI = refST.lenSeqUI;
    refST.offsetUI = 0;
 
    if(alnSetST.useNeedleBl != 0)
@@ -606,13 +602,6 @@ char * checkInput(
 
         else if(strcmp(tmpCStr, "-min-bases") == 0)
           cStrToUInt(singleArgCStr, &alnSetST->minBasesUI);
-
-        else if(
-          strcmp(tmpCStr, "-enable-match-priority") == 0
-        ) { // Else if disabling match priority
-            alnSetST->matchPriorityBl = !defMatchPriority;
-            --intArg;
-        } // Else if disabling match priority
 
         else if(strcmp(tmpCStr, "-match-ins-del") == 0)
         { // Else if wants matches->insertions->deletions

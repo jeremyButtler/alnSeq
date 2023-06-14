@@ -258,14 +258,15 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
 
   char *bestQueryCStr =
       queryST->seqCStr
-    + (scoreST->indexUL / (lenQueryUL + 1)) - 1;
+    + (scoreST->indexUL / (lenRefUL + 1)) - 1;
     // lenQueryUL + 1: gives the length of each column in
     //   the matrix
     // bestScoreUI / (column length) gives the index of the
     //   query base for the best score
     // -1: converts the index 1 output to index 0
   char *bestRefCStr =
-      refST->seqCStr + (scoreST->indexUL%(lenRefUL+1)) - 1;
+      refST->seqCStr
+    + (scoreST->indexUL / (lenQueryUL + 1)) - 1;
     // lenRefUL + 1: gives the length of each row in the
     //   matrix
     // bestScoreUI % (row length) gives the index of the
@@ -290,7 +291,7 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   uint8_t bitElmUC = 0;
   uint8_t lastBitElmUC = 0;
 
-  alnST = malloc(sizeof(alnST));
+  alnST = calloc(1, sizeof(alnST));
 
   if(alnST == 0) return 0;
 
@@ -739,6 +740,7 @@ void initAlnST(
    alnST->alnAryUC = 0;
    alnST->lenAlnAryUI = 0;
    alnST->numBasesUI = 0;
+   alnST->numAlnBasesUI = 0;
    alnST->refStartUI = 0;
    alnST->refEndUI = 0;
    alnST->queryStartUI = 0;

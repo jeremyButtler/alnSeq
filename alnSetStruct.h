@@ -82,7 +82,6 @@ typedef struct alnSet
    char diagnolPriorityC; // 0 favor snps; 1 kinda; 2 do not
    char topPriorityC;     // 0 favor insertions; 1 kinda; 2 do not
    char leftPriorityC;    // 0 favor deletions; 1 kinda; 2 do not
-   char matchPriorityBl;  // Match scores always beat all other scores
 
    // Needleman-Wunsch / Waterman Smith variables
    char useNeedleBl;
