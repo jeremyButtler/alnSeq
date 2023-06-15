@@ -266,7 +266,7 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
     // -1: converts the index 1 output to index 0
   char *bestRefCStr =
       refST->seqCStr
-    + (scoreST->indexUL / (lenQueryUL + 1)) - 1;
+    + (scoreST->indexUL % (lenRefUL + 1)) - 1;
     // lenRefUL + 1: gives the length of each row in the
     //   matrix
     // bestScoreUI % (row length) gives the index of the
@@ -659,7 +659,11 @@ void printAln(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    alnAryUCPtr = alnST->alnAryUC;
-   uiBase += wrapUS; // Avoid overprinting with fwrite
+
+   if(alnST->numBasesUI <= wrapUS)
+     goto finishPrint;
+
+   uiBase += wrapUS;
 
    while(uiBase < alnST->numBasesUI)
    { // while I need to print the alignment
@@ -691,33 +695,14 @@ void printAln(
 
    uiBase += 1 - wrapUS;
 
+   finishPrint:
+
    if(uiBase < alnST->numBasesUI)
-   { // If missed the last base
-     if(uiBase > 1)
-     { // If I have printed other parts of this alignment
-       refAlnCStr += 1 - wrapUS;
-       queryAlnCStr += 1 - wrapUS;
-       alnAryUCPtr += 1 - wrapUS;
-     } // If I have printed other parts of this alignment
-     // Else; the alignment is covered in one wrap
-
-     uiBase = alnST->numBasesUI - uiBase + 1;
-
-     fwrite("\n", sizeof(char), 1, outFILE);
-
-     fwrite("Ref:     ", sizeof(char), 9, outFILE);
-     fwrite(refAlnCStr, sizeof(char), uiBase, outFILE);
-     fwrite("\n", sizeof(char), 1, outFILE);
-
-     fwrite("Query:   ", sizeof(char), 9, outFILE);
-     fwrite(queryAlnCStr, sizeof(char), uiBase, outFILE);
-     fwrite("\n", sizeof(char), 1, outFILE);
-
-     
-     fwrite("Eqx:     ", sizeof(char), 9, outFILE);
-     fwrite(alnAryUCPtr, sizeof(char), uiBase, outFILE);
-     fwrite("\n", sizeof(char), 1, outFILE);
-   } // If missed the last base
+   { // If missed the last few bases
+     fprintf(outFILE, "\nRef:     %s\n", refAlnCStr);
+     fprintf(outFILE, "Query:   %s\n", queryAlnCStr);
+     fprintf(outFILE, "Eqx:     %s\n", alnAryUCPtr);
+   } // If missed the last few bases
 
    return;
 } // printAln

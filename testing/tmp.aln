@@ -980,6 +980,10 @@ Ref:     GACACAGATAGTCTGACAAGGAGGTGATGTGTGACTCGGAAAAACACCCG
 Query:   GACACAGGTAGTCTGACAAGGAGGTGATGTGTGACTCGGAAAAACACCCG
 Eqx:     =======X==========================================
 
-Ref:     AC
-Query:   AC
-Eqx:     ==
+Ref:     CT                                                
+Query:   CT                                                
+Eqx:     ==                                                
+
+Ref:     T
+Query:   T
+Eqx:     =

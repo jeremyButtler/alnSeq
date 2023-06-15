@@ -11,7 +11,7 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings (version this ports with)*/
-#define defVersion 1.20230606  // Version of find co-infections 
+#define defVersion 1.20230615  // Version of find co-infections 
 
 #define defLineWrap 59         // Max chars per line in 
                                // output file (min 40)

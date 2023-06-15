@@ -229,15 +229,21 @@ struct alnMatrixStruct * WatermanAln(
    ^  - Fill in initial negatives for reference
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   // Calloc already set everything to done (defMoveStop=0)
-   scoreOnLPtr = scoreMatrixL + lenRefUL + 1;
-       // Move to the first column in next row
-
    // Get the first indel position
    cpTwoBitPos(dirMatrix, &topDir);
+   scoreOnLPtr = scoreMatrixL;
 
-   // Move to start of the first sequence indel column
-   twoBitAryMoveForXElm(dirMatrix, lenRefUL + 1);
+   // This is here just in case the user changes
+   // defMoveStop from 0
+   // <= is same as lenRefUL + 1 when uiCell = 0
+   for(uint32_t uiCell = 0; uiCell <= lenRefUL; ++uiCell)
+   { // loop; till have initalized the first row
+     changeTwoBitElm(dirMatrix, defMoveStop);
+
+     // Move to the next cell (ref base)
+     ++scoreOnLPtr; // Already set to 0 by calloc
+     twoBitAryMoveToNextElm(dirMatrix);
+   } // loop; till have initalized the first row
 
    // Get the left (deletion0 direction positioned
    cpTwoBitPos(dirMatrix, &leftDir);
@@ -267,6 +273,11 @@ struct alnMatrixStruct * WatermanAln(
 
    tmpQueryCStr = queryStartCStr;
    tmpRefCStr = refStartCStr;
+
+   switch(settings->multiBaseWaterBl)
+   { // switch: check if keeping best score for each base
+     case 1: queryNtOnUL = queryST->offsetUI - 1;
+   } // switch: check if keeping best score for each base
 
    // Starting on the first sequence row
    while(*tmpQueryCStr != '\0')

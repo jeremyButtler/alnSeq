@@ -31,12 +31,11 @@ Here is my current status
   working on OpenBSD (the OS I mainly use), but it is only
   working on the Debain Linux machine I am testing with
   non-stdout output. Use a ">", "|", or "-out file.aln" to
-  get the proper output.
-- The Smith Waterman alignment is not working and is what
-  I am currently working on. I am not sure if the errors
-  I am dealing with are in the alignment or the printing.
-- The multi-output Smith Water alignment is what I will
-  move onto next. Currently not working.
+  no error out.
+- The Smith Waterman alignment is working, but printing
+  out needs a redirect like the Needleman Wunsch on linux.
+- I am not sure if multi-output Smith Water alignment is
+  working. I will start debugging this next.
 
 # Building and running alnSeq
 

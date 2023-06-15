@@ -237,7 +237,7 @@ int main(
         ) { /*if the user wanted the version number*/
             fprintf(
                 stdout,
-                "alignSeq from findCoInft version: %.8f\n",
+                "alnSeq version: %.8f\n",
                 defVersion
             ); /*Print out the closest thing to a version*/
             exit(0);
