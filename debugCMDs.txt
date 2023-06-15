@@ -3,12 +3,16 @@ break alnSeq.c:425
 #break needleman.c:330
 #break waterman.c:233
 #break waterman.c:275
+break alnStruct.c:402
 
 #run -use-water -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta > testing/dummy-new-water.aln
-run -use-water -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta
 #run -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta > testing/dummy-new-needle.aln
+
 #run -query testing/TickBornEncephalitis-query.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/Tick-new-needle.aln
 #run -use-water -query testing/TickBornEncephalitis-query.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/Tick-new-water.aln
+
+run -query testing/small-test-query.fasta -ref testing/small-test-ref.fasta -out testing/small-test-new-needle.aln
+#run -use-water -query testing/small-test-query.fasta -ref testing/small-test-ref.fasta -out testing/small-test-new-needle.aln
 
 # Quick function to get length of a string
 define lenstr

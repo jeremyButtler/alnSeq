@@ -423,6 +423,11 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
       ++bestQueryCStr;
   } // Switch; check which sequence I am on the off base
 
+  if(*bestQueryCStr == '\0')
+    bestQueryCStr = queryST->seqCStr;
+
+  if(*bestRefCStr == '\0') bestRefCStr = refST->seqCStr;
+
   /*******************************************************\
   * Fun-03 Sec-06 Sub-02: 
   *  - Add soft masking for the starting bases
