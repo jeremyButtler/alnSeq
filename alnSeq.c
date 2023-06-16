@@ -490,10 +490,10 @@ int main(
      exit(-1);
    } // If had a memory allocation error
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Main Sec-08:
    ^  - Print out the alignment and clean up
-   \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+   \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
    alnAryToLetter(&refST, &queryST, alnST);
 
@@ -511,7 +511,6 @@ int main(
    alnSeqCleanup:
 
    fclose(outFILE);
-   outFILE = 0;
 
    free(queryAlnCStr);
    free(refAlnCStr);

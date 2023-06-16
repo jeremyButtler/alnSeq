@@ -10,7 +10,9 @@ This log records how alnSeq has changed between versions.
 - multi sequence output for Waterman Smith alignment
 - Printing to stdout on Debain, which will likely be
   similar for all linux's
-
+  - This is likely an array out of bounds error some were.
+    I suspect this is in my convert directional matrix
+    function to an alignment array.
 
 # Issues that I am not sure if I will work on
 
