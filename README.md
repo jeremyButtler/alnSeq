@@ -1,10 +1,11 @@
 # Use
 
-AlnSeq runs a memory efficient (O(n \* m / 4)), but not
-  speed efficient Smith Waterman and Needleman Wunsch
-  alignment. It can not do matrix scanning, but does allow
-  for multiple local alignments to be output from a single
-  alignment.
+AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
+  that runs with a memory usage of (O(n \* m / 4)).
+  However, it is less speed efficient than a traditional 
+  Smith Waterman and Needleman Wunsch alignment. It can
+  not do matrix scanning, but will allow for multiple local
+  alignments to be output from a single alignment.
 
 One thing I should add. I am not well read on the alignment
   literature, so I have no idea if some one has already
@@ -36,6 +37,10 @@ Here is my current status
   out needs a redirect like the Needleman Wunsch on linux.
 - I am not sure if multi-output Smith Water alignment is
   working. I will start debugging this next.
+
+# Likely better alternatives already on github
+
+- https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
 
 # Building and running alnSeq
 
