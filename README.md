@@ -35,8 +35,13 @@ Here is my current status
   no error out.
 - The Smith Waterman alignment is working, but printing
   out needs a redirect like the Needleman Wunsch on linux.
-- I am not sure if multi-output Smith Water alignment is
-  working. I will start debugging this next.
+- Multi-output Smith Water alignment is not working.
+- Matrix scan, but is currently not working.
+  - Runs and is outputing cigars, but the reference
+    starting base is off (ending base I think is ok).
+  - Note this will print out cigars for full paths, not the
+    best score in the path.
+  - Note: this makes large files
 
 # Likely better alternatives already on github
 
@@ -169,37 +174,51 @@ The rough planned memory cost of alnSeq is
 
 - Cost of the directional matrix (n\*m)/4
 - Cost to store the reference and query sequence (n + m)
-- Cost of storing the best index 8 \* (n + m) \* 2
+- Cost of storing the best index 8 \* (n + m)
   - The index must be stored as unsigned longs
   - \*2 is because the previous best score needs to be
     stored
   - This is for each query and reference base, but not the
     entire matrix
-- Cost of storing every best score 8 \* (n + m) * 2
+- Cost of storing every best score 8 \* (n + m)
   - Scores are stored as longs
-  - \*2 is because the previous best score needs to be
-    stored
   - This is for each query and reference base, but not the
     entire matrix
 - Cost of converting matrix to an alignment 3 \* (n + m)
-- Total rough cost (n\*m)/4 + 36 \* (n + m)
-- Cost of keeping one more score per base 32 \* (n + m)
+- Total rough cost (n\*m)/4 + 18 \* (n + m)
+- Cost of keeping one more score per base 16 \* (n + m)
   
 The memory cost for two 200,000 base pairs sequences would
   be ([(200,000 \* 200,000) / 4] + 36 \* 200,000) bytes =
   10 Gb + 7.2 Mb < 11Gb.
 
-A traditional Smith Waterman alignment would take 4 bytes
-  per cell of the scoring matrix and at best could take
-  1/4 of a byte for the directional matrix, but often takes
-  1 byte. This means that for aligning two 200,000 base
-  pair sequences the traditional Smith Waterman uses
-  4 to 5 bytes \* (200,000 \* 200,000) bytes = 160Gb-200Gb.
-  This is large increase in memory usage, but also allows
-  the detection of all duplications with a matrix scan.
+This algorithm has a high memory cost.
 
-This shows that though memory may be cheap, it is not n^2
-  cheap.
+## The multi-base print
+
+This records a best score (above "-min-score") for each
+  reference base and query base. However, this will only
+  record a score if the alignment is not extended into the
+  next row. The alternative alignments are printed out as
+  a cigar to a file named prefix--alt.aln.
+
+## The matrix scan
+
+Searches the matrix will I am still filling the matrix. It
+  prints out a cigar for any alignment path that is above 
+  the "-min-score " setting (default 100; needs to be
+  raised) and if the path is no longer extended on the next
+  row. This results in the full alignment, rather than
+  best alignment being printed. So, you will have to 
+  search the cigars for the best alignment.
+
+One problem is that it will also print out alignments that
+  extend the main alignment by one base, which means this
+  makes very large files and takes a lot of time. Also, the
+  print function is not very well done.
+
+The alignments are printed out to a file named
+  prefix--matrix-scan.aln.
 
 ## Final notes
 
@@ -234,39 +253,6 @@ For multi-threading my thought was to do rows and have each
   previous scores in the scoring matrix for each cell they
   complete. You would need a lock when recording the best
   score(s).
-
-This would take some work, but you could do a full scan of
-  the directional matrix if you recalculated all the
-  scores. However, this will likely take more time than a
-  traditional Smith Waterman. This should take less time
-  than the original calculations though because, you only
-  need to find one score per cell and already know the
-  chosen direction for each cell.
-
-1. Check direction
-  - If match/snp compare bases to get score
-  - Otherwise check previous direction to see if applying
-    an indel starting or indel extension penalty
-2. Get score of cell by adding match/snp or the indel
-   penalty to the previous this cell pointed to (the cell
-   in its path)
-3. If the score is within range, then skip rest of row and
-   complete the alignment path
-   - use a separate scoring array for this
-   - Ignore all cells not in the path of this alignment
-4. Once the path is complete, print, check, or doing what
-   you want with the alignment
-   - Path is complete once at a stop or hit a cell with
-     a lower then minimum score
-   - This may require you to skip some alternative paths
-5. Mark all cells in the traveled path as a stops, so this
-   path is not traveled again
-   - As you come up, travel down all missed valid
-     alternative paths and repeat 3 to 5 till no
-     alternative paths exist.
-6. Return back to start of path to complete the row/skipped
-   cells, repeating steps 1 to 6 until all cells have been
-   checked.
 
 # Thanks
 

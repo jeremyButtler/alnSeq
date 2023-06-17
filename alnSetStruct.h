@@ -77,6 +77,7 @@ typedef struct alnSet
 { /*alnSet*/
    // Line wrap for printing out an alignment
    unsigned short lineWrapUS;
+   unsigned short lenFileNameUS;
 
    //kmer mapping variables
    char diagnolPriorityC; // 0 favor snps; 1 kinda; 2 do not
@@ -86,6 +87,7 @@ typedef struct alnSet
    // Needleman-Wunsch / Waterman Smith variables
    char useNeedleBl;
    char multiBaseWaterBl;
+   char matrixScanBl;  // Fur doing a matrix scan
      // If set to 1: Recored a best score for each base
      //   in the reference and query in a Smith Waterman
      // alignment

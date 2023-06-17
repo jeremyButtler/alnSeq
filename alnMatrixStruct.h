@@ -37,10 +37,10 @@ typedef struct alnMatrixStruct
 { // alnStruct
   struct twoBitAry *dirMatrixST;
 
-  struct scoresStruct **refScoresST;
+  struct scoresStruct **refBasesST;
   unsigned long lenRefScoresUL;
 
-  struct scoresStruct **queryScoresST;
+  struct scoresStruct **qryBasesST;
   unsigned long lenQueryScoresUL;
 
   struct scoresStruct bestScoreST;

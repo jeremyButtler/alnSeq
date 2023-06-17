@@ -11,7 +11,7 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings (version this ports with)*/
-#define defVersion 1.20230615  // Version of find co-infections 
+#define defVersion 1.20230616  // Version of find co-infections 
 
 #define defLineWrap 59         // Max chars per line in 
                                // output file (min 40)
@@ -36,6 +36,7 @@
 #define defMultiBaseWater 0
    // 0: Only recored the best score in a Waterman Smith
    //    alnigment
+#define defMatrixScan 0 // Do not do a matrix scan
 
 // Settings for which direction to keep when their are
 // multiple equal directions

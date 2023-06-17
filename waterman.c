@@ -27,11 +27,14 @@
 '       sequences
 '  o fun-02 addBestBaseScore:
 '    - Adds a score and index to the kept scores list
-'  o fun-03 printAltWaterAlns:
+'  o fun-03 printMatrixCig:
+'    - Prints out a cigar for an single path in a
+'      direction matrix
+'  o fun-04 printAltWaterAlns:
 '    - Prints out the best aligment and the saved
 '       alterantive alignments  (best alignment for each
 '       base) to a file
-'  - fun-04 updateDirScoreWaterSingle:
+'  - fun-05 updateDirScoreWaterSingle:
 '     o Picks the best score and direction for the current
 '       base pairs being compared in a Waterman-Smith
 '       alignment
@@ -48,8 +51,9 @@ struct alnMatrixStruct * WatermanAln(
       // query sequence, length, & bounds for alignment
     struct seqStruct *refST,  
       // reference sequence, length, & bounds for alignment
-    struct alnSet *settings // Settings for the alignment
+    struct alnSet *setST,// Settings for the alignment
     // *startI and *endI paramaters should be index 1
+    char *prefixCStr  // Prefix for matrix scan output file
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: WatermanAln
    '  - Run a Waterman Smith alignment on input sequences
@@ -102,8 +106,8 @@ struct alnMatrixStruct * WatermanAln(
 
    // Set up counters for the query and reference base
    // index
-   unsigned long queryNtOnUL = queryST->offsetUI - 1;
-   unsigned long refNtOnUL = refST->offsetUI- 1;
+   unsigned long qryNtUL = queryST->offsetUI - 1;
+   unsigned long refNtUL = refST->offsetUI- 1;
 
    /******************************************************\
    * Fun-01 Sec-01 Sub-02:
@@ -118,8 +122,8 @@ struct alnMatrixStruct * WatermanAln(
    // Marks when to reset score buffer (every second row)
    char swapBuffBl = 1;
    long *scoreMatrixL = 0; // matrix to use in alignment
-   long *scoreOnLPtr = 0;  // Score I am working on
-   long *lastBaseLPtr = 0; //Pointer to cell with last base
+   long *scoreOnLP = 0;  // Score I am working on
+   long *topScoreLP = 0; //Pointer to cell with last base
 
    /******************************************************\
    * Fun-01 Sec-01 Sub-03:
@@ -128,24 +132,57 @@ struct alnMatrixStruct * WatermanAln(
 
    // Variables dealing with the direction matrix for
    // scoring. These are as two bit array variables
-   struct twoBitAry *dirMatrix = 0; // direction on
+   struct twoBitAry *dirMtrx = 0; // direction on
    struct twoBitAry topDir;    // insertion direction
    struct twoBitAry leftDir;   // Deletion direction
 
-   struct scoresStruct **lastQueryScoreST = 0;
-   struct scoresStruct **lastRefScoreST = 0;
+   struct scoresStruct *qryBasesST = 0;
+   struct scoresStruct *refBasesST = 0;
 
-   struct alnMatrixStruct *retMtxST =
+   struct alnMatrixStruct *matrixST =
      calloc(1, sizeof(struct alnMatrixStruct));
+
+   // Matrix scan variables
+
+   char fileNameCStr[1024];
+   char *tmpCStr = 0;
+   FILE *outFILE = 0; // For matrix scan
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-02:
    ^  - Allocate memory for alignment
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   if(retMtxST == 0) return 0;
+   if(matrixST == 0) return 0;
 
-   initAlnMatrixST(retMtxST);
+   initAlnMatrixST(matrixST);
+
+   if(setST->matrixScanBl & 1)
+   { // If I am doing a matrix scan
+     strlcpy(
+       fileNameCStr,
+       prefixCStr,
+       setST->lenFileNameUS
+     );
+
+     tmpCStr = fileNameCStr;
+
+     while(*tmpCStr != '\0') ++tmpCStr;
+
+     strlcpy(
+       tmpCStr,
+       "--matrix-scan.aln",
+       setST->lenFileNameUS - strlen(fileNameCStr)
+     );
+
+     outFILE = fopen(fileNameCStr, "w");
+
+     if(outFILE == 0)
+     { // If I was unable to open the output file
+       free(matrixST);
+       return 0;
+     } // If I was unable to open the output file
+   } // If I am doing a matrix scan
 
    scoreMatrixL =
        calloc(2 * (lenRefUL + 1), sizeof(unsigned long));
@@ -154,72 +191,59 @@ struct alnMatrixStruct * WatermanAln(
        // query column
    if(scoreMatrixL == 0)
    { // If I had a memory error
-     free(retMtxST);
+     if(outFILE != 0) fclose(outFILE);
+     free(matrixST);
      return 0;
    } // If I had a memory error
 
-   dirMatrix =
+   dirMtrx =
      makeTwoBitArry((lenRefUL + 1) * (lenQueryUL + 1), 0);
      // Calls calloc and adds an extra element at end
        // lenRefUL + 1 accounts for insertion reference row
        // lenQeurI + 1 accounts for insertion query column
 
-   if(dirMatrix == 0)
+   if(dirMtrx == 0)
    { // If I do not have a direction matrix for each cell
-     free(retMtxST);
+     if(outFILE != 0) fclose(outFILE);
+     free(matrixST);
      free(scoreMatrixL);
      return 0;
    } // If I do not have a direction matrix for each cell
 
-   retMtxST->dirMatrixST = dirMatrix;
+   matrixST->dirMatrixST = dirMtrx;
 
-   switch(settings->multiBaseWaterBl)
+   switch(setST->multiBaseWaterBl)
    { // Switch: Check if keeping many best scores
      case 0: break;
 
      case 1:
        // Make struct array for every base in the reference
-       retMtxST->refScoresST =
+       matrixST->refBasesST =
          calloc(lenRefUL, sizeof(struct scoresStruct));
 
-       if(retMtxST->refScoresST == 0)
+       if(matrixST->refBasesST == 0)
        { // If had memory error
-         freeAlnMatrixST(retMtxST);
+         if(outFILE != 0) fclose(outFILE);
+         freeAlnMatrixST(matrixST);
          return 0;
        } // If had memory error
 
        // Make struct array for every base in the query
-       retMtxST->queryScoresST =
+       matrixST->qryBasesST =
          calloc(lenQueryUL, sizeof(struct scoresStruct));
 
-       if(retMtxST->queryScoresST == 0)
+       if(matrixST->qryBasesST == 0)
        { // If had memory error
-         freeAlnMatrixST(retMtxST);
+         if(outFILE != 0) fclose(outFILE);
+         freeAlnMatrixST(matrixST);
          return 0;
        } // If had memory error
 
-       retMtxST->lenRefScoresUL = lenRefUL;
-       retMtxST->lenQueryScoresUL = lenQueryUL;
+       qryBasesST = *matrixST->qryBasesST;
+       refBasesST = *matrixST->refBasesST;
 
-       lastQueryScoreST =
-         calloc(lenQueryUL, sizeof(struct scoresStruct));
-
-       if(lastQueryScoreST == 0)
-       { // If had memory error
-         freeAlnMatrixST(retMtxST);
-         return 0;
-       } // If had memory error
-
-
-       lastRefScoreST =
-         calloc(lenRefUL, sizeof(struct scoresStruct));
-
-       if(lastRefScoreST == 0)
-       { // If had memory error
-         free(lastQueryScoreST);
-         freeAlnMatrixST(retMtxST);
-         return 0;
-       } // If had memory error
+       matrixST->lenRefScoresUL = lenRefUL;
+       matrixST->lenQueryScoresUL = lenQueryUL;
 
        break;
    } // Switch: Check if keeping many best scores
@@ -230,23 +254,23 @@ struct alnMatrixStruct * WatermanAln(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    // Get the first indel position
-   cpTwoBitPos(dirMatrix, &topDir);
-   scoreOnLPtr = scoreMatrixL;
+   cpTwoBitPos(dirMtrx, &topDir);
+   scoreOnLP = scoreMatrixL;
 
    // This is here just in case the user changes
    // defMoveStop from 0
    // <= is same as lenRefUL + 1 when uiCell = 0
    for(uint32_t uiCell = 0; uiCell <= lenRefUL; ++uiCell)
    { // loop; till have initalized the first row
-     changeTwoBitElm(dirMatrix, defMoveStop);
+     changeTwoBitElm(dirMtrx, defMoveStop);
 
      // Move to the next cell (ref base)
-     ++scoreOnLPtr; // Already set to 0 by calloc
-     twoBitAryMoveToNextElm(dirMatrix);
+     ++scoreOnLP; // Already set to 0 by calloc
+     twoBitAryMoveToNextElm(dirMtrx);
    } // loop; till have initalized the first row
 
    // Get the left (deletion0 direction positioned
-   cpTwoBitPos(dirMatrix, &leftDir);
+   cpTwoBitPos(dirMtrx, &leftDir);
    twoBitAryMoveBackOneElm(&leftDir);
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -258,8 +282,18 @@ struct alnMatrixStruct * WatermanAln(
    ^    - Get scores for ins,dels,matchs
    ^  o fun-01 sec-04 sub-03:
    ^    - Determine if have a best score
-   ^  o fun-01 sec-4 sub-04:
-   ^    - Move to the next base
+   ^  o fun-01 sec-4 sub-06:
+   ^    - Move to the next reference base
+   ^  o fun-01 sec-04 sub-04:
+   ^     - Check if storing scores for multiple bases
+   ^  o fun-01 sec-04 sub-05:
+   ^     - Do matrix scan on previous diagnol
+   ^  o fun-01 sec-04 sub-07:
+   ^     - multi aligment printout, check last cell in row
+   ^  o fun-01 sec-04 sub-08:
+   ^     - Matrix scan, check last base in row
+   ^  o fun-01 sec-04 sub-09:
+   ^     - Prepare for the next row
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    /******************************************************\
@@ -268,37 +302,35 @@ struct alnMatrixStruct * WatermanAln(
    \******************************************************/
 
    // Marks last cell in score matrix (just to make sure)
-   lastBaseLPtr = scoreMatrixL; // Set up the last base
+   topScoreLP = scoreMatrixL; // Set up the last base
    swapBuffBl = 1; // Swap buffers when finsh every 2nd row
 
    tmpQueryCStr = queryStartCStr;
    tmpRefCStr = refStartCStr;
 
-   switch(settings->multiBaseWaterBl)
-   { // switch: check if keeping best score for each base
-     case 1: queryNtOnUL = queryST->offsetUI - 1;
-   } // switch: check if keeping best score for each base
+   qryNtUL = queryST->offsetUI;
+     // Not in switch, because not in loop
 
    // Starting on the first sequence row
    while(*tmpQueryCStr != '\0')
    { // loop; compare query base against all ref bases
-     *scoreOnLPtr = 0;
-     changeTwoBitElm(dirMatrix, defMoveStop);
+     *scoreOnLP = 0;
+     changeTwoBitElm(dirMtrx, defMoveStop);
 
      // Move to the first base comparison
-     ++scoreOnLPtr;
-     ++lastBaseLPtr;
+     ++scoreOnLP;
+     ++topScoreLP;
 
      // Get the directions positioned
-     twoBitAryMoveToNextElm(dirMatrix);
+     twoBitAryMoveToNextElm(dirMtrx);
      twoBitAryMoveToNextElm(&topDir);
      twoBitAryMoveToNextElm(&leftDir);
 
      tmpRefCStr = refStartCStr;
 
-     switch(settings->multiBaseWaterBl)
+     switch(setST->multiBaseWaterBl)
      { // switch: check if keeping best score for each base
-       case 1: refNtOnUL = refST->offsetUI - 1;
+       case 1: refNtUL = refST->offsetUI;
      } // switch: check if keeping best score for each base
 
      /**************************************************\
@@ -313,33 +345,33 @@ struct alnMatrixStruct * WatermanAln(
           getBasePairScore(
               tmpQueryCStr,
               tmpRefCStr,
-              settings
+              setST
        ); // Find the score for the two base pairs
 
        // Find the score for diagnol cell (snp/match)
-       scoreDiagnolL = *(lastBaseLPtr - 1) + snpScoreL;
+       scoreDiagnolL = *(topScoreLP - 1) + snpScoreL;
 
        scoreTopL =
            getIndelScore(
                &topDir, // Direction of last cell
-               settings,
-               lastBaseLPtr
+               setST,
+               topScoreLP
        ); // Get the score for an insertion
 
        scoreLeftL =
          getIndelScore(
            &leftDir,      // direction of previous cell
-           settings,        // gap penalties
-           scoreOnLPtr - 1  //Score of last base
+           setST,        // gap penalties
+           scoreOnLP - 1  //Score of last base
        ); // Get the score for an insertion
 
        updateDirScoreWaterSingle(
-         dirMatrix,
-         settings,    // preference for scoring
+         dirMtrx,
+         setST,    // preference for scoring
          &scoreTopL,     // Score for insertion
          &scoreDiagnolL, // Score for match/snp
          &scoreLeftL,    // score for deletion
-         scoreOnLPtr
+         scoreOnLP
        ); // Update the scores
 
      /**************************************************\
@@ -347,75 +379,276 @@ struct alnMatrixStruct * WatermanAln(
      *  - Determine if have a best score
      \**************************************************/
 
-       if(*scoreOnLPtr >=
-          retMtxST->bestScoreST.scoreL
+       if(*scoreOnLP >=
+          matrixST->bestScoreST.scoreL
        ) { // Else if have a new best score
-           retMtxST->bestScoreST.scoreL =
-             *scoreOnLPtr;
+           matrixST->bestScoreST.scoreL =
+             *scoreOnLP;
 
            // Get the index of the best score
 
-           retMtxST->bestScoreST.indexUL =
-             getTwoBitAryIndex(dirMatrix);
+           matrixST->bestScoreST.indexUL =
+             getTwoBitAryIndex(dirMtrx);
        } // Else if have a new best score
 
+       /**************************************************\
+       * Fun-01 Sec-04 Sub-04:
+       *  - Check if storing scores for multiple bases
+       \**************************************************/
+
        else
-         switch(settings->multiBaseWaterBl)
+         switch(setST->multiBaseWaterBl)
          { // Switch: Check if keeping many best scores
            case 0: break;
 
            case 1:
            // Case 1: Keeping best score for each base
-             addBestBaseScore(
-               getTwoBitAryElm(dirMatrix),
-               getTwoBitAryIndex(dirMatrix),
-               *scoreOnLPtr,
-               lenRefUL,
-               *retMtxST->refScoresST,
-               refNtOnUL,
-               *retMtxST->queryScoresST,
-               queryNtOnUL,
-               *lastRefScoreST,
-               *lastQueryScoreST 
-             ); // Add the new score in
+             /* What a 2x2 martix would look like
+               +-++   +-++
+               +b*|<--+b"| b* is the base pair to check
+               +--+   +--+   if is extending.
+                ^ ^     ^  b" is the base pair to check
+                : :     :    after completing the row.
+                : +---+ :    The idea is all b"'s turn into
+                :     : :    b*'s, except for the last b".
+               ++-+   +-++
+               |bp|<--+bp|
+               +--+   +--+
+             */
 
-             ++refNtOnUL;
+             if(*(topScoreLP - 1) > setST->minScoreUI)
+             { // If the previous base was worth checking
+               switch(setST->matrixScanBl)
+               { // Switch; check if doing matrix scan
+                 case 0:
+                 // Case: Not doing a matrix scan
+                   if(
+                    getTwoBitAryElm(&leftDir) == defMoveUp
+                   ){ // If the left cell continues path
+
+                     if(
+                       *(scoreOnLP-1) >= *(topScoreLP-1) &&
+                       *(scoreOnLP-1) >= setST->minScoreUI
+                       ) break; // If path has higher score
+                   } // If the left cell continues path
+
+                   if(
+                     getTwoBitAryElm(&topDir) ==defMoveLeft
+                   ){// If top cell continues the path
+                     if(
+                       *topScoreLP >= setST->minScoreUI &&
+                       *(topScoreLP) >= *(topScoreLP - 1)
+                     ) break; // If Path has a high score
+                   }// If top cell continues the path
+
+                   if(
+                     getTwoBitAryElm(dirMtrx) ==
+                     defMoveDiagnol
+                   ){ // If the diagnol cell continues path
+                     if(
+                       *scoreOnLP >= setST->minScoreUI &&
+                       *scoreOnLP >= *(topScoreLP - 1)
+                     ) break; // If path has higher score
+                   } // If the diagnol cell continues path
+
+                   if(
+                     *scoreOnLP
+                       >= (qryBasesST + qryNtUL -1)->scoreL
+                   ){ // If new best score for last query
+                     (qryBasesST + qryNtUL - 1)->scoreL =
+                       *(topScoreLP - 1);
+
+                     (qryBasesST + qryNtUL - 1)->indexUL =
+                       getTwoBitAryIndex(&leftDir);
+                   } // If new best score for last query
+
+                   else if(
+                     *scoreOnLP
+                       >= (refBasesST + refNtUL)->scoreL
+                   ){ // else If new best score for ref
+                      (refBasesST + refNtUL)->scoreL =
+                       *(topScoreLP - 1);
+
+                     (refBasesST + refNtUL)->indexUL =
+                       getTwoBitAryIndex(&leftDir);
+                   } // else If new best score for ref
+
+                   break;
+                 // Case: Not doing a matrix scan
+
+                 /****************************************\
+                 * Fun-01 Sec-04 Sub-05:
+                 *  - Do matrix scan on previous diagnol
+                 \****************************************/
+
+                 case 1:
+                 // Case: doing a matrix scan
+                   // Check if This path is finished
+                   if(
+                    getTwoBitAryElm(&leftDir) == defMoveUp
+                   ) if(*(scoreOnLP-1)>=setST->minScoreUI
+                     ) break; // Path no finished
+
+                   if(
+                     getTwoBitAryElm(&topDir) ==defMoveLeft
+                   ) if(*topScoreLP >=setST->minScoreUI)
+                       break; // Path not finished yet
+
+                   if(
+                     getTwoBitAryElm(dirMtrx) ==
+                     defMoveDiagnol
+                   ) if(*scoreOnLP >= setST->minScoreUI) 
+                       break; // path not finished yet
+
+                   twoBitAryMoveBackOneElm(&topDir);
+
+                   printMatrixCig(
+                     outFILE,
+                     &topDir,
+                     lenRefUL,  // Length of reference
+                     *(topScoreLP - 1)
+                   );
+
+                   twoBitAryMoveToNextElm(&topDir);
+
+                   break;
+                 // Case: doing a matrix scan
+               } // Switch; check if doing matrix scan
+             } // If the previous base was worth checking
+
+             ++refNtUL;
              break;
            // Case 1: Keeping best score for each base
          } // Switch: Check if keeping many best scores
 
        /***********************************************\
-       * Fun-01 Sec-04 Sub-04:
-       *  - Move to next bases
+       * Fun-01 Sec-04 Sub-06:
+       *  - Move to next reference base
        \***********************************************/
      
        // Move to the next cell to score
-       ++scoreOnLPtr; // next comparison for query base
-       ++lastBaseLPtr; // Move to next element
+       ++scoreOnLP; // next comparison for query base
+       ++topScoreLP; // Move to next element
        ++tmpRefCStr;   // Move to next reference base
 
        // Move to the next base pair to score
-       twoBitAryMoveToNextElm(dirMatrix);
+       twoBitAryMoveToNextElm(dirMtrx);
        twoBitAryMoveToNextElm(&topDir);
        twoBitAryMoveToNextElm(&leftDir);
      } // loop; compare one query to one reference base
 
+     /****************************************************\
+     * Fun-01 Sec-04 Sub-07:
+     *  - multi aligment printout, check last cell in row
+     \****************************************************/
+
+     switch(setST->multiBaseWaterBl)
+     { // Switch: Check if keeping many best scores
+       case 0: break;
+
+       case 1:
+       // Case 1: Ceck if keeping last edge cell
+
+         if(*(topScoreLP - 1) > setST->minScoreUI)
+         { // If the previous base was worth checking
+           switch(setST->matrixScanBl)
+           { // Switch; check if doing matrix scan
+             case 0:
+             // Case: Not doing a matrix scan
+               if(getTwoBitAryElm(dirMtrx) == defMoveUp)
+               { // If the diagnol cell continues path
+                 if(
+                   *scoreOnLP >= setST->minScoreUI &&
+                   *scoreOnLP >= *topScoreLP
+                 ) break; // If path has higher score
+               } // If the diagnol cell continues path
+
+               if(
+                 *scoreOnLP
+                   >= (qryBasesST + qryNtUL - 1)->scoreL
+               ){ // If new best score for last query
+                 (qryBasesST + qryNtUL - 1)->scoreL =
+                   *(topScoreLP);
+
+                 (qryBasesST + qryNtUL - 1)->indexUL =
+                   getTwoBitAryIndex(&topDir);
+               } // If new best score for last query
+
+               else if(
+                 *scoreOnLP
+                   >= (refBasesST + refNtUL)->scoreL
+               ){ // else If new best score for ref
+                  (refBasesST + refNtUL)->scoreL =
+                   *topScoreLP;
+
+                 (refBasesST + refNtUL)->indexUL =
+                   getTwoBitAryIndex(&topDir);
+               } // else If new best score for ref
+
+               break;
+             // Case: Not doing a matrix scan
+
+             /********************************************\
+             * Fun-01 Sec-04 Sub-08:
+             *  - Matrix scan, check last base in row
+             \********************************************/
+
+             case 1:
+             // Case: doing a matrix scan
+               // Check if This path is finished
+               if(
+                getTwoBitAryElm(&leftDir) == defMoveUp
+               ) if(*(scoreOnLP-1)>=setST->minScoreUI
+                 ) break; // Path no finished
+
+               if(
+                 getTwoBitAryElm(&topDir) ==defMoveLeft
+               ) if(*topScoreLP >=setST->minScoreUI)
+                   break; // Path not finished yet
+
+               if(
+                 getTwoBitAryElm(dirMtrx) ==
+                 defMoveDiagnol
+               ) if(*scoreOnLP >= setST->minScoreUI) 
+                   break; // path not finished yet
+
+               twoBitAryMoveBackOneElm(&topDir);
+
+               printMatrixCig(
+                 outFILE,
+                 &topDir,
+                 lenRefUL,  // Length of reference
+                 *topScoreLP
+               );
+
+               twoBitAryMoveToNextElm(&topDir);
+
+               break;
+             // Case: doing a matrix scan
+           } // Switch; check if doing matrix scan
+         } // If the previous base was worth checking
+
+         ++qryNtUL;
+         break;
+       // Case 1: Keeping best score for each base
+     } // Switch: Check if keeping many best scores
+
+     /****************************************************\
+     * Fun-01 Sec-04 Sub-09:
+     *  - Prepare for the next row
+     \****************************************************/
+
      if(swapBuffBl & 1)
      { // If need to swap the buffers
-         scoreOnLPtr = scoreMatrixL; // Restart scoring
+         scoreOnLP = scoreMatrixL; // Restart scoring
          swapBuffBl = 0;
      } // If need to swap the buffers
 
      else
      { // Else need to reset the score part
-         lastBaseLPtr = scoreMatrixL; // on first row
+         topScoreLP = scoreMatrixL; // on first row
          swapBuffBl = 1;
      } // Else need to reset the score part
-
-     switch(settings->multiBaseWaterBl)
-     { // switch: check if keeping best score for each base
-       case 1: ++queryNtOnUL;
-     } // switch: check if keeping best score for each base
 
      ++tmpQueryCStr; // Move to the next query base
    } // loop; compare query base against all ref bases
@@ -423,194 +656,224 @@ struct alnMatrixStruct * WatermanAln(
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-05:
    ^  - Set up for returing the matrix (clean up/wrap up)
+   ^  o fun-01 sec-05 sub-01:
+   ^    - Handle final row of multibase output
+   ^  o fun-01 sec-05 sub-02:
+   ^    - Finsh last row for multibase output
+   ^  o fun-01 sec-05 sub-03:
+   ^    - Finish the last row for the matrix scan
+   ^  o fun-01 sec-05 sub-04:
+   ^    - Final clean up
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   // Move back to the lower right conor cell
-   twoBitAryMoveBackOneElm(dirMatrix); // not needed
-   free(scoreMatrixL);
+   /******************************************************\
+   * Fun-01 Sec-05 Sub-01:
+   *  - Handle final row of multibase output
+   \******************************************************/
 
-   return retMtxST;
+   switch(setST->multiBaseWaterBl)
+   { // Switch: Check if keeping many best scores
+     case 0: break;
+
+     case 1:
+     // Case 1: Ceck if keeping last edge cell
+
+       refNtUL = refST->offsetUI;
+       qryNtUL = qryNtUL;
+       tmpRefCStr = refStartCStr;
+
+       while(*tmpRefCStr != '\0')
+       { // While I have scores to check
+         if(getTwoBitAryIndex(&topDir) == defMoveLeft)
+           continue; // deletions just iead to first base
+
+         if(*topScoreLP > setST->minScoreUI)
+         { // If have a base worth printing out
+
+           /**********************************************\
+           * Fun-01 Sec-05 Sub-02:
+           *  - Finsh last row for multibase output
+           \**********************************************/
+
+           switch(setST->matrixScanBl)
+           { // Switch; check if doing matrix scan
+
+             case 0:
+             // Case: Not doing a matrix scan
+               if(
+                 *scoreOnLP >= (qryBasesST+qryNtUL)->scoreL
+               ){ // If new best score for last query
+                 (qryBasesST+qryNtUL)->scoreL =*topScoreLP;
+
+                 (qryBasesST + qryNtUL)->indexUL =
+                   getTwoBitAryIndex(&topDir);
+               } // If new best score for last query
+
+               else if(
+                 *scoreOnLP >= (refBasesST+refNtUL)->scoreL
+               ){ // else If new best score for ref
+                  (refBasesST + refNtUL)->scoreL =
+                   *topScoreLP;
+
+                 (refBasesST + refNtUL)->indexUL =
+                   getTwoBitAryIndex(&topDir);
+               } // else If new best score for ref
+
+               break;
+             // Case: Not doing a matrix scan
+
+             /********************************************\
+             * Fun-01 Sec-05 Sub-03:
+             *  - Finsh the last row for the matrix scan
+             \********************************************/
+
+             case 1:
+             // Case: doing a matrix scan
+               printMatrixCig(
+                 outFILE,
+                 &topDir,
+                 lenRefUL,  // Length of reference
+                 *topScoreLP
+               );
+
+               break;
+             // Case: doing a matrix scan
+           } // Switch; check if doing matrix scan
+         } // If have a base worth printing out
+
+         ++tmpRefCStr;
+       } // While I have scores to check
+   } // Switch: Check if keeping many best scores
+       
+   /******************************************************\
+   * Fun-01 Sec-05 Sub-04:
+   *  - Final clean up
+   \******************************************************/
+
+   // Move back to the lower right conor cell
+   twoBitAryMoveBackOneElm(dirMtrx); // not needed
+   free(scoreMatrixL);
+   if(outFILE != 0) fclose(outFILE);
+
+   return matrixST;
 } // WatermanAln
 
 /*--------------------------------------------------------\
 | Output:
-|  - Modifes:
-|    o socresST to hold the new score and index if better
-|      than the old score and index
-|    o oldScoreST to hold the old score if it is part of
-|      a different alignment
-\--------------------------------------------------------*/
-void addBestBaseScore(
-  uint8_t dirUC,                   // Direction travled
-  long indexUL,                 // new index to add in
-  long scoreL,                 // new score to add in
-  unsigned long lenRefUI,  // length of reference sequence
-  struct scoresStruct *refScoreST,//all Kept ref scores
-  unsigned long refBaseUL,       // current ref base on
-  struct scoresStruct *queryScoreST,//all kept query scores
-  unsigned long queryBaseUL,     // Currnetn query base on
-  struct scoresStruct *oldRScoreST,// Has old ref scores
-  struct scoresStruct *oldQScoreST // Has old query scores
+|  - Prints
+|    o Prints the path of the input index in dirST
+\*-------------------------------------------------------*/
+void printMatrixCig(
+  FILE *outFILE,            // File to print to
+  struct twoBitAry *dirST,  // Has index to print
+  unsigned long lenRefUL,   // Length of the reference
+  long scoreL               // Score of the path
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-02 TOC: Sec-01: addBestBaseScore
-   '  - Adds a score and index to the kept scores list
+   ' Fun-03 TOC: printMatrixCig
+   '  - Prints out a cigar for an single path in a
+   '    direction matrix
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-  struct scoresStruct *scoreOnST = 0;
-  struct scoresStruct *oldScoreOnST = 0;
-  
-  if((refScoreST + refBaseUL)->scoreL < scoreL)
-  { // If replacing the reference score
-    scoreOnST = refScoreST + refBaseUL;
-    oldScoreOnST = oldRScoreST + refBaseUL;
-  } // If replacing the reference score
+   uint8_t lastDirUC = defMoveStop;
+   char lastDirCigC = 0;
+   uint32_t numDirUI = 0;
+   uint8_t curDirUC = 0;
 
-  else if((queryScoreST + queryBaseUL)->scoreL < scoreL)
-  { // Else if I am replacing thw query base
-    scoreOnST = queryScoreST + queryBaseUL;
-    oldScoreOnST = oldQScoreST + queryBaseUL;
-  } // Else if I am replacing thw query base
+   struct twoBitAry matrixST;
 
-  else return; // Nothing to do
+   // As index 1
+   unsigned long qryEndUL =
+     (getTwoBitAryIndex(dirST) / (lenRefUL + 1));
 
-  switch(dirUC)
-  { // Switch: check last direction
-    // For stops I know there is no worry about pointing
-    // to a previous alignment
-    case defMoveStop:
-    // Case: This is a stop direction
-      oldScoreOnST->indexUL = scoreOnST->indexUL;
-      oldScoreOnST->scoreL = scoreOnST->scoreL;
+   unsigned long refEndUL =
+     (getTwoBitAryIndex(dirST) % (lenRefUL + 1));
 
-      scoreOnST->indexUL = indexUL;
-      scoreOnST->scoreL = scoreL;
+   cpTwoBitPos(dirST, &matrixST);
+   curDirUC = getTwoBitAryElm(&matrixST);
 
-      return;
-    // Case: This is a stop direction
+   // Print out the score, position of ending query base,
+   // & position of ending reference base
+   fprintf(
+     outFILE,
+     "%ld\t%lu\t%lu\t",
+     scoreL,
+     qryEndUL,
+     refEndUL
+   );
+   
+   goto initializePrint;
+   
+   while(curDirUC != defMoveStop)
+   { // While I have a cigar to build
+     if(curDirUC != lastDirUC && lastDirUC != defMoveStop)
+     { // If I need to print out the last direction
+       if(numDirUI > 1)
+         fprintf(outFILE, "%u%c", numDirUI, lastDirCigC);
 
-    case defMoveLeft:
-    // Case: Moved left (deletion)
-      // Check if I am continuing an already recorded
-      // path. If so, I have no need of keeping the last
-      // reference bases stored best score or the query
-      // bases score
-      if((refScoreST + refBaseUL - 1)->indexUL ==indexUL-1)
-        { // If I am contuning on the same path
-           (refScoreST + refBaseUL - 1)->indexUL = 
-             (oldRScoreST + refBaseUL - 1)->indexUL;
+       else fprintf(outFILE, "%c", lastDirCigC);
 
-           (refScoreST + refBaseUL - 1)->scoreL = 
-             (oldRScoreST + refBaseUL - 1)->scoreL;
-        } // If I am contuning on the same path
+       initializePrint:
 
-        // Still on the same query base, but not same ref
-        else if(
-          (queryScoreST + queryBaseUL - 1)->indexUL
-         == 
-          indexUL - 1
-        ) { // Else if contnuing the qury's path
-           (queryScoreST + queryBaseUL)->indexUL = 
-             (oldQScoreST + queryBaseUL)->indexUL;
+       lastDirUC = defMoveStop;
+       numDirUI = 0;
+       lastDirUC = curDirUC;
 
-           (queryScoreST + queryBaseUL)->scoreL = 
-             (oldQScoreST + queryBaseUL)->scoreL;
-        } // Else if contnuing the qury's path
+       switch(curDirUC)
+       { // Switch: find the cigar symbol
+         case defMoveUp:
+           lastDirCigC = 'I';
+           break;
 
-        scoreOnST->indexUL = indexUL;
-        scoreOnST->scoreL = scoreL;
- 
-        return;
-    // Case: Moved left (deletion)
+         case defMoveDiagnol:
+           lastDirCigC = 'X';
+           break;
 
-    case defMoveUp:
-    // Case: Moved up (insertion)
-      // Check if I am continuing an already recorded
-      // path. If so, I have no need of keeping the last
-      // reference bases stored best score or the query
-      // bases score
-      // On same reference, but not query
-      if((
-         refScoreST + refBaseUL)->indexUL
-        ==
-         indexUL - lenRefUI - 1
-        ){ // If I am contuning on the same path
-           (refScoreST + refBaseUL)->indexUL = 
-             (oldRScoreST + refBaseUL)->indexUL;
+         case defMoveLeft:
+           lastDirCigC = 'D';
+           break;
+       } // Switch: find the cigar symbol
+     } // If I need to print out the last direction
 
-           (refScoreST + refBaseUL)->scoreL = 
-             (oldRScoreST + refBaseUL)->scoreL;
-        } // If I am contuning on the same path
+     switch(curDirUC)
+     { // Switch: Check which way to move
+       case defMoveUp:
+         twoBitAryMoveBackXElm(&matrixST, lenRefUL + 1);
+         --refEndUL;
+         break;
 
-        else if(
-          (queryScoreST + queryBaseUL - 1)->indexUL
-         == 
-          indexUL - lenRefUI - 1
-        ) { // Else if contnuing the qury's path
-           (queryScoreST + queryBaseUL - 1)->indexUL = 
-             (oldQScoreST + queryBaseUL - 1)->indexUL;
+       case defMoveDiagnol:
+         twoBitAryMoveBackXElm(&matrixST, lenRefUL + 2);
+         --qryEndUL;
+         --refEndUL;
+         break;
 
-           (queryScoreST + queryBaseUL - 1)->scoreL = 
-             (oldQScoreST + queryBaseUL - 1)->scoreL;
-        } // Else if contnuing the qury's path
+       case defMoveLeft:
+         twoBitAryMoveBackOneElm(&matrixST);
+         --qryEndUL;
+         break;
+     } // Switch: Check which way to move
 
-        scoreOnST->indexUL = indexUL;
-        scoreOnST->scoreL = scoreL;
- 
-        return;
-    // Case: Moved up (insertion)
+     ++numDirUI;
+     curDirUC = getTwoBitAryElm(&matrixST);
+   } // While I have a cigar to build
 
-    case defMoveDiagnol:
-    // Case: Moved diaginol (match/snp)
-      // Check if I am continuing an already recorded
-      // path. If so, I have no need of keeping the last
-      // reference bases stored best score or the query
-      // bases score
-      // In this case both the query and reference change
-      if((
-         refScoreST + refBaseUL)->indexUL
-        ==
-         indexUL - lenRefUI - 2
-        ){ // If I am contuning on the same path
-           (refScoreST + refBaseUL - 1)->indexUL = 
-             (oldRScoreST + refBaseUL - 1)->indexUL;
+   // Print out the last score
+   if(numDirUI > 1)
+     fprintf(outFILE, "%u%c", numDirUI, lastDirCigC);
 
-           (refScoreST + refBaseUL - 1)->scoreL = 
-             (oldRScoreST + refBaseUL - 1)->scoreL;
-        } // If I am contuning on the same path
+   else fprintf(outFILE, "%c", lastDirCigC);
 
-        else if(
-          (queryScoreST + queryBaseUL - 1)->indexUL
-         == 
-          indexUL - lenRefUI - 2
-        ) { // Else if contnuing the qury's path
-           (queryScoreST + queryBaseUL - 1)->indexUL = 
-             (oldQScoreST + queryBaseUL - 1)->indexUL;
+   // Print the starting position of query and reference
+   fprintf(outFILE, "\t%lu\t%lu\n", qryEndUL, refEndUL);
 
-           (queryScoreST + queryBaseUL - 1)->scoreL = 
-             (oldQScoreST + queryBaseUL - 1)->scoreL;
-        } // Else if contnuing the qury's path
-
-        scoreOnST->indexUL = indexUL;
-        scoreOnST->scoreL = scoreL;
- 
-        return;
-    // Case: Moved diaginol (match/snp)
-  } // Switch: check last direction
-
-  return;
-} // addBestBaseScore
+   return;
+} // printMatrixCig
 
 /*--------------------------------------------------------\
 | Output:
 |  - Prints
-|    o Prints the best aligment and each alignment that is
-|      kept to a separate file
-|    o Best ailgment:
-|      prefxCStr--Best--ref-start-end--query-start-end.aln
-|    o Alignments from the reference sequence:
-|      prefx--Reference--ref-start-end--query-start-end.aln
-|    o Alignments from the Query sequence:
-|      prefxStr--Query--ref-start-end--query-start-end.aln
+|    o Prints out all saved alternative aliginments as
+|      cigars to prefix--alt.aln
 |  - Returns
 |    o 1 for success
 |    o 2 for file error
@@ -620,189 +883,64 @@ unsigned char printAltWaterAlns(
   struct alnMatrixStruct *alnMtxST, // Has matrix and scores
   struct seqStruct *queryST, //query: sequence & seq length
   struct seqStruct *refST,   // ref: sequence & seq length
-  struct alnSet *settings,   // Settings for the alignment
+  struct alnSet *setST,   // Settings for the alignment
   char *prefxCStr            // Prefix of file to write to
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: printAltWaterAlns
-   '  - Prints out the best aligment and the saved
-   '     alterantive alignments  (best alignment for each
-   '     base) to a file
-   '  o fun-03 sec-01:
+   ' Fun-04 TOC: printAltWaterAlns
+   '  - Prints out all saved alternatives alignments
+   '  o fun-04 sec-01:
    '    - Variable declerations
-   '  o fun-03 sec-02:
-   '    - Print out the best alignment
-   '  o fun-03 sec-03:
-   '    o Sort scores to get highest so lowest scores
-   '  o fun-03 sec-04:
-   '    - Print out the reference scores
-   '  o fun-03 sec-05:
-   '    - Get the query alignments
+   '  o fun-04 sec-02:
+   '    - Open the output file
+   '  o fun-04 sec-03:
+   '    o Print out the reference alignments
+   '  o fun-04 sec-04:
+   '    - Print out the query aligments
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-03 Sec-01:
+  ^ Fun-04 Sec-01:
   ^  - Variable declerations
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
   unsigned short lenFileNameUS = 1024;
-  char *queryAlnCStr = 0;
-  char *refAlnCStr = 0;
   char fileNameCStr[lenFileNameUS];
+  char *tmpCStr = 0;
+
+  unsigned long lenRefUL = refST->lenSeqUI-refST->offsetUI;
 
   struct scoresStruct *scoreST = 0;
-  struct alnStruct *alnST = 0;
+  struct twoBitAry dirOn;
+   
   FILE *outFILE = 0;
 
-  // I removed the needed for this. I left the code
-  // that used this commented out for later use
-  //struct scoresStruct *refScoreST = 0;
-  //uint32_t refBaseUI = 0;
+  /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+  ^ Fun-04 Sec-02:
+  ^  - Open the output file
+  \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-  /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-03 Sec-02:
-  ^  - Print out the best alignment
-  ^  o fun-03 sec-02 sub-01:
-  ^    - Find alignment and make alignment human readable
-  ^  o fun-03 sec-02 sub-02:
-  ^    - Make output file name and print out alingment
-  ^  o fun-03 sec-02 sub-03:
-  ^    - Free uneeded variables (clean up)
-  \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+  strlcpy(fileNameCStr, prefxCStr, lenFileNameUS);
+  tmpCStr = fileNameCStr;
 
-  /*******************************************************\
-  * Fun-03 Sec-02 Sub-01:
-  *  - Find alignment and make alignment human readable
-  \*******************************************************/
+  while(*tmpCStr != '\0') ++tmpCStr;
 
-  // Get the alignment
-  alnST =
-    cnvtDirMatrixToAlnAry(
-      refST,
-      queryST,
-      alnMtxST->dirMatrixST,
-      &alnMtxST->bestScoreST,
-      1      // Applying a soft mask
-  );
-
-  if(alnST == 0) return 2;
-  
-  // Align the reference and query bases to the alignment
-  refAlnCStr = cnvtAlnAryToSeq(refST, 0, alnST);
-
-  if(refAlnCStr == 0)
-  { // If had a memroy error
-    freeAlnST(alnST, 1); // No longer need
-    return 64;
-  } // If had a memroy error
-
-  queryAlnCStr = cnvtAlnAryToSeq(queryST, 0, alnST);
-
-  if(queryAlnCStr == 0)
-  { // If had a memroy error
-    free(refAlnCStr);
-    freeAlnST(alnST, 1); // No longer need
-    return 64;
-  } // If had a memroy error
-
-  // Conver the alingment codes to human readable
-  alnAryToLetter(refST, queryST, alnST);
-
-  /*******************************************************\
-  * Fun-03 Sec-02 Sub-02:
-  *  - Make output file name and print out alingment
-  \*******************************************************/
-
-  // Make the output file and open it
-  snprintf(
-    fileNameCStr,
-    lenFileNameUS,
-    "%s--Best--ref-%u-%u--query-%u-%u.aln",
-    prefxCStr,
-    alnST->refStartUI,
-    alnST->refEndUI,
-    alnST->queryStartUI,
-    alnST->queryEndUI
-  ); // Make the new file name
+  strlcpy(
+    tmpCStr,
+    "--alt.aln",
+    lenFileNameUS - strlen(fileNameCStr)
+  ); // Add the ending to the file name
 
   outFILE = fopen(fileNameCStr, "w");
 
-  if(outFILE == 0)
-  { // If I could not open the file
-    free(refAlnCStr);
-    free(queryAlnCStr);
-    freeAlnST(alnST, 1); // No longer need
-
-    return 1;
-  } // If I could not open the file
-
-  // Print the alignment
-  printAln(
-    outFILE,
-    queryST->idCStr,
-    queryAlnCStr,
-    refAlnCStr,
-    refST->idCStr,
-    alnMtxST->bestScoreST.scoreL,
-    settings->lineWrapUS,
-    alnST
-  );
-
-  /*******************************************************\
-  * Fun-03 Sec-02 Sub-03:
-  *  - Free uneeded variables (clean up)
-  \*******************************************************/
-
-  free(refAlnCStr);
-  refAlnCStr = 0;
-
-  free(queryAlnCStr);
-  queryAlnCStr = 0;
-
-  freeAlnST(alnST, 1); // No longer need
-  alnST = 0;
-
-  fclose(outFILE);
+  if(outFILE == 0) return 2;
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-03 Sec-03:
-  ^  - Sort scores to get highest so lowest scores
+  ^ Fun-04 Sec-03:
+  ^  - Print out alternative alignments as cigars
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-  /* This was for sorthing scores, currently not needed
-  // Sort the reference scores (sorts > to least)
-  sortScores(
-    alnMtxST->refScoresST,
-    refST->offsetUI,
-    refST->endAlnUI
-  );
-
-  // Sort the scores for the query (sorts > to least)
-  sortScores(
-    alnMtxST->queryScoresST,
-    queryST->offsetUI,
-    queryST->endAlnUI
-  );
-  */
-
-  /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-03 Sec-04:
-  ^  - Print out the reference scores
-  ^  o fun-03 sec-04 sub-01:
-  ^    - Make sure the alignment is worth printing out
-  ^  o fun-03 sec-04 sub-02:
-  ^    - Find alignment and make alignment human readable
-  ^  o fun-03 sec-04 sub-03:
-  ^    - Make output file name and print out alingment
-  ^  o fun-03 sec-04 sub-04:
-  ^    - Free uneeded variables (clean up)
-  \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
-
-  /*******************************************************\
-  * Fun-03 Sec-04 Sub-01:
-  *  - Make sure the alignment is worth printing out
-  \*******************************************************/
-  
-  scoreST = *alnMtxST->refScoresST;
+  cpTwoBitPos(&dirOn, alnMtxST->dirMatrixST);
+  scoreST = *alnMtxST->refBasesST;
 
   for(
     unsigned long ulRefBase = 0;
@@ -810,291 +948,52 @@ unsigned char printAltWaterAlns(
     ++ulRefBase
   ){ // For all reference bases in the alignment
 
-    // No longer needed. I mades sure this could never
-    // happen
-    //// Check if this is the same index as the best score
-    //if(scoreST->indexUL == alnMtxST->bestScoreST.indexUL)
-    //{ // If on the best score (move to next score)
-    //  ++scoreST; 
-    //  continue;
-    //} // If on the best score (move to next score)
-
     // Check if even need to print out any reference alns
-    if(scoreST->scoreL < settings->minScoreUI)
+    if(scoreST->scoreL < setST->minScoreUI)
       break; // No more socres to print out
 
-    /*****************************************************\
-    * Fun-03 Sec-04 Sub-02:
-    *  - Find alignment and make alignment human readable
-    \*****************************************************/
+    moveXElmFromStart(&dirOn, scoreST->indexUL);
 
-    alnST = 
-      cnvtDirMatrixToAlnAry(
-        refST,
-        queryST,
-        alnMtxST->dirMatrixST,
-        scoreST,
-        1      // Applying a soft mask
-    );
-
-    if(alnST == 0) return 2;
-
-    if(alnST->numAlnBasesUI < settings->minBasesUI)
-    { // If the alignment does not have enough bases
-      freeAlnST(alnST, 1); // No longer need
-      ++scoreST;
-      continue;  // Move to the next alignmetn
-    } // If the alignment does not have enough bases
-    
-    // Align the reference and query bases to the alignment
-    refAlnCStr = cnvtAlnAryToSeq(refST, 0, alnST);
-  
-    if(refAlnCStr == 0)
-    { // If had a memroy error
-      freeAlnST(alnST, 1); // No longer need
-      return 64;
-    } // If had a memroy error
-  
-    queryAlnCStr = cnvtAlnAryToSeq(queryST, 0, alnST);
-  
-    if(queryAlnCStr == 0)
-    { // If had a memroy error
-      free(refAlnCStr);
-      freeAlnST(alnST, 1); // No longer need
-      return 64;
-    } // If had a memroy error
-  
-    // Conver the alingment codes to human readable
-    alnAryToLetter(refST, queryST, alnST);
-  
-    /*******************************************************\
-    * Fun-03 Sec-04 Sub-03:
-    *  - Make output file name and print out alingment
-    \*******************************************************/
-  
-    // Make the output file and open it
-    snprintf(
-      fileNameCStr,
-      lenFileNameUS,
-      "%s--Reference--ref-%u-%u--query-%u-%u.aln",
-      prefxCStr,
-      alnST->refStartUI,
-      alnST->refEndUI,
-      alnST->queryStartUI,
-      alnST->queryEndUI
-    ); // Make the new file name
-  
-    outFILE = fopen(fileNameCStr, "w");
-  
-    if(outFILE == 0)
-    { // If I could not open the file
-      free(refAlnCStr);
-      free(queryAlnCStr);
-      freeAlnST(alnST, 1); // No longer need
-  
-      return 1;
-    } // If I could not open the file
-  
-    // Print the alignment
-    printAln(
+    printMatrixCig(
       outFILE,
-      queryST->idCStr,
-      queryAlnCStr,
-      refAlnCStr,
-      refST->idCStr,
-      alnMtxST->bestScoreST.scoreL,
-      settings->lineWrapUS,
-      alnST
-    );
+      &dirOn,
+      lenRefUL,
+      scoreST->scoreL
+    ); // Prit out the cigar entry
   
-    /*******************************************************\
-    * Fun-03 Sec-04 Sub-04:
-    *  - Free uneeded variables (clean up)
-    \*******************************************************/
-  
-    free(refAlnCStr);
-    refAlnCStr = 0;
-  
-    free(queryAlnCStr);
-    queryAlnCStr = 0;
-  
-    freeAlnST(alnST, 1); // No longer need
-    alnST = 0;
-  
-    fclose(outFILE);
     ++scoreST;  // Move to the next entry
   } // For all reference bases in the alignment
      
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-03 Sec-05:
-  ^  - Get the query alignments
-  ^  o Fun-03 sec-05 sub-01:
-  ^    - Set up for query aligment printing
-  ^  o fun-03 sec-05 sub-02:
-  ^    - Check if I have already printed this alignment
-  ^  o fun-03 sec-05 sub-03:
-  ^    - Find alignment and make alignment human readable
-  ^  o fun-03 sec-05 sub-04:
-  ^    - Make output file name and print out alingment
-  ^  o fun-03 sec-05 sub-05:
-  ^    - Free uneeded variables (clean up)
+  ^ Fun-03 Sec-04:
+  ^  - Print out the query alignments
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-  /*******************************************************\
-  * Fun-03 Sec-05 Sub-01:
-  *  - Set up for query aligment printing
-  \*******************************************************/
-
-  scoreST = *alnMtxST->queryScoresST;
-  //refScoreST = *alnMtxST->refScoresST;
-  //refBaseUI = refST->offsetUI;
-
-  // This was for when I had sorted scores
-  //if(scoreST->scoreL < settings->minScoreUI)
-  //  return;
+  scoreST = *alnMtxST->qryBasesST;
 
   for(
-    uint32_t ulQueryBase = 0;
-    ulQueryBase < alnMtxST->lenQueryScoresUL;
-    ++ulQueryBase
+    unsigned long ulQryBase = 0;
+    ulQryBase < alnMtxST->lenQueryScoresUL;
+    ++ulQryBase
   ){ // For all reference bases in the alignment
 
-    /*****************************************************\
-    * Fun-03 Sec-05 Sub-02:
-    *  - Check if I have already printed this alignment
-    \*****************************************************/
-
-    /* I made sure these cases could never happen
-    // Check if this is the same index as the best score
-    if(scoresST->indexUL == alnMtxST->bestScore->indexUL)
-    { // If on the best score (move to next score)
-      ++scoreST; 
-      continue;
-    } // If on the best score (move to next score)
-
     // Check if even need to print out any reference alns
-    if(scoreST->scoreL < settings->minScoreUI)
+    if(scoreST->scoreL < setST->minScoreUI)
       break; // No more socres to print out
 
-    if(refBaseUI >= refST->endAlnUI) goto afterRefCheck;
+    moveXElmFromStart(&dirOn, scoreST->indexUL);
 
-    while(refScoreST->scoreL > scoreST->scoreL)
-    { // Adavnce to the next reference score
-      ++refScoreST;
-      ++refBaseUI;
-      if(refBaseUI >= refST->endAlnUI) goto afterRefCheck;
-    } // Adavnce to the next reference score
-
-    if(refScoreST->indexUL == scoreST->indexUL)
-    { // If I have already printed this alignment as ref
-      ++scoreST;
-      continue;
-    } // If I have already printed this alignment as ref
-
-    afterRefCheck: // If no more reference scores to check
-    */
-
-    /*****************************************************\
-    * Fun-03 Sec-05 Sub-03:
-    *  - Find alignment and make alignment human readable
-    \*****************************************************/
-
-    alnST = 
-      cnvtDirMatrixToAlnAry(
-        refST,
-        queryST,
-        alnMtxST->dirMatrixST,
-        scoreST,
-        1      // Applying a soft mask
-    );
-
-    if(alnST == 0) return 2;
-
-    if(alnST->numAlnBasesUI < settings->minBasesUI)
-    { // If the alignment does not have enough bases
-      freeAlnST(alnST, 1); // No longer need
-      ++scoreST;
-      continue;  // Move to the next alignmetn
-    } // If the alignment does not have enough bases
-    
-    // Align the reference and query bases to the alignment
-    refAlnCStr = cnvtAlnAryToSeq(refST, 0, alnST);
-  
-    if(refAlnCStr == 0)
-    { // If had a memroy error
-      freeAlnST(alnST, 1); // No longer need
-      return 64;
-    } // If had a memroy error
-  
-    queryAlnCStr = cnvtAlnAryToSeq(queryST, 0, alnST);
-  
-    if(queryAlnCStr == 0)
-    { // If had a memroy error
-      free(refAlnCStr);
-      freeAlnST(alnST, 1); // No longer need
-      return 64;
-    } // If had a memroy error
-  
-    // Conver the alingment codes to human readable
-    alnAryToLetter(refST, queryST, alnST);
-  
-    /*****************************************************\
-    * Fun-03 Sec-05 Sub-04:
-    *  - Make output file name and print out alingment
-    \*****************************************************/
-  
-    // Make the output file and open it
-    snprintf(
-      fileNameCStr,
-      lenFileNameUS,
-      "%s--Query--ref-%u-%u--query-%u-%u.aln",
-      prefxCStr,
-      alnST->refStartUI,
-      alnST->refEndUI,
-      alnST->queryStartUI,
-      alnST->queryEndUI
-    ); // Make the new file name
-  
-    outFILE = fopen(fileNameCStr, "w");
-  
-    if(outFILE == 0)
-    { // If I could not open the file
-      free(refAlnCStr);
-      free(queryAlnCStr);
-      freeAlnST(alnST, 1); // No longer need
-  
-      return 1;
-    } // If I could not open the file
-  
-    // Print the alignment
-    printAln(
+    printMatrixCig(
       outFILE,
-      queryST->idCStr,
-      queryAlnCStr,
-      refAlnCStr,
-      refST->idCStr,
-      alnMtxST->bestScoreST.scoreL,
-      settings->lineWrapUS,
-      alnST
-    );
+      &dirOn,
+      lenRefUL,
+      scoreST->scoreL
+    ); // Prit out the cigar entry
   
-    /******************************************************\
-    * Fun-03 Sec-05 Sub-05:
-    *  - Free uneeded variables (clean up)
-    \******************************************************/
-  
-    free(refAlnCStr);
-    refAlnCStr = 0;
-  
-    free(queryAlnCStr);
-    queryAlnCStr = 0;
-  
-    freeAlnST(alnST, 1); // No longer need
-    alnST = 0;
-  
-    fclose(outFILE);
     ++scoreST;  // Move to the next entry
   } // For all reference bases in the alignment
+
+  fclose(outFILE);
 
   return 1;
 } // printAltWaterAlns
@@ -1114,20 +1013,20 @@ void updateDirScoreWaterSingle(
     long *scoreLeftL,    // The score for an deletion
     long *scoreOnL       // Score to update
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-04 TOC: updateDirScoreWaterSingle
+   ' Fun-05 TOC: updateDirScoreWaterSingle
    '  - Picks the best score and direction for the current
    '    base pairs being compared in a Waterman Smith
    '    alignment
-   '  o fun-04 sec-1: Matches->insertions->deletions
-   '  o fun-04 sec-2: Matches->deletions->insertions
-   '  o fun-04 sec-3: Insertions->matches->deletions
-   '  o fun-04 sec-4: Deletions->matches->insertions
-   '  o fun-04 sec-5: Insertions->deletions->matches
-   '  o fun-04 sec-6: Deletions->insertions->matches
+   '  o fun-05 sec-1: Matches->insertions->deletions
+   '  o fun-05 sec-2: Matches->deletions->insertions
+   '  o fun-05 sec-3: Insertions->matches->deletions
+   '  o fun-05 sec-4: Deletions->matches->insertions
+   '  o fun-05 sec-5: Insertions->deletions->matches
+   '  o fun-05 sec-6: Deletions->insertions->matches
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-04 Sec-1: Matches and then insertions
+   ^ Fun-05 Sec-1: Matches and then insertions
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    switch(alnSetST->diagnolPriorityC)
@@ -1225,7 +1124,7 @@ void updateDirScoreWaterSingle(
                // Case: priority matches/snps then ins
 
                /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-               ^ Fun-04 Sec-2: Matches->dels->ins
+               ^ Fun-05 Sec-2: Matches->dels->ins
                \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
                case 2:
@@ -1321,7 +1220,7 @@ void updateDirScoreWaterSingle(
        // Case; bases or matches are top priority
 
        /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-       ^ Fun-04 Sec-3: Insertions->matches->deletions
+       ^ Fun-05 Sec-3: Insertions->matches->deletions
        \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
        case 1:
@@ -1417,7 +1316,7 @@ void updateDirScoreWaterSingle(
                // Case: priority matches/snps then ins
 
                /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-               ^ Fun-04 Sec-4: Dels->matches->ins
+               ^ Fun-05 Sec-4: Dels->matches->ins
                \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
                case 2:
@@ -1511,7 +1410,7 @@ void updateDirScoreWaterSingle(
            } // Priority for insertions
 
        /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-       ^ Fun-04 Sec-5: Insertions->deletions->matches
+       ^ Fun-05 Sec-5: Insertions->deletions->matches
        \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
        case 2:
@@ -1607,7 +1506,7 @@ void updateDirScoreWaterSingle(
                // Case: priority insertions then deletions
 
                /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-               ^ Fun-04 Sec-6: Dels->insertions->matches
+               ^ Fun-05 Sec-6: Dels->insertions->matches
                \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
                case 2:

@@ -16,7 +16,7 @@
 #  o "alnSeqDefaults.h"
 #  o "twoBitArrays.h"
 # C standard libraries:
-#  - <string.h>
+#  o <string.h>
 #  o <stdlib.h>
 #  o <stdio.h>
 #  o <stdint.h>
@@ -24,7 +24,7 @@
 
 #include "waterman.h"
 #include "needleman.h"
-#include <string.h>
+//#include <string.h> // in waterman.h
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOP: Start Of Program
@@ -147,6 +147,8 @@ int main(
        \n      a t -4\
        \n      a a 5 \
        \n      \\\\ This is a comment\
+       \n  -use-needle: [Yes]\
+       \n     o Do a Needleman Wunsch alignment\
        \n  -use-water: [Needleman Wunsch]\
        \n     o Use a Waterman Smith alignment instead of\
        \n       the Needleman Wunsch\
@@ -159,6 +161,9 @@ int main(
        \n  -multi-base-water: [No]\
        \n    o For a Waterman Smith alignment, print out\
        \n      the best alignment for each base.\
+       \n  -matrix-scan-water: [No]\
+       \n    o Do a matrix scan of the Waterman Smith\
+       \n      matrix.\
        \n  -min-score: [100]\
        \n   - Minimum score needed to keep an non-best\
        \n     alignment when -multi-base-water is used.\
@@ -378,10 +383,20 @@ int main(
    refST.endAlnUI = refST.lenSeqUI;
    refST.offsetUI = 0;
 
+   if(outFileCStr != 0) outFILE = fopen(outFileCStr, "w");
+
+   else
+   { // Else putting output to stdout
+     outFILE = stdout;
+     outFileCStr = "out";
+   } // Else putting output to stdout
+
    if(alnSetST.useNeedleBl != 0)
      alnMtrxST = NeedlemanAln(&queryST, &refST, &alnSetST);
 
-   else alnMtrxST = WatermanAln(&queryST,&refST,&alnSetST);
+   else
+     alnMtrxST =
+       WatermanAln(&queryST,&refST,&alnSetST,outFileCStr);
 
    if(alnMtrxST == 0)
    { // If did not have enough memory
@@ -401,25 +416,16 @@ int main(
    ^    alignment array
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-   if(outFileCStr != 0) outFILE = fopen(outFileCStr, "w");
-   else outFILE = stdout;
-
-   if(alnSetST.multiBaseWaterBl == 1)
-   { // If doing a multi-aligment extraction
-     if(outFileCStr == 0)
-       outFileCStr = "out";
-
-      printAltWaterAlns(
+   if(
+     alnSetST.multiBaseWaterBl == 1 &&
+     alnSetST.matrixScanBl == 0
+   ) printAltWaterAlns(
         alnMtrxST,
         &queryST,
         &refST,
         &alnSetST,
         outFileCStr // Prefix to name everything
       );
-
-      freeAlnMatrixST(alnMtrxST); // No longer need
-      goto alnSeqCleanup;
-   } // If doing a multi-aligment extraction
    
    alnST =
      cnvtDirMatrixToAlnAry(
@@ -508,17 +514,15 @@ int main(
      alnST
   );
      
-   alnSeqCleanup:
+  fclose(outFILE);
 
-   fclose(outFILE);
+  free(queryAlnCStr);
+  free(refAlnCStr);
+  freeAlnST(alnST, 1); // NEED TO SET UP
+  freeSeqST(&refST, 0); // 0 to makr on the stack
+  freeSeqST(&queryST, 0); // 0 to makr on the stack
 
-   free(queryAlnCStr);
-   free(refAlnCStr);
-   freeAlnST(alnST, 1); // NEED TO SET UP
-   freeSeqST(&refST, 0); // 0 to makr on the stack
-   freeSeqST(&queryST, 0); // 0 to makr on the stack
-
-   exit(0);
+  exit(0);
 } // main
 
 /*--------------------------------------------------------\
@@ -583,18 +587,32 @@ char * checkInput(
         else if(strcmp(tmpCStr, "-line-wrap") == 0)
           cStrToUSht(singleArgCStr, &alnSetST->lineWrapUS);
 
+        else if(strcmp(tmpCStr, "-use-needle") == 0)
+        { // Else if disabling match priority
+            alnSetST->useNeedleBl = 1;
+            --intArg;
+        } // Else if disabling match priority
+
         else if(strcmp(tmpCStr, "-use-water") == 0)
         { // Else if disabling match priority
-            alnSetST->useNeedleBl = !defUseNeedle;
+            alnSetST->useNeedleBl = 0;
             --intArg;
         } // Else if disabling match priority
 
         else if(strcmp(tmpCStr, "-multi-base-water") == 0)
         { // Else if doing more than the best alignment
-          alnSetST->multiBaseWaterBl = !defMultiBaseWater;
-          alnSetST->useNeedleBl = !defUseNeedle;
+          alnSetST->multiBaseWaterBl = 1;
+          alnSetST->useNeedleBl = 0;
           --intArg;
         } // Else if doing more than the best alignment
+
+        else if(strcmp(tmpCStr, "-matrix-scan-water") == 0)
+        { // Else if doing a matrix scan
+          alnSetST->multiBaseWaterBl = 1;
+          alnSetST->matrixScanBl = 1;
+          alnSetST->useNeedleBl = 0;
+          --intArg;
+        } // Else if doing a matrix scan
 
         else if(strcmp(tmpCStr, "-min-score") == 0)
           cStrToUInt(singleArgCStr, &alnSetST->minScoreUI);

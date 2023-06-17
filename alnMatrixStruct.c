@@ -21,9 +21,9 @@ void initAlnMatrixST(
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    matrixST->dirMatrixST = 0; 
-   matrixST->refScoresST = 0;
+   matrixST->refBasesST = 0;
    matrixST->lenRefScoresUL = 0;
-   matrixST->queryScoresST = 0;
+   matrixST->qryBasesST = 0;
    matrixST->lenQueryScoresUL = 0;
    initScoresST(&matrixST->bestScoreST);
 
@@ -48,9 +48,9 @@ void freeAlnMatrixST(
      freeTwoBitAry(matrixST->dirMatrixST, 0, 0);
      // 0's to mark all elements on the heap
 
-   if(matrixST->refScoresST != 0)
+   if(matrixST->refBasesST != 0)
    { // if I need to free the reference scores
-     scoreST = *matrixST->refScoresST;
+     scoreST = *matrixST->refBasesST;
 
      for(
        unsigned long ulScore = 0;
@@ -62,9 +62,9 @@ void freeAlnMatrixST(
      } // for loop free all scores structs
    } // if I need to free the reference scores
 
-   if(matrixST->queryScoresST != 0)
+   if(matrixST->qryBasesST != 0)
    { // if I need to free the query scores
-     scoreST = *matrixST->queryScoresST;
+     scoreST = *matrixST->qryBasesST;
 
      for(
        unsigned long ulScore = 0;

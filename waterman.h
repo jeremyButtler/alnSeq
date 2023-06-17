@@ -16,6 +16,7 @@
 #   o <stdlib.h>
 #   o <stdint.h>
 #   o <stdio.h>  // by alnSetStructure.h
+#   o <string.h>
 ########################################################*/
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -25,11 +26,14 @@
 '      sequences
 '  o fun-02 addBestBaseScore:
 '    - Adds a score and index to the kept scores list
-'  o fun-03 printAltWaterAlns:
+'  o fun-03 printMatrixCig:
+'    - Prints out a cigar for an single path in a
+'      direction matrix
+'  o fun-04 printAltWaterAlns:
 '    - Prints out the best aligment and the saved
 '       alterantive alignments  (best alignment for each
 '       base) to a file
-'  o fun-04 updateDirScoreWaterSingle:
+'  o fun-05 updateDirScoreWaterSingle:
 '    - Picks the best score and direction for the current
 '      base pairs being compared in a Waterman-Smith
 '      alignment
@@ -38,6 +42,8 @@
 
 #ifndef WATERMAN_H
 #define WATERMAN_H
+
+#include <string.h>
 
 #include "generalAlnFun.h"
 #include "alnStruct.h"
@@ -54,8 +60,9 @@ struct alnMatrixStruct * WatermanAln(
       // query sequence, length, & bounds for alignment
     struct seqStruct *refST,  
       // reference sequence, length, & bounds for alignment
-    struct alnSet *settings // Settings for the alignment
+    struct alnSet *settings,// Settings for the alignment
     // *startI and *endI paramaters should be index 1
+    char *prefixCStr  // Prefix for matrix scan output file
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: WatermanAln
    '  - Run a Waterman Smith alignment on input sequences
@@ -93,18 +100,27 @@ void addBestBaseScore(
    '  - Adds a score and index to the kept scores list
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+/*--------------------------------------------------------\
+| Output:
+|  - Prints
+|    o Prints the path of the input index in dirST
+\*-------------------------------------------------------*/
+void printMatrixCig(
+  FILE *outFILE,            // File to print to
+  struct twoBitAry *dirST,  // Has index to print
+  unsigned long lenRefUL,   // Length of the reference
+  long scoreL               // Score of the path
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-03 TOC: printMatrixCig
+   '  - Prints out a cigar for an single path in a
+   '    direction matrix
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\
 | Output:
 |  - Prints
-|    o Prints the best aligment and each alignment that is
-|      kept to a separate file
-|    o Best ailgment:
-|      prefxCStr--Best--ref-start-end--query-start-end.aln
-|    o Alignments from the reference sequence:
-|      prefx--Reference--ref-start-end--query-start-end.aln
-|    o Alignments from the Query sequence:
-|      prefxStr--Query--ref-start-end--query-start-end.aln
+|    o Prints out all saved alternative aliginments as
+|      cigars to prefix--alt.aln
 |  - Returns
 |    o 1 for success
 |    o 2 for file error
@@ -114,24 +130,20 @@ unsigned char printAltWaterAlns(
   struct alnMatrixStruct *alnMtxST, // Has matrix and scores
   struct seqStruct *queryST, //query: sequence & seq length
   struct seqStruct *refST,   // ref: sequence & seq length
-  struct alnSet *settings,   // Settings for the alignment
+  struct alnSet *setST,   // Settings for the alignment
   char *prefxCStr            // Prefix of file to write to
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: printAltWaterAlns
-   '  - Constructs the full aligment from a waterman smith
-   '    directional matrix
-   '  o fun-03 sec-01:
+   ' Fun-04 TOC: printAltWaterAlns
+   '  - Prints out all saved alternatives alignments
+   '  o fun-04 sec-01:
    '    - Variable declerations
-   '  o fun-03 sec-02:
-   '    - Print out the best alignment
-   '  o fun-03 sec-03:
-   '    o Sort scores to get highest so lowest scores
-   '  o fun-03 sec-04:
-   '    - Print out the reference scores
-   '  o fun-03 sec-05:
-   '    - Get the query alignments
+   '  o fun-04 sec-02:
+   '    - Open the output file
+   '  o fun-04 sec-03:
+   '    o Print out the reference alignments
+   '  o fun-04 sec-04:
+   '    - Print out the query aligments
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
 
 /*--------------------------------------------------------\
 | Output:
@@ -152,12 +164,12 @@ void updateDirScoreWaterSingle(
    '  - Picks the best score and direction for the current
    '    base pairs being compared in a Waterman Smith
    '    alignment
-   '  o fun-04 sec-1: Matches->insertions->deletions
-   '  o fun-04 sec-2: Matches->deletions->insertions
-   '  o fun-04 sec-3: Insertions->matches->deletions
-   '  o fun-04 sec-4: Deletions->matches->insertions
-   '  o fun-04 sec-5: Insertions->deletions->matches
-   '  o fun-04 sec-6: Deletions->insertions->matches
+   '  o fun-05 sec-1: Matches->insertions->deletions
+   '  o fun-05 sec-2: Matches->deletions->insertions
+   '  o fun-05 sec-3: Insertions->matches->deletions
+   '  o fun-05 sec-4: Deletions->matches->insertions
+   '  o fun-05 sec-5: Insertions->deletions->matches
+   '  o fun-05 sec-6: Deletions->insertions->matches
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 

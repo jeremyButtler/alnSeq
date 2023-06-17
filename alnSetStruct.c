@@ -44,6 +44,7 @@ void initAlnSet(
    // Choose the aligment style
    alnSetST->multiBaseWaterBl = defMultiBaseWater;
    alnSetST->useNeedleBl = defUseNeedle;
+   alnSetST->matrixScanBl = defMatrixScan;
 
    // Aligment Needleman-Wunsch settings
    alnSetST->gapStartPenaltyI = defGapStartPenalty;
@@ -60,6 +61,7 @@ void initAlnSet(
   
    // Set the default output line wrapping
    alnSetST->lineWrapUS = defLineWrap;
+   alnSetST->lenFileNameUS = 1024;
 
    // Aligment Needleman-Wunsch scoring matrix
    for(uint8_t colUC = 0; colUC < 26; ++colUC)
