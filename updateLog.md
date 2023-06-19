@@ -5,14 +5,6 @@ This log records how alnSeq has changed between versions.
   month, and then day. For example version 1.20230615 would
   be version 1, from June 15th, 2023.
 
-# Issues to be solved
-
-- Printing to stdout on Debain, which will likely be
-  similar for all linux's
-  - This is likely an array out of bounds error some were.
-    I suspect this is in my convert directional matrix
-    function to an alignment array.
-
 # Ideas that would be cool, but not worth working on
 
 These ideas are a future vision that is not worth the
@@ -25,11 +17,29 @@ These ideas are a future vision that is not worth the
     bit marking if the next 16 bit int is a number.
   - This would be slower, but also use a more compressed
     alignment matrix.
+- Get a matrix scan function that recalculates scores on
+  fly, so that user can search a completed direction
+  matrix.
+  - Also allow a function to be input, so user can decide
+    if printing or not.
 
 # Log
 
 ## Version 1.20230619
 
+Other than bug fixes that pop up, this will be my final
+  code update until I see that this code is useful to
+  others. The only exception is if I find a use for 
+  pressing this code further.
+
+- Fixed the printing to stdout on Debain error.
+  - This was due to alnST not being allocated properly
+    in the cnvtDirMatrixToAlnAry function with calloc. This
+    resulted in only a partial alnStruct structure being
+    allocated.
+  - Also had problem were I freed the alignment matrix to
+    soon and so lost the best score. This has been fixed
+    by storing the best score in a temporary variable.
 - Multi sequence output that prints a best score for each
   query and reference for Waterman Smith alignment no
   longer segfaults

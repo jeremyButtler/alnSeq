@@ -1,7 +1,7 @@
 set confirm off
 break alnSeq.c:386
 set confirm off
-break alnSeq.c:423
+#break alnSeq.c:423
 break alnSeq.c:425
 #break needleman.c:330
 #break waterman.c:233

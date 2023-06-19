@@ -7,29 +7,16 @@ AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
   output multiple local alignments from a single alignment.
 
 There are faster and less memory hungry Waterman Smith
-  implementations out there than alnSeq. One example is the
-  stripped Waterman Smith alignment, which I think reduces
-  both scoring and direction matrix to just a few rows. See 
+  implementations than alnSeq. One example is the stripped
+  Waterman Smith alignment, which I think reduces both
+  scoring and direction matrix to just a few rows. See 
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
   for an very fast striped Waterman Smith aligner.
 
-# This code is not running yet
-
-I am currently debugging this code and will hopefully be
-  done in a few weeks to months. For an alternative,
-  working version of this code please see the alingSeq
-  folder at
-  [https://github.com/jeremybuttler/find--Co-infections](https://github.com/jeremybuttler/find--Co-infections).
-
-Here is my current status
-
-I am pretty sure everything is working, except for a
-  printing error on Linux (tested on Debain) that crashes
-  the alignment or give really bad alignments when printing
-  to the screen (stdout). Redirects (">" or "|") work most
-  of the time and "-out file.aln" will work most of the
-  time.
-  
+I am currently finished with this code, but will take some
+  time to add in a document describing how to interface
+  with this code. It will mostly be a list of functions,
+  were they are found, and what they do.
 
 # Building and running alnSeq
 

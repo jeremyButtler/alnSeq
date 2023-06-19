@@ -106,7 +106,8 @@ int main(
 
    // Caputures error type from functions
    unsigned char errUC = 0;
-    
+   long bestScoreL = 0;  // Allows me to free score matrix
+
    // For holding settings
    struct alnSet alnSetST;
 
@@ -433,7 +434,9 @@ int main(
        1                          // Include soft masking
    );
 
+   bestScoreL = alnMtrxST->bestScoreST.scoreL;
    freeAlnMatrixST(alnMtrxST); // No longer need
+   alnMtrxST = 0;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Main Sec-07:
@@ -506,7 +509,7 @@ int main(
      queryAlnCStr,
      refST.idCStr,
      refAlnCStr,
-     alnMtrxST->bestScoreST.scoreL,
+     bestScoreL,
      alnSetST.lineWrapUS,
      alnST
   );

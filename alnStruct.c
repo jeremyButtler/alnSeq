@@ -295,7 +295,8 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   uint8_t bitElmUC = 0;
   uint8_t lastBitElmUC = 0;
 
-  alnST = calloc(1, sizeof(alnST));
+  alnST = malloc(sizeof(struct alnStruct));
+  initAlnST(alnST);
 
   if(alnST == 0) return 0;
 

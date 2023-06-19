@@ -16,6 +16,7 @@
 #   o <stdlib.h>
 #   o <stdint.h>
 #   o <stdio.h>  // by alnSetStructure.h
+#   - <string.h>
 #########################################################*/
 
 #include "waterman.h"
@@ -159,20 +160,20 @@ struct alnMatrixStruct * WatermanAln(
 
    if(setST->matrixScanBl & 1)
    { // If I am doing a matrix scan
-     strlcpy(
+     strncpy(
        fileNameCStr,
        prefixCStr,
-       setST->lenFileNameUS
+       setST->lenFileNameUS - 1
      );
 
      tmpCStr = fileNameCStr;
 
      while(*tmpCStr != '\0') ++tmpCStr;
 
-     strlcpy(
+     strncpy(
        tmpCStr,
        "--matrix-scan.aln",
-       setST->lenFileNameUS - strlen(fileNameCStr)
+       setST->lenFileNameUS - strlen(fileNameCStr) - 1
      );
 
      outFILE = fopen(fileNameCStr, "w");
@@ -935,15 +936,15 @@ unsigned char printAltWaterAlns(
   ^  - Open the output file
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-  strlcpy(fileNameCStr, prefxCStr, lenFileNameUS);
+  strncpy(fileNameCStr, prefxCStr, lenFileNameUS - 1);
   tmpCStr = fileNameCStr;
 
   while(*tmpCStr != '\0') ++tmpCStr;
 
-  strlcpy(
+  strncpy(
     tmpCStr,
     "--alt.aln",
-    lenFileNameUS - strlen(fileNameCStr)
+    lenFileNameUS - strlen(fileNameCStr) - 1
   ); // Add the ending to the file name
 
   outFILE = fopen(fileNameCStr, "w");
