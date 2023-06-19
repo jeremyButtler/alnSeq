@@ -86,7 +86,8 @@ typedef struct alnSet
 
    // Needleman-Wunsch / Waterman Smith variables
    char useNeedleBl;
-   char multiBaseWaterBl;
+   char multiBaseWaterBl; // Keep more than best aligment
+   char refQueryScanBl;   // Keep best score for ref/query
    char matrixScanBl;  // Fur doing a matrix scan
      // If set to 1: Recored a best score for each base
      //   in the reference and query in a Smith Waterman

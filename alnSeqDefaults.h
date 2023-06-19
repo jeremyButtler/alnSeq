@@ -11,7 +11,7 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings (version this ports with)*/
-#define defVersion 1.20230616  // Version of find co-infections 
+#define defVersion 1.20230619  // Version of find co-infections 
 
 #define defLineWrap 59         // Max chars per line in 
                                // output file (min 40)
@@ -27,15 +27,16 @@
 #define defMinBasesUI 50
  // Min number of bases to keep an non-best alignment when
  // doing an mutli-entry Waterman Smith alignment
-#define defMinScore 100
+#define defMinScore 1000
     // Min score to keep an non-best alignment when doing
     // an mutli-entry Waterman Smith alignment
 
 // Aligment Needleman-Wunsch and Watman Smith settings
 #define defUseNeedle 1     // do Needleman-Wunsch alignment
-#define defMultiBaseWater 0
-   // 0: Only recored the best score in a Waterman Smith
-   //    alnigment
+#define defMultiBaseWater 0 // 1: doing multple alignments
+#define defQueryRefScan 1
+   // 0: Only recored the best score for each reference and
+   // query base in in a Waterman Smith alnigment
 #define defMatrixScan 0 // Do not do a matrix scan
 
 // Settings for which direction to keep when their are
@@ -58,21 +59,25 @@
 // Needleman-Wunsch alignment scoring matrix (non-anonymous)
 #define defAToA 5        // Penalty for an query A to reference A
 #define defAToT -4       // Penalty for an query A to reference T
+#define defAToU -4       // Penalty for an query A to reference T
 #define defAToG -4       // Penalty for an query A to reference G
 #define defAToC -4       // Penalty for an query A to reference C
 
 #define defTToA -4       // Penalty for an query T to reference A
 #define defTToT 5        // Penalty for an query T to reference T
+#define defTToU 5        // Penalty for an query T to reference T
 #define defTToG -4       // Penalty for an query T to reference G
 #define defTToC -4       // Penalty for an query T to reference C
 
 #define defGToA -4       // Penalty for an query G to reference A
 #define defGToT -4       // Penalty for an query G to reference T
+#define defGToU -4       // Penalty for an query G to reference T
 #define defGToG 5        // Penalty for an query G to reference G
 #define defGToC -4       // Penalty for an query G to reference C
 
 #define defCToA -4       // Penalty for an query C to reference A
 #define defCToT -4       // Penalty for an query C to reference T
+#define defCToU -4       // Penalty for an query C to reference T
 #define defCToG -4       // Penalty for an query C to reference G
 #define defCToC 5        // Penalty for an query C to reference C
 
@@ -183,6 +188,33 @@
 #define defVToT -4       // Penalty for an query T to reference V (ACG)
 #define defNToT -2       // Penalty for an query T to reference N (ACGT)
 #define defXToT -2       // Penalty for an query T to reference X (ACGT)
+
+// Needleman-Wunsch alignment scoring matrix anonymous (U)
+#define defUToW 1        // Penalty for an query T to reference W (AT)
+#define defUToS -4       // Penalty for an query T to reference S (CG)
+#define defUToM -4       // Penalty for an query T to reference M (AC)
+#define defUToK 1        // Penalty for an query T to reference K (GT)
+#define defUToR -4       // Penalty for an query T to reference R (AG)
+#define defUToY 1        // Penalty for an query T to reference Y (CT)
+#define defUToB -1       // Penalty for an query T to reference B (CGT)
+#define defUToD -1       // Penalty for an query T to reference D (AGT)
+#define defUToH -1       // Penalty for an query T to reference H (ACT)
+#define defUToV -4       // Penalty for an query T to reference V (ACG)
+#define defUToN -2       // Penalty for an query T to reference N (ACGT)
+#define defUToX -2       // Penalty for an query T to reference X (ACGT)
+
+#define defWToU 1        // Penalty for an query T to reference W (AT)
+#define defSToU -4       // Penalty for an query T to reference S (CG)
+#define defMToU -4       // Penalty for an query T to reference M (AC)
+#define defKToU 1        // Penalty for an query T to reference K (GT)
+#define defRToU -4       // Penalty for an query T to reference R (AG)
+#define defYToU -4       // Penalty for an query T to reference Y (CT)
+#define defBToU -1       // Penalty for an query T to reference B (CGT)
+#define defDToU -1       // Penalty for an query T to reference D (AGT)
+#define defHToU -1       // Penalty for an query T to reference H (ACT)
+#define defVToU -4       // Penalty for an query T to reference V (ACG)
+#define defNToU -2       // Penalty for an query T to reference N (ACGT)
+#define defXToU -2       // Penalty for an query T to reference X (ACGT)
 
 // Needleman-Wunsch alignment scoring matrix anonymous (W)
 #define defWToW -1       // Penalty for an query W to reference W (AT)

@@ -1,35 +1,48 @@
-// This is an example of a scoring matrix you would supply to alignSeq.
-// In this case the scoring matrix is set to default settings.
+// This is an example of a scoring matrix you would supply
+//   to alnSeq. In this case the scoring matrix is set to
+//   the default settings.
 
-// This is a comment and needs to start at the start of a line. It is
-// ok to have stuff after the base combination, since the read in step
-// on looks at the two base pairs and the provided number. It does not
-// look past the number. However, starting a line with a space is a good
-// way to cause an error.
+// This is a comment and needs to start at the start of a
+//   line. It is ok to have stuff after the base
+//   combination, since the read in step on looks at the
+//   two base pairs and the provided number.  It does not
+//   look past the number. However, starting a line with a
+//   space is a good way to cause an error.
 
-// A blank line will be ignored so long as it does not have white space.
+// A blank line will be ignored so long as it does not have
+//   white space.
 
-// Scoring matrix is EDNAFULL or something close to it. I think I have
-// the anonymous bases with the correct scores.
+// Scoring matrix is EDNAFULL or something close to it. I
+//   think I have the anonymous bases with the correct
+//   scores.
 
 // Needleman-Wunsch alignment scoring matrix (non-anonymous)
 A A 5        // Penalty for an query A to reference A
 A T -4       // Penalty for an query A to reference T
+A U -4       // Penalty for query A to reference T (RNA T)
 A G -4       // Penalty for an query A to reference G
 A C -4       // Penalty for an query A to reference C
 
 T A -4       // Penalty for an query T to reference A
 T T 5        // Penalty for an query T to reference T
+T U 5        // Penalty for query T to reference U (RNA T)
 T G -4       // Penalty for an query T to reference G
 T C -4       // Penalty for an query T to reference C
 
+U A -4       // Penalty for query U (RNA T) to reference A
+U T 5        // Penalty for query U (RNA T) to reference T
+U G -4       // Penalty for query U (RNA T) to reference G
+U C -4       // Penalty for query U (RNA T) to reference C
+
 G A -4       // Penalty for an query G to reference A
 G T -4       // Penalty for an query G to reference T
+G U -4       // Penalty for query G to reference T (RNA T)
 G G 5        // Penalty for an query G to reference G
 G C -4       // Penalty for an query G to reference C
 
 C A -4       // Penalty for an query C to reference A
 C T -4       // Penalty for an query C to reference T
+C U -4       // Penalty for query C to reference T (RNA T)
 C G -4       // Penalty for an query C to reference G
 C C 5        // Penalty for an query C to reference C
 
@@ -140,6 +153,33 @@ H T -1       // Penalty for an query T to reference H (ACT)
 V T -4       // Penalty for an query T to reference V (ACG)
 N T -2       // Penalty for an query T to reference N (ACGT)
 X T -2       // Penalty for an query T to reference X (ACGT)
+
+// Needleman-Wunsch alignment scoring matrix anonymous (U)
+U W 1        // Penalty for query U (RNA T) to ref W (AT)
+U S -4       // Penalty for query U (RNA T) to ref S (CG)
+U M -4       // Penalty for query U (RNA T) to ref M (AC)
+U K 1        // Penalty for query U (RNA T) to ref K (GT)
+U R -4       // Penalty for query U (RNA T) to ref R (AG)
+U Y 1        // Penalty for query U (RNA T) to ref Y (CT)
+U B -1       // Penalty for query U (RNA T) to ref B (CGT)
+U D -1       // Penalty for query U (RNA T) to ref D (AGT)
+U H -1       // Penalty for query U (RNA T) to ref H (ACT)
+U V -4       // Penalty for query U (RNA T) to ref V (ACG)
+U N -2       // Penalty for query U (RNA T) to ref N (ACGT)
+U X -2       // Penalty for query U (RNA T) to ref X (ACGT)
+
+W U 1        // Penalty for query U (RNA T) to ref W (AT)
+S U -4       // Penalty for query U (RNA T) to ref S (CG)
+M U -4       // Penalty for query U (RNA T) to ref M (AC)
+K U 1        // Penalty for query U (RNA T) to ref K (GT)
+R U -4       // Penalty for query U (RNA T) to ref R (AG)
+Y U -4       // Penalty for query U (RNA T) to ref Y (CT)
+B U -1       // Penalty for query U (RNA T) to ref B (CGT)
+D U -1       // Penalty for query U (RNA T) to ref D (AGT)
+H U -1       // Penalty for query U (RNA T) to ref H (ACT)
+V U -4       // Penalty for query U (RNA T) to ref V (ACG)
+N U -2       // Penalty for query U (RNA T) to ref N (ACGT)
+X U -2       // Penalty for query U (RNA T) to ref X (ACGT)
 
 // Needleman-Wunsch alignment scoring matrix anonymous (W)
 W W -1       // Penalty for an query W to reference W (AT)

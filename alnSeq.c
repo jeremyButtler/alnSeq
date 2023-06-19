@@ -158,19 +158,16 @@ int main(
        \n    o Maximum characters per line in the output\
        \n      alignment file.\
        \n    o The minimum line wrap is 42.\
-       \n  -multi-base-water: [No]\
+       \n  -query-ref-scan-water: [No]\
        \n    o For a Waterman Smith alignment, print out\
-       \n      the best alignment for each base.\
+       \n      the best alignment for each reference and\
+       \n      query base.\
        \n  -matrix-scan-water: [No]\
        \n    o Do a matrix scan of the Waterman Smith\
        \n      matrix.\
        \n  -min-score: [100]\
        \n   - Minimum score needed to keep an non-best\
-       \n     alignment when -multi-base-water is used.\
-       \n  -min-bases: [50]\
-       \n   - Minimum number unique bases needed for\
-       \n     reference or query to keep an non-best\
-       \n     alignment when -multi-base-water is used.\
+       \n     alignment with -query-ref-scan-water.\
        \n  -match-ins-del: [match-ins-del]\
        \n     o For equal scores choose matches/SNPs over\
        \n       insertions and insertions over deletions.\
@@ -599,10 +596,13 @@ char * checkInput(
             --intArg;
         } // Else if disabling match priority
 
-        else if(strcmp(tmpCStr, "-multi-base-water") == 0)
+        else if(
+          strcmp(tmpCStr, "-query-ref-scan-water") == 0
+        )
         { // Else if doing more than the best alignment
           alnSetST->multiBaseWaterBl = 1;
           alnSetST->useNeedleBl = 0;
+          alnSetST->refQueryScanBl = 1;
           --intArg;
         } // Else if doing more than the best alignment
 
@@ -617,8 +617,9 @@ char * checkInput(
         else if(strcmp(tmpCStr, "-min-score") == 0)
           cStrToUInt(singleArgCStr, &alnSetST->minScoreUI);
 
-        else if(strcmp(tmpCStr, "-min-bases") == 0)
-          cStrToUInt(singleArgCStr, &alnSetST->minBasesUI);
+        // Not used
+        //else if(strcmp(tmpCStr, "-min-bases") == 0)
+        //  cStrToUInt(singleArgCStr, &alnSetST->minBasesUI);
 
         else if(strcmp(tmpCStr, "-match-ins-del") == 0)
         { // Else if wants matches->insertions->deletions

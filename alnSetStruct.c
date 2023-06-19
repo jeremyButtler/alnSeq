@@ -42,9 +42,10 @@ void initAlnSet(
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    // Choose the aligment style
-   alnSetST->multiBaseWaterBl = defMultiBaseWater;
    alnSetST->useNeedleBl = defUseNeedle;
+   alnSetST->multiBaseWaterBl = defMultiBaseWater;
    alnSetST->matrixScanBl = defMatrixScan;
+   alnSetST->refQueryScanBl = defMatrixScan;
 
    // Aligment Needleman-Wunsch settings
    alnSetST->gapStartPenaltyI = defGapStartPenalty;
@@ -430,50 +431,6 @@ void setBasePairScore(
        [(uint8_t) (*refBaseC & defClearNonAlph) - 1]
        =
        newScoreC;
-
-   // accounts for U is the RNA version of T
-   if((*queryBaseC & defToUper) =='T')
-       alnSetST->snpPenaltyC
-           [(uint8_t) ('U' & defClearNonAlph) - 1]
-           [(uint8_t) (*refBaseC & defClearNonAlph) - 1]
-           =
-           newScoreC;
-   else if((*queryBaseC & defToUper) == 'U')
-       alnSetST->snpPenaltyC
-           [(uint8_t) ('T' & defClearNonAlph) - 1]
-           [(uint8_t) (*refBaseC & defClearNonAlph) - 1]
-           =
-           newScoreC;
-
-   if((*refBaseC & defToUper) =='T')
-       alnSetST->snpPenaltyC
-           [(uint8_t)(*queryBaseC & defClearNonAlph)-1]
-           [(uint8_t) ('U' & defClearNonAlph) - 1]
-           =
-           newScoreC;
-   else if((*refBaseC & defToUper) =='U')
-       alnSetST->snpPenaltyC
-           [(uint8_t)(*queryBaseC & defClearNonAlph)-1]
-           [(uint8_t) ('T' & defClearNonAlph) - 1]
-           =
-           newScoreC;
-
-   if((*queryBaseC & defToUper) =='T' &&
-       (*refBaseC & defToUper) == 'T'
-    )
-       alnSetST->snpPenaltyC
-           [(uint8_t)('U' & defClearNonAlph) - 1]
-           [(uint8_t) ('U' & defClearNonAlph) - 1]
-           =
-           newScoreC;
-   else if((*queryBaseC & defToUper)=='U' &&
-           (*refBaseC & defToUper)=='U'
-   )
-       alnSetST->snpPenaltyC
-           [(uint8_t)('T' & defClearNonAlph) - 1]
-           [(uint8_t) ('T' & defClearNonAlph) - 1]
-           =
-           newScoreC;
 
    return;
 } // setBasePairScore

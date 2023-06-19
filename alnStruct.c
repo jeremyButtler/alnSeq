@@ -258,7 +258,9 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
 
   char *bestQueryCStr =
       queryST->seqCStr
-    + (scoreST->indexUL / (lenRefUL + 1)) - 1;
+    + queryST->offsetUI +
+    + (scoreST->indexUL / (lenRefUL + 1))
+    - 1;
     // lenQueryUL + 1: gives the length of each column in
     //   the matrix
     // bestScoreUI / (column length) gives the index of the
@@ -266,7 +268,9 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
     // -1: converts the index 1 output to index 0
   char *bestRefCStr =
       refST->seqCStr
-    + (scoreST->indexUL % (lenRefUL + 1)) - 1;
+    + refST->offsetUI +
+    + (scoreST->indexUL % (lenRefUL + 1))
+    - 1;
     // lenRefUL + 1: gives the length of each row in the
     //   matrix
     // bestScoreUI % (row length) gives the index of the
@@ -309,9 +313,8 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   } // If had a memory error
 
   // Get the ending position for the alignment
-  alnST->refEndUI = endRefAlnCStr - refST->seqCStr + 1;
-  alnST->queryEndUI =
-    endQueryAlnCStr - queryST->seqCStr + 1;
+  alnST->refEndUI = endRefAlnCStr - refST->seqCStr;
+  alnST->queryEndUI = endQueryAlnCStr - queryST->seqCStr;
     // Need +1 to deal with index issues
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -403,10 +406,14 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
 
   // Recording the starting base of the alignment
   alnST->refStartUI =
-    alnST->refEndUI - (endRefAlnCStr - bestRefCStr) + 1;
+    + refST->offsetUI +
+    + (getTwoBitAryIndex(dirMatrxST) % (lenRefUL + 1));
+    //alnST->refEndUI - (endRefAlnCStr - bestRefCStr);
 
   alnST->queryStartUI =
-    alnST->queryEndUI - (endQueryAlnCStr -bestQueryCStr)+1;
+    + queryST->offsetUI +
+    + (getTwoBitAryIndex(dirMatrxST) / (lenRefUL + 1));
+    //alnST->queryEndUI -(endQueryAlnCStr - bestQueryCStr);
 
   switch(lastBitElmUC)
   { // Switch; check which sequence I am on the off base

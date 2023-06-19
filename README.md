@@ -4,15 +4,14 @@ AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
   that runs with a memory usage of (O(n \* m / 4)).
   However, it is less speed efficient than a traditional 
   Smith Waterman and Needleman Wunsch alignment. It can
-  not do matrix scanning, but will allow for multiple local
-  alignments to be output from a single alignment.
+  output multiple local alignments from a single alignment.
 
-One thing I should add. I am not well read on the alignment
-  literature, so I have no idea if some one has already
-  done this. My impression is no, because I do not see
-  anything like this done in emboss, mentioned on
-  Wikipedia, or mentioned in the two or three reviews I
-  have read on the Smith Waterman algorithm.
+There are faster and less memory hungry Waterman Smith
+  implementations out there than alnSeq. One example is the
+  stripped Waterman Smith alignment, which I think reduces
+  both scoring and direction matrix to just a few rows. See 
+  [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
+  for an very fast striped Waterman Smith aligner.
 
 # This code is not running yet
 
@@ -21,31 +20,16 @@ I am currently debugging this code and will hopefully be
   working version of this code please see the alingSeq
   folder at
   [https://github.com/jeremybuttler/find--Co-infections](https://github.com/jeremybuttler/find--Co-infections).
-  The only major difference between the alternative code
-  and this code will be that this code will allow the
-  option of saving more then one alignment for the Smith
-  Waterman alignment.
 
 Here is my current status
 
-- The Needleman Wunsch alignment has be tested and is now
-  working on OpenBSD (the OS I mainly use), but it is only
-  working on the Debain Linux machine I am testing with
-  non-stdout output. Use a ">", "|", or "-out file.aln" to
-  no error out.
-- The Smith Waterman alignment is working, but printing
-  out needs a redirect like the Needleman Wunsch on linux.
-- Multi-output Smith Water alignment is not working.
-- Matrix scan, but is currently not working.
-  - Runs and is outputing cigars, but the reference
-    starting base is off (ending base I think is ok).
-  - Note this will print out cigars for full paths, not the
-    best score in the path.
-  - Note: this makes large files
-
-# Likely better alternatives already on github
-
-- https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
+I am pretty sure everything is working, except for a
+  printing error on Linux (tested on Debain) that crashes
+  the alignment or give really bad alignments when printing
+  to the screen (stdout). Redirects (">" or "|") work most
+  of the time and "-out file.aln" will work most of the
+  time.
+  
 
 # Building and running alnSeq
 
@@ -80,8 +64,11 @@ alnSeq -query query.fasta -ref ref.fasta > alignment.aln
 # For a single local alignment (Waterman Smith) (not working)
 alnSeq -use-water -query query.fasta -ref ref.fasta > out.aln
 
-# For a multi local alignment (Waterman Smith) (not working)
-alnSeq -multi-base-water -query query.fasta -ref ref.fasta -out prefix 
+# For printing out a best score for each base
+alnSeq -query-ref-scan-water -query query.fasta -ref ref.fasta -out prefix 
+
+# For a matrix scan
+alnSeq -matrix-scan-water -query query.fasta -ref ref.fasta -out prefix 
 
 ```
 
@@ -98,9 +85,8 @@ AlnSeq is an sequence alignment program that uses either
 One thing I do want to point out is that there are very
   memory efficient algorithms for optimal global alignments
   (Needleman Wunsch), such as the Hirschberg alignment.
-  However, I am unaware of any solutions for optimal local
-  alignments (Smith Waterman). I am not very well read in
-  the literature, so it is possible I missed something.
+  The striped Waterman Smith alignment is a very memory
+  efficient algorithm for optimal global alignments.
 
 ## The direction matrix
 
@@ -185,40 +171,48 @@ The rough planned memory cost of alnSeq is
   - This is for each query and reference base, but not the
     entire matrix
 - Cost of converting matrix to an alignment 3 \* (n + m)
-- Total rough cost (n\*m)/4 + 18 \* (n + m)
+- Total rough cost (n\*m)/4 + 19 \* (n + m)
 - Cost of keeping one more score per base 16 \* (n + m)
   
 The memory cost for two 200,000 base pairs sequences would
-  be ([(200,000 \* 200,000) / 4] + 36 \* 200,000) bytes =
-  10 Gb + 7.2 Mb < 11Gb.
+  be ([(200,000 \* 200,000) / 4] + 19 \* 200,000) bytes >
+  10 Gb, but < 11Gb.
 
-This algorithm has a high memory cost.
+This shows that alnSeq has a very high memory cost.
+
+## The matrix scan
+
+Searches the matrix will I am still filling the matrix. It
+  prints out a cigar for any alignment path that is above 
+  the "-min-score " setting (default 1000, which is  at
+  least 200 matches) and if the path is no longer extended
+  on the next row. This results in the full alignment,
+  rather than best alignment being printed. So, you will
+  have to search the cigars for the best sections.
+
+The output file is named prefix--matrix-scan.aln. Each line
+  in the file is tab delimited and has the score,
+  ending query base, ending reference base, cigar (end of
+  alignment to start), start of query, start of reference
+  to a file named.
+  
+One problem is that it will also print out alignments that
+  extend the main alignment by one base, which means this
+  MAKES VERY LARGE FILES and takes a lot of time. Also, the
+  print function is not very well done.
 
 ## The multi-base print
 
 This records a best score (above "-min-score") for each
   reference base and query base. However, this will only
   record a score if the alignment is not extended into the
-  next row. The alternative alignments are printed out as
-  a cigar to a file named prefix--alt.aln.
+  next row. The alternative alignments are printed out with
+  the same file format as the matrix scan.
 
-## The matrix scan
-
-Searches the matrix will I am still filling the matrix. It
-  prints out a cigar for any alignment path that is above 
-  the "-min-score " setting (default 100; needs to be
-  raised) and if the path is no longer extended on the next
-  row. This results in the full alignment, rather than
-  best alignment being printed. So, you will have to 
-  search the cigars for the best alignment.
-
-One problem is that it will also print out alignments that
-  extend the main alignment by one base, which means this
-  makes very large files and takes a lot of time. Also, the
-  print function is not very well done.
-
-The alignments are printed out to a file named
-  prefix--matrix-scan.aln.
+Though this will not make as large files as the matrix
+  scan, it still can output files that are the size of the
+  query length * reference length. This can result in VERY
+  LARGE FILES for large alignments.
 
 ## Final notes
 

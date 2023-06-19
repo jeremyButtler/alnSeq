@@ -50,7 +50,7 @@ void freeAlnMatrixST(
 
    if(matrixST->refBasesST != 0)
    { // if I need to free the reference scores
-     scoreST = *matrixST->refBasesST;
+     scoreST = matrixST->refBasesST;
 
      for(
        unsigned long ulScore = 0;
@@ -64,7 +64,7 @@ void freeAlnMatrixST(
 
    if(matrixST->qryBasesST != 0)
    { // if I need to free the query scores
-     scoreST = *matrixST->qryBasesST;
+     scoreST = matrixST->qryBasesST;
 
      for(
        unsigned long ulScore = 0;

@@ -212,7 +212,7 @@ struct alnMatrixStruct * WatermanAln(
 
    matrixST->dirMatrixST = dirMtrx;
 
-   switch(setST->multiBaseWaterBl)
+   switch(setST->refQueryScanBl)
    { // Switch: Check if keeping many best scores
      case 0: break;
 
@@ -239,8 +239,8 @@ struct alnMatrixStruct * WatermanAln(
          return 0;
        } // If had memory error
 
-       qryBasesST = *matrixST->qryBasesST;
-       refBasesST = *matrixST->refBasesST;
+       qryBasesST = matrixST->qryBasesST;
+       refBasesST = matrixST->refBasesST;
 
        matrixST->lenRefScoresUL = lenRefUL;
        matrixST->lenQueryScoresUL = lenQueryUL;
@@ -418,10 +418,12 @@ struct alnMatrixStruct * WatermanAln(
 
              if(*(topScoreLP - 1) > setST->minScoreUI)
              { // If the previous base was worth checking
-               switch(setST->matrixScanBl)
-               { // Switch; check if doing matrix scan
-                 case 0:
-                 // Case: Not doing a matrix scan
+               switch(setST->refQueryScanBl)
+               { // Switch; check if doing ref/query scan
+                 case 0: break;
+
+                 case 1:
+                 // Case: doing a reference/qury scan
                    if(
                     getTwoBitAryElm(&leftDir) == defMoveUp
                    ){ // If the left cell continues path
@@ -474,13 +476,17 @@ struct alnMatrixStruct * WatermanAln(
                    } // else If new best score for ref
 
                    break;
-                 // Case: Not doing a matrix scan
+                 // Case: doing a reference/qury scan
+               } // Switch; check if doing ref/query scan
 
                  /****************************************\
                  * Fun-01 Sec-04 Sub-05:
                  *  - Do matrix scan on previous diagnol
                  \****************************************/
 
+               switch(setST->matrixScanBl)
+               { // Switch; check if doing matrix scan
+                 case 0: break;
                  case 1:
                  // Case: doing a matrix scan
                    // Check if This path is finished
@@ -551,10 +557,12 @@ struct alnMatrixStruct * WatermanAln(
 
          if(*(topScoreLP - 1) > setST->minScoreUI)
          { // If the previous base was worth checking
-           switch(setST->matrixScanBl)
-           { // Switch; check if doing matrix scan
-             case 0:
-             // Case: Not doing a matrix scan
+          switch(setST->refQueryScanBl)
+          { // Switch; check if doing ref/query scan
+             case 0: break;
+
+             case 1:
+             // Case: doing a ref/query scan
                if(getTwoBitAryElm(dirMtrx) == defMoveUp)
                { // If the diagnol cell continues path
                  if(
@@ -586,13 +594,17 @@ struct alnMatrixStruct * WatermanAln(
                } // else If new best score for ref
 
                break;
-             // Case: Not doing a matrix scan
+             // Case: doing a ref/query scan
+          } // Switch; check if doing ref/query scan
 
              /********************************************\
              * Fun-01 Sec-04 Sub-08:
              *  - Matrix scan, check last base in row
              \********************************************/
 
+           switch(setST->matrixScanBl)
+           { // Switch; check if doing matrix scan
+             case 0: break;
              case 1:
              // Case: doing a matrix scan
                // Check if This path is finished
@@ -694,11 +706,11 @@ struct alnMatrixStruct * WatermanAln(
            * Fun-01 Sec-05 Sub-02:
            *  - Finsh last row for multibase output
            \**********************************************/
+          switch(setST->refQueryScanBl)
+          { // Switch; check if doing ref/query scan
+             case 0: break;
 
-           switch(setST->matrixScanBl)
-           { // Switch; check if doing matrix scan
-
-             case 0:
+             case 1:
              // Case: Not doing a matrix scan
                if(
                  *scoreOnLP >= (qryBasesST+qryNtUL)->scoreL
@@ -721,11 +733,16 @@ struct alnMatrixStruct * WatermanAln(
 
                break;
              // Case: Not doing a matrix scan
+          } // Switch; check if doing ref/query scan
 
              /********************************************\
              * Fun-01 Sec-05 Sub-03:
              *  - Finsh the last row for the matrix scan
              \********************************************/
+
+           switch(setST->matrixScanBl)
+           { // Switch; check if doing matrix scan
+             case 0: break;
 
              case 1:
              // Case: doing a matrix scan
@@ -838,18 +855,14 @@ void printMatrixCig(
      { // Switch: Check which way to move
        case defMoveUp:
          twoBitAryMoveBackXElm(&matrixST, lenRefUL + 1);
-         --refEndUL;
          break;
 
        case defMoveDiagnol:
          twoBitAryMoveBackXElm(&matrixST, lenRefUL + 2);
-         --qryEndUL;
-         --refEndUL;
          break;
 
        case defMoveLeft:
          twoBitAryMoveBackOneElm(&matrixST);
-         --qryEndUL;
          break;
      } // Switch: Check which way to move
 
@@ -862,6 +875,9 @@ void printMatrixCig(
      fprintf(outFILE, "%u%c", numDirUI, lastDirCigC);
 
    else fprintf(outFILE, "%c", lastDirCigC);
+
+   qryEndUL = (getTwoBitAryIndex(&matrixST) /(lenRefUL+1));
+   refEndUL = (getTwoBitAryIndex(&matrixST) %(lenRefUL+1));
 
    // Print the starting position of query and reference
    fprintf(outFILE, "\t%lu\t%lu\n", qryEndUL, refEndUL);
@@ -939,8 +955,8 @@ unsigned char printAltWaterAlns(
   ^  - Print out alternative alignments as cigars
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-  cpTwoBitPos(&dirOn, alnMtxST->dirMatrixST);
-  scoreST = *alnMtxST->refBasesST;
+  cpTwoBitPos(alnMtxST->dirMatrixST, &dirOn);
+  scoreST = alnMtxST->refBasesST;
 
   for(
     unsigned long ulRefBase = 0;
@@ -950,7 +966,7 @@ unsigned char printAltWaterAlns(
 
     // Check if even need to print out any reference alns
     if(scoreST->scoreL < setST->minScoreUI)
-      break; // No more socres to print out
+      goto nextRefScore;
 
     moveXElmFromStart(&dirOn, scoreST->indexUL);
 
@@ -960,7 +976,8 @@ unsigned char printAltWaterAlns(
       lenRefUL,
       scoreST->scoreL
     ); // Prit out the cigar entry
-  
+
+     nextRefScore:
     ++scoreST;  // Move to the next entry
   } // For all reference bases in the alignment
      
@@ -969,7 +986,7 @@ unsigned char printAltWaterAlns(
   ^  - Print out the query alignments
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-  scoreST = *alnMtxST->qryBasesST;
+  scoreST = alnMtxST->qryBasesST;
 
   for(
     unsigned long ulQryBase = 0;
@@ -979,7 +996,7 @@ unsigned char printAltWaterAlns(
 
     // Check if even need to print out any reference alns
     if(scoreST->scoreL < setST->minScoreUI)
-      break; // No more socres to print out
+      goto nextQueryScore;
 
     moveXElmFromStart(&dirOn, scoreST->indexUL);
 
@@ -989,7 +1006,8 @@ unsigned char printAltWaterAlns(
       lenRefUL,
       scoreST->scoreL
     ); // Prit out the cigar entry
-  
+
+    nextQueryScore:
     ++scoreST;  // Move to the next entry
   } // For all reference bases in the alignment
 
