@@ -201,6 +201,10 @@ Though this will not make as large files as the matrix
   query length * reference length. This can result in VERY
   LARGE FILES for large alignments.
 
+This was an intresting idea, but for the few tests that I 
+  ran, I found that this mainly feature printed alignments
+  that were just one or two bases off the main alignment.
+
 ## Final notes
 
 AlnSeq does not use decimals, so if you want decimals for
