@@ -25,6 +25,16 @@ These ideas are a future vision that is not worth the
 
 # Log
 
+## Version 1.20230620
+
+- Fixed an issue were two very different large alignments
+  (Tested was: testing/largeTest-query-a.fasta and
+  TickBornEncephalitis-reference.fasta) would segfault.
+  - This error was due to my inputting unsigned longs
+    instead int32_t for twoBitAryMoveForXElm.
+  - twoBitAryMoveForXElm now uses unsigned longs instead of
+    int32_t for its index
+
 ## Version 1.20230619
 
 Other than bug fixes that pop up, this will be my final

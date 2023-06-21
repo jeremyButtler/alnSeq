@@ -176,17 +176,17 @@ void twoBitAryMoveToNextElm(
 \--------------------------------------------------------*/
 void twoBitAryMoveForXElm(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL    // Number elements to shift by
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-04 TOC: Sec-1 Sub-1: twoBitAryMoveForXElm
    '  - Moves forward in two bit array by x elements
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    // Get whole shifts to perform
-   twoBitST->limbOnUCPtr += (shiftByI >> 2);
+   twoBitST->limbOnUCPtr += (shiftByUL >> 2);
 
    // Move the bit above 
-   switch(twoBitST->elmOnUC + (shiftByI & (1 | 2)))
+   switch(twoBitST->elmOnUC + (shiftByUL & (1 | 2)))
    { // Switch; check if need to move to a new element
        case 0:
            twoBitST->elmOnUC = 0;
@@ -253,21 +253,21 @@ void twoBitAryMoveBackOneElm(
 \--------------------------------------------------------*/
 void twoBitAryMoveBackXElm(
   struct twoBitAry *twoBitST, // To bit array to move back
-  int32_t shiftByI         // number elements to shift back
+  unsigned long shiftByUL  // number elements to shift back
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-06 TOC: Sec-1 Sub-1: twoBitAryMoveBackXElm
    '  - Moves back X elements back in a 2-bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    // Move back by limbs
-   twoBitST->limbOnUCPtr -= (shiftByI >> 2);
+   twoBitST->limbOnUCPtr -= (shiftByUL >> 2);
 
    // Move the bit above 
    switch(twoBitST->elmOnUC)
    { // Switch; check if need to move to a new element
        case 0:
        // Case 0: on the first element in the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: return; // Finished
                case 1:         // Target in previous limb
@@ -287,7 +287,7 @@ void twoBitAryMoveBackXElm(
 
        case 1:
        // Case 1: Was on the second element in the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: return; // Finished
                case 1:
@@ -306,7 +306,7 @@ void twoBitAryMoveBackXElm(
 
        case 2:
        // Case 2: On the third element in the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: return; // Finished
                case 1:
@@ -324,7 +324,7 @@ void twoBitAryMoveBackXElm(
 
        case 3:
        // Case 3: was on the last element of the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: return; // Finished
                case 1:
@@ -573,7 +573,7 @@ void freeTwoBitAry(
 \--------------------------------------------------------*/
 void moveXElmFromStart(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL     // Number elements to shift by
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-15 TOC: Sec-1 Sub-1: moveXElmFromStart
    '  - Change the two bit array postion to x elements
@@ -582,10 +582,10 @@ void moveXElmFromStart(
 
    // Get whole shifts to perform
    twoBitST->limbOnUCPtr =
-     twoBitST->firstLimbUCPtr + (shiftByI >> 2);
+     twoBitST->firstLimbUCPtr + (shiftByUL >> 2);
 
    // Move the bit above 
-   switch(shiftByI & (1 | 2))
+   switch(shiftByUL & (1 | 2))
    { // Switch; check if need to move to a new element
        case 0:
            twoBitST->elmOnUC = 0;
@@ -704,17 +704,17 @@ char twoBitAryMoveToNextElmBoundsCheck(
 \--------------------------------------------------------*/
 char twoBitAryMoveForXElmBoundsCheck(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL  // Number elements to shift by
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-19 TOC: Sec-1 Sub-1: twoBitAryMoveForXElm
    '  - Moves forward in two bit array by x elements
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    // Get whole shifts to perform
-   twoBitST->limbOnUCPtr += (shiftByI >> 2);
+   twoBitST->limbOnUCPtr += (shiftByUL >> 2);
 
    // Move the bit above 
-   switch(twoBitST->elmOnUC + (shiftByI & (1 | 2)))
+   switch(twoBitST->elmOnUC + (shiftByUL & (1 | 2)))
    { // Switch; check if need to move to a new element
        case 0:
            twoBitST->elmOnUC = 0;
@@ -797,21 +797,21 @@ char twoBitAryMoveBackOneElmBoundsCheck(
 \--------------------------------------------------------*/
 char twoBitAryMoveBackXElmBoundsCheck(
   struct twoBitAry *twoBitST,// To bit array to move back
-  int32_t shiftByI         // number elements to shift back
+  unsigned long shiftByUL // number elements to shift back
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-21 TOC: Sec-1: twoBitAryMoveBackXElmBoundsCheck
    '  - Moves back X elements back in a 2-bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    // Move back by limbs
-   twoBitST->limbOnUCPtr -= (shiftByI >> 2);
+   twoBitST->limbOnUCPtr -= (shiftByUL >> 2);
 
    // Move the bit above 
    switch(twoBitST->elmOnUC)
    { // Switch; check if need to move to a new element
        case 0:
        // Case 0: on the first element in the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: break; // Finished
                case 1:         // Target in previous limb
@@ -831,7 +831,7 @@ char twoBitAryMoveBackXElmBoundsCheck(
 
        case 1:
        // Case 1: Was on the second element in the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: break; // Finished
                case 1:
@@ -850,7 +850,7 @@ char twoBitAryMoveBackXElmBoundsCheck(
 
        case 2:
        // Case 2: On the third element in the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: break; // Finished
                case 1:
@@ -868,7 +868,7 @@ char twoBitAryMoveBackXElmBoundsCheck(
 
        case 3:
        // Case 3: was on the last element of the limb
-           switch(shiftByI & (1 | 2))
+           switch(shiftByUL & (1 | 2))
            { // Switch; find out how many bits to adjust
                case 0: break; // Finished
                case 1:
@@ -960,7 +960,7 @@ char moveToLastLimbBoundsCheck(
 \--------------------------------------------------------*/
 char moveXElmFromStartBoundsCheck(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL // Number elements to shift by
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-24 TOC: Sec-1 Sub-1: moveXElmFromStart
    '  - Change the two bit array postion to x elements
@@ -969,10 +969,10 @@ char moveXElmFromStartBoundsCheck(
 
    // Get whole shifts to perform
    twoBitST->limbOnUCPtr =
-     twoBitST->firstLimbUCPtr + (shiftByI >> 2);
+     twoBitST->firstLimbUCPtr + (shiftByUL >> 2);
 
    // Move the bit above 
-   switch(shiftByI & (1 | 2))
+   switch(shiftByUL & (1 | 2))
    { // Switch; check if need to move to a new element
        case 0:
            twoBitST->elmOnUC = 0;

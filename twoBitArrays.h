@@ -172,7 +172,7 @@ void twoBitAryMoveToNextElm(
 \--------------------------------------------------------*/
 void twoBitAryMoveForXElm(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL    // Number elements to shift by
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-04 TOC: Sec-1 Sub-1: twoBitAryMoveForXElm
    '  - Moves forward in two bit array by x elements
@@ -197,7 +197,7 @@ void twoBitAryMoveBackOneElm(
 \--------------------------------------------------------*/
 void twoBitAryMoveBackXElm(
   struct twoBitAry *twoBitST, // To bit array to move back
-  int32_t shiftByI         // number elements to shift back
+  unsigned long shiftByUL // number elements to shift back
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-06 TOC: Sec-1 Sub-1: twoBitAryMoveBackXElm
    '  - Moves back X elements back in a 2-bit array
@@ -323,7 +323,7 @@ void freeTwoBitAry(
 \--------------------------------------------------------*/
 void moveXElmFromStart(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL    // Number elements to shift by
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-15 TOC: Sec-1 Sub-1: moveXElmFromStart
    '  - Change the two bit array postion to x elements
@@ -385,7 +385,7 @@ char twoBitAryMoveToNextElmBoundsCheck(
 \--------------------------------------------------------*/
 char twoBitAryMoveForXElmBoundsCheck(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL    // Number elements to shift by
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-19 TOC: Sec-1 twoBitAryMoveForXElmBoundsCheck
    '  - Moves forward in two bit array by x elements
@@ -419,7 +419,7 @@ char twoBitAryMoveBackOneElmBoundsCheck(
 \--------------------------------------------------------*/
 char twoBitAryMoveBackXElmBoundsCheck(
   struct twoBitAry *twoBitST, // To bit array to move back
-  int32_t shiftByI         // number elements to shift back
+  unsigned long shiftByUL  // number elements to shift back
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-21 TOC: Sec-1 twoBitAryMoveBackXElmBoundsCheck
    '  - Moves back X elements back in a 2-bit array
@@ -468,7 +468,7 @@ char moveToLastLimbBoundsCheck(
 \--------------------------------------------------------*/
 char moveXElmFromStartBoundsCheck(
   struct twoBitAry *twoBitST,// Array to change index for
-  int32_t shiftByI           // Number elements to shift by
+  unsigned long shiftByUL  // Number elements to shift by
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-24 TOC: Sec-1: moveXElmFromStartBoundsCheck
    '  - Change the two bit array postion to x elements
