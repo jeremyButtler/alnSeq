@@ -38,36 +38,19 @@
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOH: Start Of Header
-'  - st-01 alnSet:
+'  o st-01 alnSet:
 '     o Holds settings for my alignment program
-'  - fun-03 cnvtAlnErrToSeq:
-'     o Uses an array of error types and a c-string with the a sequence
-'       to make one part of an alignment
-'  - fun-04 WatermanSmithAln:
-'     o Perform a Waterman Smith alignment on input sequences
-'  - fun-05 NeedleManWunschAln:
-'     o Perform a Needleman-Wunsch alignment on input sequences
-'  - fun-07 checkIfBasesMatch
-'     o Check if two bases are the same (includes anonymous bases)
-'  - fun-12 makeAlnSet:
-'     o Makes & initalizes an alnSet structer on the heap
-'  - fun-13 getBasePairScore:
-'     o Get the score for a pair of bases from an alignment structure
-'  - fun-14 initAlnSet:
-'     o Set values in altSet (alingment settings) structure to defaults
-'  - fun-15 setAlnSetSnpPenalty:
-'     o Changes SNP/Match penalty for one query/reference combination
-'  - fun-16 freeAlnSet:
-'     o Frees and alnSet (alignment settings) structure
-'  - fun-17 cnvtAlnErrAryToLetter:
-'     o Converts an alignment error array from my Needleman-Wunsch
-'       alignment into an array of letters (I = insertion, D = deletion,
-'       = = match, X = snp) [These codes are from the eqx cigar entry]
-'  - fun-18 readInScoreFile
+'  o fun-01 initAlnSet:
+'    - Set all values in altSet (alingment settings)
+'      structure to defaults
+'  o fun-02 freeAlnSet:
+'    o Frees and alnSet (alignment settings) structure
+'  o fun-03 setBasePairScore:
+'    - Changes SNP/Match penalty for one query/reference
+'      combination
+'  - fun-04 readInScoreFile
 '     o Reads in a file of scores for a scoring matrix
-'  - fun-19 getIndelScore:
-'     o Gets an indel score for the current cell
-\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+\~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*---------------------------------------------------------------------\
 | ST-01: alnSet
@@ -104,37 +87,12 @@ typedef struct alnSet
 }alnSet;
 
 /*---------------------------------------------------------------------\
-| Output: Heap alloacted C-string with alignment for the input sequence
-\---------------------------------------------------------------------*/
-char * cnvtAlnErrToSeq(
-    char *seqCStr,        // c-string with query sequence
-    int32_t seqStartI,    // Were alignment starts on query (index 1)
-    char queryBl,         // 1: input sequence is query, 0: is reference
-    uint8_t *alnErrUCAry, // Holds error types (ends with 0)
-    uint32_t lenErrAryUI  // length of alnErrUCAry (for sequence array)
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: Sec-1 Sub-1: cnvtAlnQueryErrToSeq
-   '  - Uses an array of error types and a c-string with the a sequence
-   '    to make one part of an alignment
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
-| Output: Returns: Initalized alnSet structer or 0 for memory error
-| Note: I prefer using stack, so this is more here for someone else
-\---------------------------------------------------------------------*/
-struct alnSet * makeAlnSetST(
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-12 TOC: Sec-1 Sub-1: makeAlnSet
-   '  - Makes & initalizes an alnSet structer on the heap
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
 | Output: Modifies: alnSetST to have default alignment settings values
 \---------------------------------------------------------------------*/
 void initAlnSet(
     struct alnSet *alnSetST // Alinment settings structure to initialize
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-14 TOC: Sec-1 Sub-1: initAlnSet
+   ' Fun-01 TOC: Sec-1 Sub-1: initAlnSet
    '  - Set values in altSet (alingment settings) structure to defaults
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -147,7 +105,7 @@ void setBasePairScore(
     int16_t newScoreC,      // New value for [query][ref] combination
     struct alnSet *alnSetST // structure with scoring matrix to change
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-15 TOC: Sec-1 Sub-1: setBasePairScore
+   ' Fun-02 TOC: Sec-1 Sub-1: setBasePairScore
    '  - Changes SNP/Match penalty for one query/reference combination
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -158,36 +116,19 @@ void freeAlnSet(
     struct alnSet *alnSetST,  // Alignment settings structure to free
     char stackBl              // 1: alnSetSt on stack; 0: on heap
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-16 TOC: Sec-1 Sub-1: freeAlnSet
+   ' Fun-03 TOC: Sec-1 Sub-1: freeAlnSet
    '  - Frees and alnSet (alignment settings) structure
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*---------------------------------------------------------------------\
-| Output: Modifies: alnErrUCAry to have letters instead of codes
-\---------------------------------------------------------------------*/
-void cnvtAlnErrAryToLetter(
-    char *refSeqCStr,      // Reference sequence for detecting matches
-                           // Input 0 to ignore matches
-    char *querySeqCStr,    // query sequence for detecting matches
-                           // Input 0 to ignore matches
-    uint8_t *alnErrUCAry   // Array array from Needleman (fun-05) to 
-                          // convert to legible characters
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-17 TOC: Sec-1 Sub-1: cnvtAlnErrAryToLetter
-   '  - Converts an alignment error array from my Needleman-Wunsch
-   '    alignment into an array of letters (I = insertion, D = deletion,
-   '    = = match, X = snp) [These codes are from the eqx cigar entry]
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 unsigned long readInScoreFile(
     struct alnSet *alnSetST,  // structure with scoring matrix to change
     FILE *scoreFILE           // File of scores for a scoring matrix
 );  /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-    ' Fun-18 TOC: readInScoreFile
+    ' Fun-04 TOC: readInScoreFile
     '  - Reads in a file of scores for a scoring matrix
-    '  o fun-18 sec-1: Variable declerations and buffer set up
-    '  o fun-18 sec-2: Read in line and check if comment
-    '  o fun-18 sec-3: Get score, update matrix, & move to next line
+    '  o fun-04 sec-1: Variable declerations and buffer set up
+    '  o fun-04 sec-2: Read in line and check if comment
+    '  o fun-04 sec-3: Get score, update matrix, & move to next line
     \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #endif

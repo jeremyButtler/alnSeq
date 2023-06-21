@@ -13,10 +13,10 @@ There are faster and less memory hungry Waterman Smith
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
   for an very fast striped Waterman Smith aligner.
 
-I am currently finished with this code, but will take some
-  time to add in a document describing how to interface
-  with this code. It will mostly be a list of functions,
-  were they are found, and what they do.
+Other than doing some bechmarking and future debugging, I
+  am finished with this code. If this code becomes usefull
+  to many others I may try to improve this code further,
+  but for now I am done.
 
 # Building and running alnSeq
 
