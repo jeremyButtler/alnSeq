@@ -13,10 +13,9 @@ There are faster and less memory hungry Waterman Smith
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
   for an very fast striped Waterman Smith aligner.
 
-Other than doing some bechmarking and future debugging, I
-  am finished with this code. If this code becomes usefull
-  to many others I may try to improve this code further,
-  but for now I am done.
+Other than future debugging, I am finished with this code.
+  If this code becomes usefull to many others I may try to
+  improve this code further, but for now I am done.
 
 # Building and running alnSeq
 
@@ -204,6 +203,58 @@ Though this will not make as large files as the matrix
 This was an intresting idea, but for the few tests that I 
   ran, I found that this mainly feature printed alignments
   that were just one or two bases off the main alignment.
+
+## Some light benchmarking
+
+I compared alnSeq to the Waterman Smith and Needleman
+  Wunsch aligners in bio-alignment (bio-align), emboss,
+  and Complete-Striped-Smith-Waterman-Library (ssw_test).
+  I also included the Hirschberg alignment in bio-alignment
+  (bio-align-hb) in my tests.
+
+![Memory usage of alnSeq compared to the Waterman Smith,
+  Needleman Wunsch, and Hirschberg (hb) aligners from
+  bio-alignment (bio-align), emobss, and
+  Complete-Striped-Smith-Waterman-Library.
+  The alnSeqO3 means alnSeq was complied with the O3
+  option.
+](analysis/alnSeq-memory.svg)
+
+As expected the memory usage was much lower for the
+  Hirschberg and striped Smith Waterman (ssw_test), while
+  alnSeq, emboss, and bio-alginment needed large amounts
+  of memory.
+However, alnSeq needed less memory than emboss of
+  bio-alignment.
+Also, we found that though ssw_test had low memory usage
+  when aligning similar genomes, it had a much higher
+  memory usage when the genomes were very different, such
+  as from different viruses.
+However, in all cases ssw_test still had better memory
+  usage than alnSeq.
+
+![Time usage of alnSeq compared to the Waterman Smith,
+    Needleman Wunsch, and Hirschberg (hb) aligners from
+    , emobss, and
+  Complete-Striped-Smith-Waterman-Library.
+    The alnSeqO3 means alnSeq was complied with the O3
+    option.
+  The Waterman Smith Bio-alignment (bio-align) tests were
+    discarded due to Bio-alignments Waterman Smith
+    algorithm printing out the scoring matrix.
+](analysis/alnSeq-memory.svg)
+
+For time usage we find that alnSeq was often the slowest
+  algorithm, while the Hirschberg and ssw_test were often
+  the fastest algorithms.
+
+The differences in memory and time usage for the Hirschberg
+  and ssw_test for the Small-Mid, Small-Large, Small-Huge,
+  Mid-Large, Mid-Huge, and Large-Huge are likely due to
+  half of the data points using the larger genome as the
+  query and the other half using the larger genome as the
+  reference. Also, a different reference and query genome
+  was used for the different tests.
 
 ## Final notes
 

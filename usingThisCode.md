@@ -391,8 +391,95 @@ return 0;
 
 ## Two bit arrays
 
-For the two bit arrays, please browse the functions in
-  twoBitArrays.h. For movement functions there are two
-  forms, the first does not check if the move resulted in
-  an out of bounds error. The second ends in BoundsCheck
-  and will check if the move was out of bounds.
+The two bit array is an array of uint8_t's that each hold
+  four two bit elements. This array is stored in a
+  twoBitAry structure (struct-01 twoBitArrays.h). The
+  twoBitAry structure has a pointer to the first unit8_t
+  (limb) in the array (firstLimbUCPtr), a pointer to the 
+  limb currently one (limbOnUCPtr), a counter telling which
+  element we are on in the limb, and the length of the
+  array.
+
+You can create a twoBitAry structure using the
+  makeTwoBitArry function (fun-12 in twoBitArrys.h). This
+  function will return a two bit array structure allocated
+  on the head with a two bit array of the requested size.
+  The inputs are the number of elements in the two bit
+  array and 0. However, if you wish to not make an array
+  you can use twoBitStruct = makeTowBitArry(0, 1).
+
+When finished the two bit array can be freed with
+  the freeTwoBitAry function (fun-14 twoBitArrays.h). This
+  takes a pointer to the twoBitAry structure to free,
+  a 1 or 0 (free structure) to tell if to not free the
+  structure, and a 1 or 0 (free array) to tell if to free
+  the array stored in the structure. If you free the
+  structure, make sure you set the pointer to null.
+
+Their are several functions that are used to move around
+  the two bit array, most of which only take a pointer to
+  a two bit array structure or a pointer to the structure
+  and a additional value.
+
+To get the current two bit element on in the array use
+  the getElmFromToBitUCAry() function
+  (fun-01 twoBitArrays.h). To move forward one element use
+
+You can get the index of the element you are on in the two
+  bit array using the getTowBitAryIndex() function (fun-17
+  twoBitArrays.h).
+
+You can get the length of the two bit array by using the
+  lenTwoBitAry() function (fun-16 twoBitArrays.c).
+ 
+To change the current element on in a two bit array use the
+  changeTwoBitElement() function (fun-08 in twoBitArrays.h)
+
+You can do a shallow copy of the two bit array by using
+  the cpTowBitPos() function (fun-13 twoBitArrays.h). This
+  will allow you to work on the same two bit array with two
+  separate pointers.
+  
+You can move forward in a two bit array using the
+  twoBitAryMoveToNextElm() (fun-03 twoBitArrays.h) and
+  twoBitAryMoveForXElm functions (fun-04 twoBitArrays.h).
+  You can also use the moveXElmFromStart() function to move
+  from the starting index instead of the current position.
+
+You can move backwards in a two bit array using the
+  twoBitAryMoveBackOnElm() (fun-05 twoBitArrays.h) and
+  twoBitAryMoveBackXElm functions (fun-06 twoBitArrays.h).
+
+Finally if you need to blank a limb to 0 you can use the
+  blankLimb() function (fun-09 twoBitArrays.h).
+
+Most of the movement functions have an alternative form
+  that ends in BoundsCheck, which checks to see if the move
+  resulted in an out of bounds error. I have not tested
+  these, but they should work.
+
+```
+// An example of using two bit arrays
+
+struct twoBitAry *twoBitST = makeTwoBitArry(10, 0);
+
+// Add some values into the array
+changeTwoBitElement(twoBitST, 1);
+twoBitAryMoveToNextElm(twoBitSt);
+
+changeTwoBitElement(twoBitST, 0);
+twoBitAryMoveToNextElm(twoBitSt);
+
+changeTwoBitElement(twoBitST, 3);
+twoBitAryMoveToNextElm(twoBitSt);
+
+// Move back to the start of the array
+moveXElmFromStart(twoBitST, 0);
+
+// Print out the first element
+printf("%u\n", getElmFromToBitUCAry(twoBitST);
+
+freeTwoBitAry(twoBitST, 0, 0);
+twoBitST = 0;
+return 0;
+```

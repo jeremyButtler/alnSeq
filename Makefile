@@ -41,8 +41,20 @@ gcc:
 cc:
 	cc $(CFLAGS) $(SOURCE) -o alnSeq
 
+benchmark:
+	$(CC) -static -Ofast $(SOURCE) -o alnSeqOFast || gcc -static -Ofast $(SOURCE) -o alnSeqOFast || egcc -static -Ofast $(SOURCE) -o alnSeqOFast || cc -static -Ofast $(SOURCE) -o alnSeqOFast
+	$(CC) -static -O3 $(SOURCE) -o alnSeqO3 || gcc -static -O3 $(SOURCE) -o alnSeqO3 || egcc -static -O3 $(SOURCE) -o alnSeqO3 || cc -static -O3 $(SOURCE) -o alnSeqO3
+	$(CC) -static -O2 $(SOURCE) -o alnSeqO2 || gcc -static -O2 $(SOURCE) -o alnSeqO2 || egcc -static -O2 $(SOURCE) -o alnSeqO2 || cc -static -O2 $(SOURCE) -o alnSeqO2
+	$(CC) -static -O0 $(SOURCE) -o alnSeqO0 || gcc -static -O0 $(SOURCE) -o alnSeqO0 || egcc -static -O0 $(SOURCE) -o alnSeqO0 || cc -static -O0 $(SOURCE) -o alnSeqO0
+
+
 clean:
-	rm alnSeqDebug; # Only thing to clean up
+	rm alnSeqDebug || printf ""; # Only thing to clean up
+	rm alnSeqOFast || printf ""; # clean up benchmarking programs
+	rm alnSeqO3 || printf "";
+	rm alnSeqO2 || printf "";
+	rm alnSeqO0 || printf "";
+	# || printf ""; is so it does not error out
 
 install:
 	mv alnSeq $(PREFIX) || printf "Unable to install alnSeq at %s\n Change this with make PREFIX=/path/to/install install\n" $(PREFIX) && exit;
