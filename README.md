@@ -242,7 +242,7 @@ However, in all cases ssw_test still had better memory
   The Waterman Smith Bio-alignment (bio-align) tests were
     discarded due to Bio-alignments Waterman Smith
     algorithm printing out the scoring matrix.
-](analysis/alnSeq-memory.svg)
+](analysis/alnSeq-time.svg)
 
 For time usage we find that alnSeq was often the slowest
   algorithm, while the Hirschberg and ssw_test were often
