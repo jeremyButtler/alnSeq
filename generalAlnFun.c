@@ -20,18 +20,8 @@
 '    - Gets an indel score for the current cell
 '  o fun-02 getBasePairScore:
 '    - Get the score for a pair of bases from an alignment
-'  o fun-03 cnvtAlnErrToSeq:
-'    - Uses an array of error types and a c-string with
-'      the a sequence to make one part of an alignment
-'  o fun-04 TOC: Sec-1 Sub-1: cnvtAlnErrAryToLetter
-'    - Converts an alignment error array from my alignment
-'      algorithms into an array of letters
-'      (I = insertion, D = deletion, = = match, X = snp)
-'  o fun-05 checkIfBasesMatch:
+'  o fun-03 checkIfBasesMatch:
 '    - Are two bases are same? (includes anonymous bases)
-'  o fun-06 getAlnAry:
-'    - Builds an anlignment array for the input direction
-'      matrix
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\
@@ -94,7 +84,7 @@ char checkIfBasesMatch(
     char *queryBaseC,// Query base to compare to reference
     char *refBaseC   // Reference base to compare to query
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-05 TOC: Sec-1 Sub-1: checkIfBasesMatch
+   ' Fun-03 TOC: Sec-1 Sub-1: checkIfBasesMatch
    '  - Are two bases are same? (includes anonymous bases)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
    

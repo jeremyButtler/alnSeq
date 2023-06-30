@@ -43,6 +43,10 @@ void initAlnSet(
 
    // Choose the aligment style
    alnSetST->useNeedleBl = defUseNeedle;
+   alnSetST->useWaterBl = defUseWater;
+   alnSetST->useHirschBl = defUseHirsch;
+
+   // Set the base style ouput for the waterman alignment
    alnSetST->multiBaseWaterBl = defMultiBaseWater;
    alnSetST->matrixScanBl = defMatrixScan;
    alnSetST->refQueryScanBl = defMatrixScan;
@@ -57,7 +61,8 @@ void initAlnSet(
 
    // Min settings to keep an non-best alternateve
    // alignment for eac base
-   alnSetST->minBasesUI = defMinBasesUI;
+   //alnSetST->minBasesUI = defMinBasesUI;
+      // minBaseUI is NO LONGER USED
    alnSetST->minScoreUI = defMinScore;
   
    // Set the default output line wrapping

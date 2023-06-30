@@ -11,11 +11,32 @@ There are faster and less memory hungry Waterman Smith
   Waterman Smith alignment, which I think reduces both
   scoring and direction matrix to just a few rows. See 
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
-  for an very fast striped Waterman Smith aligner.
+  for an very fast striped Waterman Smith aligner. However,
+  this program is currently not set up to handle alingments
+  with scores over 37678.
 
-Other than future debugging, I am finished with this code.
-  If this code becomes usefull to many others I may try to
-  improve this code further, but for now I am done.
+# Current work
+
+I know I said I was finished, but I just thought I would
+  try reducing the Waterman directional matrix down to two
+  rows and just record the score, start position, and end
+  position of the best alignment. My plan would then be to
+  use an Hirschberg to find the actual alignment. My logic
+  is that a local aligmnent turns into a global alignment
+  once you know the start and end. This would reduce memory
+  usage down, but would also require running both a
+  Waterman and Hirschberg alignment, which takes more time.
+
+I then could also allow recording of the best score for
+  each query and reference base or printing of each score
+  that passes the min score value to add in additional
+  searching. However, I will only print out the score, 
+  starting reference base, starting query base, ending
+  reference base, and ending query base for alternative
+  alignments.
+
+Currently I am trying to get the Hirschberg up and running
+  (it is not working).
 
 # Building and running alnSeq
 
@@ -209,7 +230,7 @@ This was an intresting idea, but for the few tests that I
 I compared alnSeq to the Waterman Smith and Needleman
   Wunsch aligners in bio-alignment (bio-align), emboss,
   and Complete-Striped-Smith-Waterman-Library (ssw_test).
-  I also included the Hirschberg alignment in bio-alignment
+  I also included an Hirschberg alignment in bio-alignment
   (bio-align-hb) in my tests.
 
 ![Memory usage of alnSeq compared to the Waterman Smith,
@@ -256,6 +277,18 @@ The differences in memory and time usage for the Hirschberg
   reference. Also, a different reference and query genome
   was used for the different tests.
 
+When I inspected the huge-huge alignments for ssw_test I
+  found that ssw_test output an alignment score of 32767,
+  which is one off the maximum value for a short (32768).
+  I also found out that ssw_test would only print out the
+  first 16486 bases. This is likely due to ssw_test using
+  shorts to record scores. This is further supported by
+  ssw_test being able to print out the full alignment for
+  the huge-large alignment test (score of 5449).
+
+For now, do not use ssw_test if you expect your scores to
+  exceeded 32768.
+
 ## Final notes
 
 AlnSeq does not use decimals, so if you want decimals for
@@ -298,3 +331,10 @@ For multi-threading my thought was to do rows and have each
   It gave me a great visual on how the Needleman Wunsch
   algorithm worked. Their were many other sources, but this
   was the one that was the most useful to me.
+- Wikipedia's entry about the Hirschberg. It is helping me
+  understand how the Hirschberg works
+- Bio-alignment coded a Hirsberg, which I used to help
+  understand how the Hirsberg alignment worked. 
+- To all the sights providing guidance on how aligners
+  worked. There are to many to list, but each one I used
+  helped me understand these algorithms a little better.

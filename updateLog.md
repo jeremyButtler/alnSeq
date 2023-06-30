@@ -25,6 +25,18 @@ These ideas are a future vision that is not worth the
 
 # Log
 
+## Version 1.20230630
+
+- Changed sequence lengths and offsets to be longs instead
+  of integers
+- Put down logic for Hirschberg, which I am currently
+  debugging
+- Changed the default gap extension and gap opening 
+  penalties to be more suited for non-noisy reads
+  - Gap opening penalty is now -4 (used to be -1)
+  - Gap extension penalty is now -1 (used to be -4)
+- Changed
+  
 ## Version 1.20230620
 
 - Fixed an issue were two very different large alignments

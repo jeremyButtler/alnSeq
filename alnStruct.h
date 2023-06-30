@@ -37,6 +37,11 @@
 '    - Initalize all values in alnST to 0
 '  o fun-06 freeAlnST:
 '    - Frees alnST and all variables in alnST
+'  o fun-07 addAlnSTArray:
+'    - Adds an alignment array to an alnStruct structure
+'  o fun-08 lnSTAddNewCode:
+'    - Convert a two bit element into an alignment code.
+'      Matches are checked in fun-02 (alnAryToLetter)
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #ifndef ALNSTRUCT_H
@@ -194,6 +199,40 @@ void freeAlnST(
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-06 TOC: Sec-01: freeAlnST
    '  - Frees alnST and all variables in alnST
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o alnST->alnAryUC to have an alignment array
+|    o alnST->lenAlnAryUI to have the length of the
+|      alignment array
+|  - Returns
+|    o 0 for no errors
+|    o 64 for memory allocation errors
+\--------------------------------------------------------*/
+unsigned char addAlnSTArray(
+  struct alnStruct *alnST, // add new array to
+  unsigned long  lenAryUL  // Size of new array
+    // This should be reference length + query length
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-07 TOC: addAlnSTArray
+   '  - Adds an alignment array to an alnStruct structure
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o alnST to hold the alignment direction and incurment
+|      both of its counters
+\--------------------------------------------------------*/
+void alnSTAddNewCode(
+  struct alnStruct *alnST, // Has alignment array to add to
+  uint8_t twoBitElmUC      // Alignment code to add 
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-08 TOC: alnSTAddNewCode
+   '  - Convert a two bit element into an alignment code.
+   '    Matches are checked in fun-02 (alnAryToLetter)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #endif

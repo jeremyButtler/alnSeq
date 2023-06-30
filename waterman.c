@@ -48,10 +48,13 @@
 |    o 0 for memory allocation errors
 \--------------------------------------------------------*/
 struct alnMatrixStruct * WatermanAln(
-    struct seqStruct *queryST,
-      // query sequence, length, & bounds for alignment
-    struct seqStruct *refST,  
-      // reference sequence, length, & bounds for alignment
+    struct seqStruct *queryST, // query sequence and data
+    struct seqStruct *refST,  // ref sequence and data
+      // both queryST and refST have the sequence,
+      // they also have the point to start the alignment
+      // seqST->offsetUL (index 0) and the point to end
+      // the alignment seqST->endAlnUL (index 0).
+      // CURRENTLY THIS ONLY WORKS FOR FULL ALIGNMENTS
     struct alnSet *setST,// Settings for the alignment
     // *startI and *endI paramaters should be index 1
     char *prefixCStr  // Prefix for matrix scan output file
@@ -90,25 +93,27 @@ struct alnMatrixStruct * WatermanAln(
    \******************************************************/
 
    // Get the start of the query and reference sequences
-   char *refStartCStr = refST->seqCStr + refST->offsetUI;
+   char *refStartCStr = refST->seqCStr + refST->offsetUL;
 
    char *queryStartCStr =
-        queryST->seqCStr + queryST->offsetUI;
+        queryST->seqCStr + queryST->offsetUL;
 
    char *tmpQueryCStr = queryStartCStr;
    char *tmpRefCStr = refStartCStr;
 
    // Find the length of the reference and query
    unsigned long lenQueryUL =
-       queryST->endAlnUI - queryST->offsetUI;
+       queryST->endAlnUL - queryST->offsetUL + 1;
+     // The + 1 is to account for index 0 of endAlnUL
 
    unsigned long lenRefUL =
-       refST->endAlnUI - refST->offsetUI;
+       refST->endAlnUL - refST->offsetUL + 1;
+     // The + 1 is to account for index 0 of endAlnUL
 
    // Set up counters for the query and reference base
    // index
-   unsigned long qryNtUL = queryST->offsetUI - 1;
-   unsigned long refNtUL = refST->offsetUI- 1;
+   unsigned long qryNtUL = queryST->offsetUL - 1;
+   unsigned long refNtUL = refST->offsetUL- 1;
 
    /******************************************************\
    * Fun-01 Sec-01 Sub-02:
@@ -309,7 +314,7 @@ struct alnMatrixStruct * WatermanAln(
    tmpQueryCStr = queryStartCStr;
    tmpRefCStr = refStartCStr;
 
-   qryNtUL = queryST->offsetUI;
+   qryNtUL = queryST->offsetUL;
      // Not in switch, because not in loop
 
    // Starting on the first sequence row
@@ -331,7 +336,7 @@ struct alnMatrixStruct * WatermanAln(
 
      switch(setST->multiBaseWaterBl)
      { // switch: check if keeping best score for each base
-       case 1: refNtUL = refST->offsetUI;
+       case 1: refNtUL = refST->offsetUL;
      } // switch: check if keeping best score for each base
 
      /**************************************************\
@@ -691,7 +696,7 @@ struct alnMatrixStruct * WatermanAln(
      case 1:
      // Case 1: Ceck if keeping last edge cell
 
-       refNtUL = refST->offsetUI;
+       refNtUL = refST->offsetUL;
        qryNtUL = qryNtUL;
        tmpRefCStr = refStartCStr;
 
@@ -924,7 +929,7 @@ unsigned char printAltWaterAlns(
   char fileNameCStr[lenFileNameUS];
   char *tmpCStr = 0;
 
-  unsigned long lenRefUL = refST->lenSeqUI-refST->offsetUI;
+  unsigned long lenRefUL = refST->lenSeqUL-refST->offsetUL;
 
   struct scoresStruct *scoreST = 0;
   struct twoBitAry dirOn;

@@ -11,33 +11,36 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings (version this ports with)*/
-#define defVersion 1.20230621  // Version of find co-infections 
+#define defVersion 1.20230630  // Version of find co-infections 
 
+// Aligment method being used
+#define defUseNeedle 1     // do Needleman-Wunsch alignment
+#define defUseWater 0     // Do a waterman smith alignment
+#define defUseHirsch 0     // Use a Hirschberg alignment
+
+// Doing printing out more than one aligment
+#define defMultiBaseWater 0
+   // 1: Flage if outputing more than one alignment
+#define defQueryRefScan 0
+   // 0: Only recored the best score for each reference and
+   // query base in in a Waterman Smith alnigment
+#define defMatrixScan 0 // Do not do a matrix scan
+
+// Output settings
 #define defLineWrap 59         // Max chars per line in 
                                // output file (min 40)
-
 // Alignment matrix movements
 #define defMoveStop 0    // Do not move
 #define defMoveLeft 1    // Move left (deletion)
 #define defMoveUp 2      // Move up (insertion)
 #define defMoveDiagnol 3 // Move on a diagnol (snp/match)
 
-// alignment kmer settings (was for a planned alignment step), which
-// I am not planning to work on.
-#define defMinBasesUI 50
- // Min number of bases to keep an non-best alignment when
- // doing an mutli-entry Waterman Smith alignment
+// Matrix filling settings
 #define defMinScore 1000
     // Min score to keep an non-best alignment when doing
     // an mutli-entry Waterman Smith alignment
 
-// Aligment Needleman-Wunsch and Watman Smith settings
-#define defUseNeedle 1     // do Needleman-Wunsch alignment
-#define defMultiBaseWater 0 // 1: doing multple alignments
-#define defQueryRefScan 1
-   // 0: Only recored the best score for each reference and
-   // query base in in a Waterman Smith alnigment
-#define defMatrixScan 0 // Do not do a matrix scan
+//#define defMinBasesUI 100 // NO LONGER USED
 
 // Settings for which direction to keep when their are
 // multiple equal directions
@@ -49,8 +52,8 @@
 #define defLeftPriority 2     // Deletions prefered
 
 // Scoring variables
-#define defGapStartPenalty -1 // Penalty for starting indel
-#define defGapExtendPenalty -4//penalty for extending indel
+#define defGapStartPenalty -4 // Penalty for starting indel
+#define defGapExtendPenalty -1//penalty for extending indel
 
 // Scoring matrix is EDNAFULL or something close to it. I
 //  think I have the anonymous bases with the correct

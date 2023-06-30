@@ -54,19 +54,19 @@
 typedef struct seqStruct
 { // refQueryStruct
   char *idCStr;          // Id of th sequence
-  uint32_t lenIdUI;      // Length of the sequence id
-  uint32_t lenIdBuffUI;  // Lenght of Id buffer
+  unsigned long  lenIdUL;      // Length of the sequence id
+  unsigned long  lenIdBuffUL;  // Lenght of Id buffer
 
   char *seqCStr;          // Sequence
-  uint32_t lenSeqUI;      // Length of the sequence
-  uint32_t lenSeqBuffUI;  // Lenght of sequence buffer
+  unsigned long  lenSeqUL;      // Length of the sequence
+  unsigned long  lenSeqBuffUL;  // Lenght of sequence buffer
 
   char *qCStr;           // q-score entry
-  uint32_t lenQUI;       // Length of the Q-score
-  uint32_t lenQBuffUI;   // Length of Q-score buffer
+  unsigned long  lenQUL;       // Length of the Q-score
+  unsigned long  lenQBuffUL;   // Length of Q-score buffer
 
-  uint32_t offsetUI;     // Offset for an alignment
-  uint32_t endAlnUI;     // Marks end of alignment
+  unsigned long  offsetUL;     // Offset for an alignment
+  unsigned long  endAlnUL;     // Marks end of alignment
 }seqStruct;
 
 /*--------------------------------------------------------\
@@ -81,11 +81,11 @@ void reverseComplementSeq(
    '  - Reverse complement a sequence
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-/*---------------------------------------------------------------------\
+/*--------------------------------------------------------\
 | Output:
 |  - Returns
 |     o complement of the input base (0 if invalid base)
-\---------------------------------------------------------------------*/
+\--------------------------------------------------------*/
 char complementBase(
     const char *baseC
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -174,8 +174,8 @@ uint8_t readFaSeq(
 \--------------------------------------------------------*/
 unsigned char addLineToBuffSeqFun(
     char **buffCStr,          // Buffer to add data to
-    uint32_t *lenBuffUL,      // Size of the buffer
-    uint32_t *curBuffUL,      // Number of chars in buffer
+    unsigned long  *lenBuffUL, // Size of the buffer
+    unsigned long  *curBuffUL, // Number of chars in buffer
     unsigned long resBuffUL,  // How much to resize buff by
     FILE *inFILE              // File to grab data from
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -198,8 +198,8 @@ unsigned char addLineToBuffSeqFun(
 |    o inCStr to be backwards (end at start, start at end)
 \--------------------------------------------------------*/
 void reverseCStr(
-    char *inCStr,       // C-string to refeverse
-    uint32_t lenCStrUI  // Length of input string (index 1)
+  char *inCStr,       // C-string to refeverse
+  unsigned long lenCStrUI//Length of input string (index 1)
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-06 TOC: Sec-1 Sub-1: reverseCStr
    '  - Reverse a c-string to be backwards
@@ -243,8 +243,10 @@ void initSeqST(
 |      target region in the sequence
 \--------------------------------------------------------*/
 void addStartEndToSeqST(
-  uint32_t startTargetUI, // Start of region of intreset
-  uint32_t endTargetUI,   // End of region of interest
+  unsigned long  startTargetUI,
+    // Start of region of intreset
+  unsigned long  endTargetUI,
+     // End of region of interest
   struct seqStruct *seqST // Struct to add corrdinates to
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-09 TOC: Sec-01: addStartEndToSeqST

@@ -14,16 +14,11 @@
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOH: Start Of Header
-'  o struct-01: scoresStruct
-'    - Holds the score for one direction matrix positon
-'  o struct-03: alnMatrixStruct
-'    - Holds the direction matrix and best score(s) for a
-'      single aligment
 '  o fun-01 getIndelScore:
 '    - Gets an indel score for the current cell
 '  o fun-02 getBasePairScore:
 '    - Get the score for a pair of bases from an alignment
-'  o fun-05 checkIfBasesMatch:
+'  o fun-03 checkIfBasesMatch:
 '    - Are two bases are same? (includes anonymous bases)
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -71,7 +66,7 @@ char checkIfBasesMatch(
     char *queryBaseC,// Query base to compare to reference
     char *refBaseC   // Reference base to compare to query
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-05 TOC: Sec-1 Sub-1: checkIfBasesMatch
+   ' Fun-03 TOC: Sec-1 Sub-1: checkIfBasesMatch
    '  - Are two bases are same? (includes anonymous bases)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 

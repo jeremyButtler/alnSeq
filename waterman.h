@@ -56,10 +56,13 @@
 |    o 0 for memory allocation errors
 \--------------------------------------------------------*/
 struct alnMatrixStruct * WatermanAln(
-    struct seqStruct *queryST,
-      // query sequence, length, & bounds for alignment
-    struct seqStruct *refST,  
-      // reference sequence, length, & bounds for alignment
+    struct seqStruct *queryST, // query sequence and data
+    struct seqStruct *refST,  // ref sequence and data
+      // both queryST and refST have the sequence,
+      // they also have the point to start the alignment
+      // seqST->offsetUI (index 0) and the point to end
+      // the alignment seqST->endAlnUI (index 0).
+      // CURRENTLY THIS ONLY WORKS FOR FULL ALIGNMENTS
     struct alnSet *settings,// Settings for the alignment
     // *startI and *endI paramaters should be index 1
     char *prefixCStr  // Prefix for matrix scan output file

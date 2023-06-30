@@ -1,7 +1,14 @@
 set confirm off
 set confirm off
-break alnSeq.c:384
-break alnSeq.c:429
+#break alnSeq.c:388
+break hirschberg.c:112
+break hirschberg.c:202
+break hirschberg.c:259
+#break hirschberg.c:327
+break hirschberg.c:355
+#break hirschberg.c:464 if midPointUI - 1 + refOffsetUI < refOffsetUI
+#break hirschberg.c:464 if midPointUI + refOffsetUI >= refEndAlnUI
+#break alnSeq.c:429
 #break needleman.c:330
 #break waterman.c:233
 #break waterman.c:309
@@ -18,7 +25,8 @@ break alnSeq.c:429
 #run -use-water -query testing/small-test-query.fasta -ref testing/small-test-ref.fasta -out testing/small-test-new-needle.aln
 #run -query-ref-scan-water -min-score 100 -query testing/small-test-query.fasta -ref testing/small-test-ref.fasta > testing/del.aln
 
-run -query testing/largeTest-query-a.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/del.aln
+#run -query testing/largeTest-query-a.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/del.aln
+run -use-hirschberg -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Small-ref.fasta > ../del.aln
 
 # Quick function to get length of a string
 define lenstr

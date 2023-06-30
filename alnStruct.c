@@ -33,6 +33,11 @@
 '    - Initalize all values in alnST to 0
 '  o fun-06 freeAlnST:
 '    - Frees alnST and all variables in alnST
+'  o fun-07 addAlnSTArray:
+'    - Adds an alignment array to an alnStruct structure
+'  o fun-08 lnSTAddNewCode:
+'    - Convert a two bit element into an alignment code.
+'      Matches are checked in fun-02 (alnAryToLetter)
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #include "alnStruct.h"
@@ -54,7 +59,7 @@ char * cnvtAlnAryToSeq(
    '    the a sequence to make one part of an alignment
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   char *baseCStr = seqST->seqCStr + seqST->offsetUI;
+   char *baseCStr = seqST->seqCStr + seqST->offsetUL;
    char *tmpBaseCStr = 0;
    char *seqAlnCStr = 0;
    uint8_t *errUCPtr = alnST->alnAryUC;
@@ -156,9 +161,9 @@ void alnAryToLetter(
    '    (I = insertion, D = deletion, = = match, X = snp)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    char *refSeqCStr = refST->seqCStr + refST->offsetUI;
+    char *refSeqCStr = refST->seqCStr + refST->offsetUL;
     char *querySeqCStr =
-      queryST->seqCStr + queryST->offsetUI;
+      queryST->seqCStr + queryST->offsetUL;
 
     uint8_t *alnAryUC = alnST->alnAryUC;
 
@@ -252,13 +257,13 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
   unsigned long lenQueryUL =
-    queryST->lenSeqUI - queryST->offsetUI;
+    queryST->lenSeqUL - queryST->offsetUL;
 
-  unsigned long lenRefUL = refST->lenSeqUI-refST->offsetUI;
+  unsigned long lenRefUL = refST->lenSeqUL-refST->offsetUL;
 
   char *bestQueryCStr =
       queryST->seqCStr
-    + queryST->offsetUI +
+    + queryST->offsetUL +
     + (scoreST->indexUL / (lenRefUL + 1))
     - 1;
     // lenQueryUL + 1: gives the length of each column in
@@ -268,7 +273,7 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
     // -1: converts the index 1 output to index 0
   char *bestRefCStr =
       refST->seqCStr
-    + refST->offsetUI +
+    + refST->offsetUL +
     + (scoreST->indexUL % (lenRefUL + 1))
     - 1;
     // lenRefUL + 1: gives the length of each row in the
@@ -296,18 +301,13 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
   uint8_t lastBitElmUC = 0;
 
   alnST = malloc(sizeof(struct alnStruct));
-  initAlnST(alnST);
 
   if(alnST == 0) return 0;
 
-  alnST->lenAlnAryUI = lenQueryUL + lenRefUL;
+  initAlnST(alnST);
 
-  alnST->alnAryUC =
-    calloc(alnST->lenAlnAryUI, sizeof(uint8_t));
-    // calloc initializes all values to 0, so I do not
-    // need to mark the end of the alignment array
-
-  if(alnST->alnAryUC == 0)
+  // Set up the alignment array
+  if(addAlnSTArray(alnST, lenQueryUL + lenRefUL) != 0)
   { // If had a memory error
      freeAlnST(alnST, 1);
      return 0; // Memory error
@@ -407,12 +407,12 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
 
   // Recording the starting base of the alignment
   alnST->refStartUI =
-    + refST->offsetUI +
+    + refST->offsetUL +
     + (getTwoBitAryIndex(dirMatrxST) % (lenRefUL + 1));
     //alnST->refEndUI - (endRefAlnCStr - bestRefCStr);
 
   alnST->queryStartUI =
-    + queryST->offsetUI +
+    + queryST->offsetUL +
     + (getTwoBitAryIndex(dirMatrxST) / (lenRefUL + 1));
     //alnST->queryEndUI -(endQueryAlnCStr - bestQueryCStr);
 
@@ -446,8 +446,8 @@ struct alnStruct * cnvtDirMatrixToAlnAry(
     case 0: break;
 
     case 1:
-      tmpQueryCStr = queryST->seqCStr + queryST->offsetUI;
-      tmpRefCStr = refST->seqCStr + refST->offsetUI;
+      tmpQueryCStr = queryST->seqCStr + queryST->offsetUL;
+      tmpRefCStr = refST->seqCStr + refST->offsetUL;
       endUCPtr = alnST->alnAryUC + alnST->numAlnBasesUI;
     
       // Apply softmasking to the start region
@@ -621,7 +621,7 @@ void printAln(
      // - 9 to account for 9 spaces needed for seq entry
      // Min is 42 so that the comment section fits on one
      // one line
-   uint32_t uiBase = 0; // Base priting out
+   unsigned long ulBase = 0; // Base priting out
 
    char *headerCStr = "\
      \n# Eqx = Error line\
@@ -676,9 +676,9 @@ void printAln(
    if(alnST->numBasesUI <= wrapUS)
      goto finishPrint;
 
-   uiBase += wrapUS;
+   ulBase += wrapUS;
 
-   while(uiBase < alnST->numBasesUI)
+   while(ulBase < alnST->numBasesUI)
    { // while I need to print the alignment
      fwrite("\n", sizeof(char), 1, outFILE);
 
@@ -698,7 +698,7 @@ void printAln(
      refAlnCStr += wrapUS;
      queryAlnCStr += wrapUS;
      alnAryUCPtr += wrapUS;
-     uiBase += wrapUS;
+     ulBase += wrapUS;
    } // while I need to print the alignment
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -706,11 +706,11 @@ void printAln(
    ^  - Print out tail of the alingment (missed by loop)
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   uiBase += 1 - wrapUS;
+   ulBase += 1 - wrapUS;
 
    finishPrint:
 
-   if(uiBase < alnST->numBasesUI)
+   if(ulBase < alnST->numBasesUI)
    { // If missed the last few bases
      fprintf(outFILE, "\nRef:     %s\n", refAlnCStr);
      fprintf(outFILE, "Query:   %s\n", queryAlnCStr);
@@ -768,3 +768,76 @@ void freeAlnST(
 
    return;
 } // initAlnST
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o alnST->alnAryUC to have an alignment array
+|    o alnST->lenAlnAryUI to have the length of the
+|      alignment array
+|  - Returns
+|    o 0 for no errors
+|    o 64 for memory allocation errors
+\--------------------------------------------------------*/
+unsigned char addAlnSTArray(
+  struct alnStruct *alnST, // add new array to
+  unsigned long  lenAryUL  // Size of new array
+    // This should be reference length + query length
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-07 TOC: addAlnSTArray
+   '  - Adds an alignment array to an alnStruct structure
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+  // Free any old arrays
+  if(alnST->alnAryUC != 0)
+  { // If there is an old array
+    free(alnST->alnAryUC);
+    alnST->alnAryUC = 0;
+  } // If there is an old array
+
+  alnST->alnAryUC = calloc(lenAryUL + 1, sizeof(uint8_t));
+
+  if(alnST->alnAryUC == 0)
+  { // If there was a memory allocatoin error
+    alnST->lenAlnAryUI = 0;
+    return 64;
+  } // If there was a memory allocatoin error
+
+  alnST->lenAlnAryUI = lenAryUL;
+
+  return 0;
+} // addAlnSTArray
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o alnST to hold the alignment direction and incurment
+|      both of its counters
+\--------------------------------------------------------*/
+void alnSTAddNewCode(
+  struct alnStruct *alnST, // Has alignment array to add to
+  uint8_t twoBitElmUC      // Alignment code to add 
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-08 TOC: alnSTAddNewCode
+   '  - Convert a two bit element into an alignment code.
+   '    Matches are checked in fun-02 (alnAryToLetter)
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+  switch(twoBitElmUC)
+  { // Switch: check wich direction the alighment is
+    case defMoveUp:
+      *(alnST->alnAryUC +alnST->numAlnBasesUI) =defInsFlag;
+      break;
+
+    case defMoveDiagnol:
+      *(alnST->alnAryUC +alnST->numAlnBasesUI) =defInsFlag;
+      break;
+
+    case defMoveLeft:
+      *(alnST->alnAryUC +alnST->numAlnBasesUI) =defDelFlag;
+      break;
+  } // Switch: check wich direction the alighment is
+
+  ++alnST->numAlnBasesUI;
+  ++alnST->numBasesUI;
+} // alnSTAddNewCode

@@ -38,10 +38,13 @@
 |      the direction matrix
 \--------------------------------------------------------*/
 struct alnMatrixStruct * NeedlemanAln(
-    struct seqStruct *queryST,
-      // query sequence, length, & bounds for alignment
-    struct seqStruct *refST,  
-      // reference sequence, length, & bounds for alignment
+    struct seqStruct *queryST, // query sequence and data
+    struct seqStruct *refST,  // ref sequence and data
+      // both queryST and refST have the sequence,
+      // they also have the point to start the alignment
+      // seqST->offsetUL (index 0) and the point to end
+      // the alignment seqST->endAlnUL (index 0).
+      // CURRENTLY THIS ONLY WORKS FOR FULL ALIGNMENTS
     struct alnSet *settings // Settings for the alignment
     // *startI and *endI paramaters should be index 1
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -64,20 +67,21 @@ struct alnMatrixStruct * NeedlemanAln(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    // Get the start of the query and reference sequences
-   char *refStartCStr = refST->seqCStr + refST->offsetUI;
+   char *refStartCStr = refST->seqCStr + refST->offsetUL;
 
    char *queryStartCStr =
-        queryST->seqCStr + queryST->offsetUI;
+        queryST->seqCStr + queryST->offsetUL;
 
    char *tmpQueryCStr = 0;
    char *tmpRefCStr = 0;
 
    // Find the length of the reference and query
    unsigned long lenQueryUL =
-       queryST->endAlnUI - queryST->offsetUI;
-
+       queryST->endAlnUL - queryST->offsetUL + 1;
+       // + 1 to Account for index 0
    unsigned long lenRefUL =
-       refST->endAlnUI - refST->offsetUI;
+       refST->endAlnUL - refST->offsetUL + 1;
+       // + 1 to Account for index 0
 
    // Scoring variables 
    long snpScoreL = 0;     // Score for single base pair

@@ -4,8 +4,9 @@
 #  - Runs a Needlman Wunsch or Smith Waterman alignment on
 #    a pair of fasta files
 # Includes:
-#  - "waterman.h"
-#  - "needleman.h"
+#  - "hirschberg.h"
+#  o "waterman.h"
+#  o "needleman.h"
 #  o "generalAlnFun.h"
 #  o "alnStruct.h"
 #  o "alnMatrixStruct.h"
@@ -22,8 +23,9 @@
 #  o <stdint.h>
 #########################################################*/
 
-#include "waterman.h"
-#include "needleman.h"
+#include "hirschberg.h"
+//#include "waterman.h"  // hirschberg.h
+//#include "needleman.h" // hirschberg.h
 //#include <string.h> // in waterman.h
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -155,6 +157,8 @@ int main(
        \n       the Needleman Wunsch\
        \n     o This only tracks one best alignment, not\
        \n       all best (or all) alignments.\
+       \n  -use-hirschberg: [No]\
+       \n     o Use a Hirschberg alignment.\
        \n  -line-wrap: [59]\
        \n    o Maximum characters per line in the output\
        \n      alignment file.\
@@ -374,12 +378,14 @@ int main(
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
    // Right know these are hardoced in, but at some piont
-   // it might be nice to allow the user the manipulate
-   queryST.endAlnUI = queryST.lenSeqUI;
-   queryST.offsetUI = 0;
+   // it might be nice to allow the user the manipulate.
+   // I would need to set up the Waterman and Needleman
+   // alignments to handle this
+   queryST.endAlnUL = queryST.lenSeqUL - 1;
+   queryST.offsetUL = 0;
 
-   refST.endAlnUI = refST.lenSeqUI;
-   refST.offsetUI = 0;
+   refST.endAlnUL = refST.lenSeqUL - 1;
+   refST.offsetUL = 0;
 
    if(outFileCStr != 0) outFILE = fopen(outFileCStr, "w");
 
@@ -392,12 +398,27 @@ int main(
    if(alnSetST.useNeedleBl != 0)
      alnMtrxST = NeedlemanAln(&queryST, &refST, &alnSetST);
 
-   else
+   else if(alnSetST.useWaterBl != 0)
      alnMtrxST =
        WatermanAln(&queryST,&refST,&alnSetST,outFileCStr);
 
+   else if(alnSetST.useHirschBl != 0)
+   { // Else if doing a Hirschberg alignment
+     alnST = Hirschberg(&queryST, &refST, &alnSetST, 0);
+       // 0, so that negatives values are kept. A 1 would
+       // convert all negavitve values to 0 (like waterman)
+
+     if(alnST == 0) goto alignmentFailed;
+
+     // The Hirschberg returns an alignment structure,
+     // instead of a directional matrix.
+     if(alnSetST.useHirschBl != 0) goto noDirMatrix;
+   } // Else if doing a Hirschberg alignment
+
    if(alnMtrxST == 0)
    { // If did not have enough memory
+      alignmentFailed:
+
       freeSeqST(&refST, 0); // 0 to makr on the stack
       freeSeqST(&queryST, 0); // 0 to makr on the stack
 
@@ -438,10 +459,25 @@ int main(
    freeAlnMatrixST(alnMtrxST); // No longer need
    alnMtrxST = 0;
 
+   if(alnST == 0)
+   { // IF i falied to make an alignment array
+      freeSeqST(&refST, 0); // 0 to makr on the stack
+      freeSeqST(&queryST, 0); // 0 to makr on the stack
+
+       fprintf(
+         stderr,
+         "Memory error when making alignment array\n"
+       );
+
+       exit(-1);
+   } // IF i falied to make an alignment array
+
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Main Sec-07:
    ^  - Make aligned query sequence
    \>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+
+   noDirMatrix://For aligners that return an alignmentArray
 
    queryAlnCStr = cnvtAlnAryToSeq(&queryST, 1, alnST);
 
@@ -590,30 +626,52 @@ char * checkInput(
         else if(strcmp(tmpCStr, "-use-needle") == 0)
         { // Else if disabling match priority
             alnSetST->useNeedleBl = 1;
+            alnSetST->useWaterBl = 0;
+            alnSetST->useHirschBl = 0;
             --intArg;
         } // Else if disabling match priority
 
         else if(strcmp(tmpCStr, "-use-water") == 0)
-        { // Else if disabling match priority
+        { // Else if doing a waterman smith alignment
             alnSetST->useNeedleBl = 0;
+            alnSetST->useWaterBl = 1;
+            alnSetST->useHirschBl = 0;
             --intArg;
-        } // Else if disabling match priority
+        } // Else if doing a waterman smith alignment
+
+        else if(strcmp(tmpCStr, "-use-hirschberg") == 0)
+        { // Else if doing a Hirshberg alignment
+            alnSetST->useNeedleBl = 0;
+            alnSetST->useWaterBl = 0;
+            alnSetST->useHirschBl = 1;
+            --intArg;
+        } // Else if doing a Hirshberg alignment
 
         else if(
           strcmp(tmpCStr, "-query-ref-scan-water") == 0
         )
         { // Else if doing more than the best alignment
           alnSetST->multiBaseWaterBl = 1;
-          alnSetST->useNeedleBl = 0;
           alnSetST->refQueryScanBl = 1;
+          alnSetST->matrixScanBl = 0;
+
+          alnSetST->useNeedleBl = 0;
+          alnSetST->useWaterBl = 1;
+          alnSetST->useHirschBl = 0;
+
           --intArg;
         } // Else if doing more than the best alignment
 
         else if(strcmp(tmpCStr, "-matrix-scan-water") == 0)
         { // Else if doing a matrix scan
           alnSetST->multiBaseWaterBl = 1;
+          alnSetST->refQueryScanBl = 0;
           alnSetST->matrixScanBl = 1;
+
           alnSetST->useNeedleBl = 0;
+          alnSetST->useWaterBl = 1;
+          alnSetST->useHirschBl = 0;
+
           --intArg;
         } // Else if doing a matrix scan
 

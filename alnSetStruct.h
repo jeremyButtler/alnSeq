@@ -69,6 +69,9 @@ typedef struct alnSet
 
    // Needleman-Wunsch / Waterman Smith variables
    char useNeedleBl;
+   char useWaterBl;
+   char useHirschBl;
+
    char multiBaseWaterBl; // Keep more than best aligment
    char refQueryScanBl;   // Keep best score for ref/query
    char matrixScanBl;  // Fur doing a matrix scan
@@ -83,7 +86,7 @@ typedef struct alnSet
    int32_t gapStartPenaltyI;     // Penalty for starting an indel
    int32_t gapExtendPenaltyI;    // Penalty for extending an indel
    uint32_t minScoreUI;        // Minimum score needed to keep alignment
-   uint32_t minBasesUI;
+   //uint32_t minBasesUI; // NO LONGER USED
 }alnSet;
 
 /*---------------------------------------------------------------------\

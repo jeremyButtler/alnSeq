@@ -18,6 +18,7 @@ SOURCE=\
   alnStruct.c\
   waterman.c\
   needleman.c\
+  hirschberg.c\
   alnSeq.c
  
 # Build findCoInfct
