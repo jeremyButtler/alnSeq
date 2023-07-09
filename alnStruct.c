@@ -637,7 +637,7 @@ void printAln(
    ^  - Print out the header  for the alignment
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   if(wrapUS < 42) wrapUS = 42;
+   if(wrapUS < 42 && wrapUS != 0) wrapUS = 42;
 
    fputs(
      "###########################################\n",
@@ -676,6 +676,10 @@ void printAln(
    if(alnST->numBasesUI <= wrapUS)
      goto finishPrint;
 
+   // User does not want word wrap
+   if(wrapUS == 0)
+     goto finishPrint;
+
    ulBase += wrapUS;
 
    while(ulBase < alnST->numBasesUI)
@@ -708,10 +712,10 @@ void printAln(
 
    ulBase += 1 - wrapUS;
 
-   finishPrint:
-
    if(ulBase < alnST->numBasesUI)
    { // If missed the last few bases
+     finishPrint:
+
      fprintf(outFILE, "\nRef:     %s\n", refAlnCStr);
      fprintf(outFILE, "Query:   %s\n", queryAlnCStr);
      fprintf(outFILE, "Eqx:     %s\n", alnAryUCPtr);

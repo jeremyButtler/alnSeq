@@ -5,7 +5,7 @@
 #    a pair of fasta files
 # Includes:
 #  - "hirschberg.h"
-#  o "waterman.h"
+#  - "waterman.h"
 #  o "needleman.h"
 #  o "generalAlnFun.h"
 #  o "alnStruct.h"
@@ -24,7 +24,7 @@
 #########################################################*/
 
 #include "hirschberg.h"
-//#include "waterman.h"  // hirschberg.h
+#include "waterman.h"  // hirschberg.h
 //#include "needleman.h" // hirschberg.h
 //#include <string.h> // in waterman.h
 
@@ -162,6 +162,7 @@ int main(
        \n  -line-wrap: [59]\
        \n    o Maximum characters per line in the output\
        \n      alignment file.\
+       \n    o Input 0 for no line wrap.\
        \n    o The minimum line wrap is 42.\
        \n  -query-ref-scan-water: [No]\
        \n    o For a Waterman Smith alignment, print out\
@@ -244,7 +245,7 @@ int main(
         ) { /*if the user wanted the version number*/
             fprintf(
                 stdout,
-                "alnSeq version: %.8f\n",
+                "alnSeq version: %u\n",
                 defVersion
             ); /*Print out the closest thing to a version*/
             exit(0);
@@ -404,7 +405,7 @@ int main(
 
    else if(alnSetST.useHirschBl != 0)
    { // Else if doing a Hirschberg alignment
-     alnST = Hirschberg(&queryST, &refST, &alnSetST, 0);
+     alnST = Hirschberg(&queryST, &refST, &alnSetST);
        // 0, so that negatives values are kept. A 1 would
        // convert all negavitve values to 0 (like waterman)
 

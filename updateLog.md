@@ -25,6 +25,12 @@ These ideas are a future vision that is not worth the
 
 # Log
 
+## Version 20230709
+
+- using "-line-wrap 0" will now disable line wrapping
+- Worked out some bugs in the Hirschberg alignment
+  - Hirschberg still not working
+
 ## Version 1.20230630
 
 - Changed sequence lengths and offsets to be longs instead

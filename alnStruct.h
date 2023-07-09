@@ -58,6 +58,11 @@
 #define defSoftQueryFlag 8 // Softmask a query base
 #define defSoftRefFlag 16  // Softmask a reference base
 
+#define defAlnEndFlag 0
+#define defGapFlag 1
+#define defSnpFlag 2
+#define defMatchFlag 3
+
 /*--------------------------------------------------------\
 | Struct-01: alnStruct
 |  - Holds the alignment array, which tells if a match,

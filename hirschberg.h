@@ -4,8 +4,7 @@
 #  - Holds functions for doing a hirschberg global
 #    alignment
 # Libraries:
-#  - neelde.h
-#  - water.h
+#  - needleman.h
 #  o "generalAlnFun.h"
 #  o "alnStruct.h"
 #  o "alnMatrixStruct.h"
@@ -45,7 +44,6 @@
 #define HIRSCHBERG_H
 
 #include "needleman.h"
-#include "waterman.h"
 
 /*--------------------------------------------------------\
 | Output:
@@ -59,9 +57,7 @@ struct alnStruct * Hirschberg(
     // For refST and qryST, use seqStruct->offsetUI to set
     // the starting point for the alignmnet and
     // seqStruct->endAlnUI to set the ending point
-  struct alnSet *settings, // Settings to use for alignment
-  char useWaterScoreBl     // 1: Treat negatives as 0, like
-                           // in a Smith Waterman
+  struct alnSet *settings  // Settings to use for alignment
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: Hirschberg
    '  - Sets up for and calls the recursvie function to
@@ -94,11 +90,10 @@ void HirschbergFun(
   long *reverseScoreRowL,   // For finding reverse scores
     // both the forward and reverse scoring rows must be
     // the size of the full length reference.
-  struct twoBitAry *dirRowST,   // For gap extension
-  struct twoBitAry *twoBitAlnST,// Holds alignment codes
-  struct alnSet *settings, // Settings to use for alignment
-  char useWaterScoreBl     // 1: Treat negatives as 0, like
-                           // in a Smith Waterman
+
+  struct twoBitAry *refAlnST,   // For gap extension
+  struct twoBitAry *qryAlnST,  // Holds alignment codes
+  struct alnSet *settings  // Settings to use for alignment
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: HirschbergFun
    '  - Does the recursive part of a Hirschberg alignment
@@ -135,8 +130,7 @@ long scoreForwardHirsch(
 
   long *scoreRowPtrL,        // Array of scores to fill
   struct twoBitAry *dirRowST,//direction row for gap extend
-  struct alnSet *settings,   // setttings to use
-  char useWaterScoreBl       //1: replace - numbers wihth 0
+  struct alnSet *settings    // setttings to use
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-03 TOC: scoreForwardHirsch
    '  - Does a single round of scoring for a hirschberg
@@ -174,8 +168,7 @@ long scoreReverseHirsch(
      // This needs to be as long as the full length
      // reference sequence
   struct twoBitAry *dirRowST,//direction row for gap extend
-  struct alnSet *settings,   // setttings to use
-  char useWaterScoreBl       //1: replace - numbers wihth 0
+  struct alnSet *settings    // setttings to use
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-04 TOC: scoreReverseHirsch
    '  - Does a single round of scoring for a hirschberg
@@ -193,19 +186,27 @@ long scoreReverseHirsch(
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies:
-|    o twoBitAlnST to hold the aligned reference and query
-|      bases
+|    o twoBitAlnST to hold the alignment for the single
+|      base aligned to the sequence
 \--------------------------------------------------------*/
-void positionSingleRefBase(
-  char refBaseC,          // Single reference base to align
-  char *qrySeqCStr,//query sequence to position ref base on
-  unsigned long endOfQrySeqUI,   // Marks end of alignment
-  struct twoBitAry *twoBitAlnST, // Array to hold alignment
-  struct alnSet *settings,       // setttings to use
-  char useWaterScoreBl          // convert negatives to 0's
+void positionSingleBase(
+  char baseC,             // Single base to align to a seq
+  unsigned long baseIndexUL, // Index base is at
+  char *seqCStr,            // Sequence to position base on
+  unsigned long startOfSeqUL,
+    // Index 0 of first base to align bascC to in seqCStr
+  unsigned long lenSeqUL,
+    //index 1; Length of the aligned region in seqCStr
+  struct twoBitAry *baseCAlnST,
+    // Two bit alingment array for the sequence having
+    // baseC
+  struct twoBitAry *seqAlnST,    // Array to hold alignment
+    // Two bit alignment array for the sequence aliging
+    // baseC to
+  struct alnSet *settings        // setttings to use
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-05 TOC: positionSingleRefBase
-   '  - Align a single reference base to a query sequence
+   '  - Align a single base to a sequence
    '  o fun-05 sec-01:
    '    - Variable declerations
    '  o fun-05 sec-02:
@@ -217,16 +218,25 @@ void positionSingleRefBase(
 /*--------------------------------------------------------\
 | Output:
 |  - Returns:
-|    o An alnStruct with the alignment from twoBitAlnST
-|  - Modifies:
-|    o twoBitAlnST to point to the end of the alignment
+|    o 0: for success
+|    o 1: No valid output file (alnFILE)
+|    o 64: for memroy error
+|  - Prints:
+|    o Alginmetns to alnFILE
 \--------------------------------------------------------*/
-struct alnStruct * twoBitAlnAryToAlnST(
-  struct twoBitAry *twoBitAlnST
-   // Two bit array with alignment to convert, which ends
-   // in a stop
+char printTwoBitAln(
+  FILE *alnFILE,               // File to save alignment to
+  char *refSeqCStr,
+  char *qrySeqCStr,
+  struct twoBitAry *refTwoBitST,
+    // Two bir array with the referenc alignmetn
+  struct twoBitAry *qryTwoBitST,
+    // Two bir array with the query alignmetn
+  unsigned long lnWrapUL
+    // How many characters to pritn per line. Do
+    // length(query) + length(ref) to have no line wrap
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-06 TOC: twoBitAlnAryToAlnST
+   ' Fun-06 TOC: printTwoBitAln
    '  - Converts a two bit array with an alignment to an
    '    alnStruct structure for printing
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
