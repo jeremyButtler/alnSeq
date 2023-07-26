@@ -11,7 +11,7 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings (version this ports with)*/
-#define defVersion 20230709  // Version of find co-infections 
+#define defVersion 20230726  // Version number for alnSeq
 
 // Aligment method being used
 #define defUseNeedle 1     // do Needleman-Wunsch alignment
@@ -52,7 +52,7 @@
 #define defLeftPriority 2     // Deletions prefered
 
 // Scoring variables
-#define defGapStartPenalty -4 // Penalty for starting indel
+#define defGapStartPenalty -10// Penalty for starting indel
 #define defGapExtendPenalty -1//penalty for extending indel
 
 // Scoring matrix is EDNAFULL or something close to it. I

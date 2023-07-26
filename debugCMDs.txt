@@ -2,24 +2,53 @@ set confirm off
 set confirm off
 break hirschberg.c:112
 break hirschberg.c:184
-#break hirschberg.c:290
-#break hirschberg.c:464 if midPointUI - 1 + refOffsetUI < refOffsetUI
-#break hirschberg.c:464 if midPointUI + refOffsetUI >= refEndAlnUI
+break hirschberg.c:465
 
-#run -use-water -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta > testing/dummy-new-water.aln
-#run -query testing/dummyQuery.fasta -ref testing/dummyRef.fasta > testing/dummy-new-needle.aln
+define runcmd
+  run -use-hirschberg -query test-query.fasta -ref test-ref.fasta
+end
 
-#run -query testing/TickBornEncephalitis-query.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/Tick-new-needle.aln
-#run -use-water -query testing/TickBornEncephalitis-query.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/Tick-new-water.aln
+runcmd
 
-#run -matrix-scan-water -min-score 1000 -query testing/small-test-query.fasta -ref testing/small-test-ref.fasta > testing/del.aln
-#  -out testing/small-test-new-needle.aln
-#run -use-water -query testing/small-test-query.fasta -ref testing/small-test-ref.fasta -out testing/small-test-new-needle.aln
-#run -query-ref-scan-water -min-score 100 -query testing/small-test-query.fasta -ref testing/small-test-ref.fasta > testing/del.aln
+# Print out the hirschberg reverse and forward score rows
+define pscores
+  printf "%3li", forwardIndelColL
+  set $iIndex = 0
 
-#run -query testing/largeTest-query-a.fasta -ref testing/TickBornEncephalitis-reference.fasta > testing/del.aln
-#run -use-hirschberg -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Small-ref.fasta > ../del.aln
-run -use-hirschberg -query test-query.fasta -ref test-ref.fasta
+  while($iIndex < refLenUL)
+    printf " %3li", *(forwardScoreRowL +refStartUL+$iIndex)
+    set $iIndex = $iIndex + 1
+  end
+
+  printf "\n"
+  set $iIndex = 0
+ 
+  while($iIndex < refLenUL)
+    printf "%3li ", *(reverseScoreRowL +refStartUL+$iIndex)
+    set $iIndex = $iIndex + 1
+  end
+
+  printf "%3li\n", reverseIndelColL
+
+  set $iIndex = 0
+  set $sumI =  *(reverseScoreRowL + refStartUL)
+  set $sumI = $sumI + forwardIndelColL
+
+  printf "%3li ", $sumI
+
+  while($iIndex < refLenUL - 1)
+    set $sumI = *(forwardScoreRowL + refStartUL +$iIndex)
+    set $iIndex = $iIndex + 1
+
+    set $sumI=$sumI+*(reverseScoreRowL+refStartUL+$iIndex)
+    printf "%3li ", $sumI
+  end
+
+  set $sumI =  *(forwardScoreRowL + refLenUL - 1)
+  set $sumI = $sumI + reverseIndelColL
+
+  printf "%3li\n", $sumI
+end
 
 # Quick function to get length of a string
 define lenstr
@@ -33,3 +62,5 @@ define lenstr
 
   p $lenI
 end
+
+#break hirschberg.c:464 if midPointUI - 1 + refOffsetUI < refOffsetUI

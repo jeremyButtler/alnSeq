@@ -11,9 +11,7 @@ There are faster and less memory hungry Waterman Smith
   Waterman Smith alignment, which I think reduces both
   scoring and direction matrix to just a few rows. See 
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
-  for an very fast striped Waterman Smith aligner. However,
-  this program is currently not set up to handle alingments
-  with scores over 37678.
+  for an very fast striped Waterman Smith aligner.
 
 # Current work
 
@@ -35,8 +33,37 @@ I then could also allow recording of the best score for
   reference base, and ending query base for alternative
   alignments.
 
-Currently I am trying to get the Hirschberg up and running
-  (it is not working).
+## Hirschberg Update
+
+I have the Hirschberg working, but it still needs some work
+  to join it in with the rest of the code. Currently it is
+  using its own printing method to print alignments with
+  the default line wrapping only. It does not mark which
+  is the reference (fist line) or query (second line).
+
+The Hirschberg in alnSeq is not thread safe, but can be
+  easily made thread safe by providing an additional
+  reference sized two bit array to score directions in for
+  the reverse direction. I will add this in later.
+
+I ran a single test using my Huge sequences (RamKiller) to
+  get an idea of how long the Hirschber would take.
+
+The Hirschberg takes twice the amount of time to run as my
+  Needleman (~1405 seconds versus ~750 seconds), but also
+  takes much less memory usage (~4.3Mb instead of ~10Gb).
+  Both of these results were expected.
+
+It looks like alnSeq will be much slower than bio-alignment
+  (~1405 versus 183 seconds). The Hirschberg in alnSeq is
+  using an insignificant amount of less ram (4.3MB versus
+  5.4MB) than bio-alignment. The only real advantage alnSeq
+  offers is that it allows gap opening and extension
+  penalties.
+
+The 183 seconds is slower than my bio-alignment benchmarks.
+  I should go back and make sure I am running the
+  Hirschberg in bio-aligment correctly.
 
 # Building and running alnSeq
 
@@ -68,6 +95,10 @@ alnSeq -h
 # For a global alignment (Needleman Wunsch)
 alnSeq -query query.fasta -ref ref.fasta > alignment.aln
 
+# For a Hirschberg global alignment (slow, but low memory
+# usage
+alnSeq -use-hirschberg -query query.fasta -ref ref.fasta > alignment.aln
+
 # For a single local alignment (Waterman Smith) (not working)
 alnSeq -use-water -query query.fasta -ref ref.fasta > out.aln
 
@@ -77,6 +108,8 @@ alnSeq -query-ref-scan-water -query query.fasta -ref ref.fasta -out prefix
 # For a matrix scan
 alnSeq -matrix-scan-water -query query.fasta -ref ref.fasta -out prefix 
 
+# Help message
+alnSeq -h
 ```
 
 # Explaining alnSeq
@@ -84,10 +117,10 @@ alnSeq -matrix-scan-water -query query.fasta -ref ref.fasta -out prefix
 ## What is alnSeq?
 
 AlnSeq is an sequence alignment program that uses either 
-  a Needleman Wunsch or Smith Waterman alignment algorithm.
-  AlnSeq is unique from a traditional Needleman Wunsch or
-  Smith Waterman in how it handles the scoring matrix and
-  the direction matrix.
+  a Needleman Wunsch, Hirschberg, or Smith Waterman
+  alignment algorithm. AlnSeq is unique from a traditional
+  Needleman Wunsch or Smith Waterman in how it handles the
+  scoring matrix and the direction matrix.
 
 One thing I do want to point out is that there are very
   memory efficient algorithms for optimal global alignments
@@ -284,7 +317,7 @@ When I inspected the huge-huge alignments for ssw_test I
   first 16486 bases. This is likely due to ssw_test using
   shorts to record scores. This is further supported by
   ssw_test being able to print out the full alignment for
-  the huge-large alignment test (score of 5449).
+  the huge-large alignment test (maximum score of 5449).
 
 For now, do not use ssw_test if you expect your scores to
   exceeded 32768.
@@ -302,14 +335,6 @@ My current vision for this code is more to be an example or
   take alnSeq any farther right now. This means some of the
   additions I mentioned, multi-threading, or even gpu
   support is up to you.
-
-Note: This program is more set up for noisy reads. This
-  means that the gap opening has a lighter penalty than the
-  gap extension penalty, which means that this program
-  favors single gaps instead of longer gaps. For a
-  reference or consensus alignment you will want to set
-  the gap open penalty higher and lower the gap extension
-  penalty.
 
 For multi-threading my thought was to do rows and have each
   thread launch a thread after it finishes the first cell

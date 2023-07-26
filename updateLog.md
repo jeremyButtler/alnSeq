@@ -5,6 +5,32 @@ This log records how alnSeq has changed between versions.
   month, and then day. For example version 1.20230615 would
   be version 1, from June 15th, 2023.
 
+# TODO or to fix list
+
+- The Hirschberg currently prints the alignment separately.
+  It should return an alnStruct with the alignment to be
+  printed out.
+  - Reference is always the top line, query is the second
+    line (this is not marked).
+- Have alnStruct store matches (revise how I print out
+  alignments).
+  - Or modify it use use two two bit arrays like the
+    Hirschberg (likely will set up a conversion of 
+    Hirschberg to alnStruct).
+- Make Hirschberg thread safe (just in case I want to
+  multithread it). This will increase memory usage by a
+  very slight amount (~ bytes = 1/4 \* reference length).
+- The Smith Waterman only prints alignments out correctly
+  with -line-wrap 0
+- Set up Smith Waterman Hirschberg combination
+- Add in a match matrix. Currently I am using a switch
+  table set up for nucleotides to identify matches/snps.
+  - This is used for printing the alignment eqx line, not
+    for finding an optimal alignment (scoring matrix).
+- Set alternative alignment printing (multi-base printing
+  and matrix scanning) to print out only the start and end
+  of alignments instead of cigars.
+
 # Ideas that would be cool, but not worth working on
 
 These ideas are a future vision that is not worth the
@@ -24,6 +50,13 @@ These ideas are a future vision that is not worth the
     if printing or not.
 
 # Log
+
+## Version 20230726
+
+- Hirschberg is working, but the output methods are
+  limited.
+- Gap opening penalty has been changed to -10. I found this
+  worked better when using alnSeq for my projects.
 
 ## Version 20230709
 

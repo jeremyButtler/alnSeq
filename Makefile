@@ -1,9 +1,10 @@
 PREFIX=/usr/local/bin
 
-CC=gcc
+CC=cc
 
 CFLAGS=\
   -Wall\
+  --std=c99 \
   -static\
   -O3
 
@@ -26,12 +27,7 @@ all:
 	$(CC) $(CFLAGS) $(SOURCE) -o alnSeq || gcc $(CFLAGS) $(SOURCE) -o alnSeq || egcc $(CFLAGS) $(SOURCE) -o alnSeq || cc $(CFLAGS) $(SOURCE) -o alnSeq
 
 debug:
-	$(CC) -Wall -O0 -ggdb $(SOURCE) -o alnSeqDebug
-	# Used to use -g, but -ggdb provides more info for gdb
-	bash debug.sh
-
-debugOpenBsd:
-	egcc -Wall -O0 -ggdb $(SOURCE) -o alnSeqDebug
+	$(CC) -Wall -static --std=c99 -O0 -ggdb $(SOURCE) -o alnSeqDebug
 	# Used to use -g, but -ggdb provides more info for gdb
 	bash debug.sh
 
@@ -44,9 +40,9 @@ cc:
 
 benchmark:
 	$(CC) -static -Ofast $(SOURCE) -o alnSeqOFast || gcc -static -Ofast $(SOURCE) -o alnSeqOFast || egcc -static -Ofast $(SOURCE) -o alnSeqOFast || cc -static -Ofast $(SOURCE) -o alnSeqOFast
-	$(CC) -static -O3 $(SOURCE) -o alnSeqO3 || gcc -static -O3 $(SOURCE) -o alnSeqO3 || egcc -static -O3 $(SOURCE) -o alnSeqO3 || cc -static -O3 $(SOURCE) -o alnSeqO3
-	$(CC) -static -O2 $(SOURCE) -o alnSeqO2 || gcc -static -O2 $(SOURCE) -o alnSeqO2 || egcc -static -O2 $(SOURCE) -o alnSeqO2 || cc -static -O2 $(SOURCE) -o alnSeqO2
-	$(CC) -static -O0 $(SOURCE) -o alnSeqO0 || gcc -static -O0 $(SOURCE) -o alnSeqO0 || egcc -static -O0 $(SOURCE) -o alnSeqO0 || cc -static -O0 $(SOURCE) -o alnSeqO0
+	$(CC) -static -O3    $(SOURCE) -o alnSeqO3 || gcc -static -O3 $(SOURCE) -o alnSeqO3 || egcc -static -O3 $(SOURCE) -o alnSeqO3 || cc -static -O3 $(SOURCE) -o alnSeqO3
+	$(CC) -static -O2    $(SOURCE) -o alnSeqO2 || gcc -static -O2 $(SOURCE) -o alnSeqO2 || egcc -static -O2 $(SOURCE) -o alnSeqO2 || cc -static -O2 $(SOURCE) -o alnSeqO2
+	$(CC) -static -O0    $(SOURCE) -o alnSeqO0 || gcc -static -O0 $(SOURCE) -o alnSeqO0 || egcc -static -O0 $(SOURCE) -o alnSeqO0 || cc -static -O0 $(SOURCE) -o alnSeqO0
 
 
 clean:

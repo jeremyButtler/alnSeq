@@ -409,6 +409,10 @@ int main(
        // 0, so that negatives values are kept. A 1 would
        // convert all negavitve values to 0 (like waterman)
 
+     // TODO: Currently the Hirscbherg just prints the
+     // output I need to set it up so that it returns an
+     // alignment structure.
+     goto freeAndExit;
      if(alnST == 0) goto alignmentFailed;
 
      // The Hirschberg returns an alignment structure,
@@ -552,10 +556,12 @@ int main(
   );
      
   fclose(outFILE);
-
   free(queryAlnCStr);
   free(refAlnCStr);
   freeAlnST(alnST, 1); // NEED TO SET UP
+
+  freeAndExit:
+
   freeSeqST(&refST, 0); // 0 to makr on the stack
   freeSeqST(&queryST, 0); // 0 to makr on the stack
 
@@ -598,7 +604,7 @@ char * checkInput(
     # Fun-01 Sec-2: Look through user input
     <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-    for(int intArg = 1; intArg < *lenArgsInt; intArg++)
+    for(int intArg = 1; intArg < *lenArgsInt; intArg += 2)
     { /*loop through all user input arguments*/
         // The 0 index holds the program name
         singleArgCStr = *(argsCStr +intArg + 1);// argument
@@ -762,9 +768,6 @@ char * checkInput(
         } // else if the user supplied a scoring matrix
             
         else return tmpCStr; // Invalid parameter
-
-        // Move to the parameter, so next input is a flag
-        intArg++;
     } /*loop through all user input arguments*/
 
     return 0; /*input is valid*/

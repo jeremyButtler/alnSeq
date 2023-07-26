@@ -697,7 +697,7 @@ struct alnMatrixStruct * WatermanAln(
      // Case 1: Ceck if keeping last edge cell
 
        refNtUL = refST->offsetUL;
-       qryNtUL = qryNtUL;
+       //qryNtUL = qryNtUL;
        tmpRefCStr = refStartCStr;
 
        while(*tmpRefCStr != '\0')
