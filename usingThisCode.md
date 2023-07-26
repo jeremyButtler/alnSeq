@@ -153,17 +153,19 @@ return 0;
   
 ## Doing an alignment
 
-alnSeq can do either an Needleman Wunsch or an Waterman
-  Smith alignment. The Needleman Wunsch alignment is done
-  by the NeedlemanAln function (fun-01 in needle.h), while
-  the Waterman Smith alignment is done by the WatermanAln
-  function (fun-01 water.h). Both functions take an pointer
-  to an seqStruct structure with a query sequence, an
-  pointer to an seqStruct structure with a reference
-  sequence, an pointer to a alignment settings structure.
-  In addition the WatermanAln also takes in a prefix to
-  name the output matrix scan file if a matrix scan is
-  requested.
+alnSeq can do either an Needleman Wunsch, Hirschberg, or an
+  Waterman Smith alignment. The Needleman Wunsch alignment
+  is done by the NeedlemanAln function
+  (fun-01 in needle.h), the Hirsberg is done by the 
+  Hirschberg function (fun-01 in hirschberg), and the
+  Waterman Smith alignment is done by the WatermanAln
+  function (fun-01 water.h). All functions take an pointer
+  to an seqStruct structure with the reference sequence, an
+  pointer to an seqStruct structure with the query
+  sequence, and an pointer to a alignment settings
+  structure. In addition the WatermanAln also takes in a
+  prefix to name the output matrix scan file if a matrix
+  scan is requested.
 
 Both the Needleman Wunsch and Waterman Smith alignments
   will return an alnMatrixStruct structure
@@ -171,6 +173,10 @@ Both the Needleman Wunsch and Waterman Smith alignments
   directional matrix as a two bit array, best score/ending
   score, and the extra scores kept for the
   reference/query scan (if was called for).
+
+The Hirschberg currently does not return anything, but does
+  its own printing. This was done for debugging and will
+  be corrected to return an alignment structure later.
 
 Once you are finished with the matrix you can free it with
   the freeAlnMatrixST() function (fun-02 in
@@ -216,17 +222,24 @@ switch(readFaSeq(faFILE, &refSeq))
 // This is to avoid errors. Originally I wanted to be able
 // to align in the middle of sequences, but I never set
 // that option up fully. It would crash the current code.
+// Note the Hirschberg is set up for changing these values.
 queryST.endAlnUI = queryST.lenSeqUI;
 queryST.offsetUI = 0;
 
 refST.endAlnUI = refST.lenSeqUI;
 refST.offsetUI = 0;
 
-matrix = WatermanAln(querySeq, refSeqSt, settings, "");
-// or matrix = NeedlemanAln(querySeq, refSeqSt, settings);
+matrix = WatermanAln(querySeq, refSeq, settings, "");
+// or matrix = NeedlemanAln(querySeq, refSeq, settings);
+// or matrix = Hirschberg(querySeq, refSeq, settings);
+  // For Hirschberg do nothing else except freeing the
+  // other variables. I will change the printing methods
+  // for this later.
 
 // Do something with matrix here
 
+freeSeqST(&refSeq, 0);
+freeSeqST(&qrySeq, 0);
 freeAlnMatrixST(alignmentMatrix);
 freeAlnSet(settings, 0);
 ```
