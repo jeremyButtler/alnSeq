@@ -38,9 +38,9 @@
 '      alignment (reverse direction)
 '  o fun-05 positionSingleRefBase:
 '    - Align a single reference base to a query sequence
-'  o fun-06 twoBitAlnAryToAlnST:
+'  o fun-06 twoBitAlnToAlnST:
 '    - Converts a two bit array with an alignment to an
-'      alnStruct structure for printing
+'      alnStruct structure
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\
@@ -85,6 +85,7 @@ struct alnStruct * Hirschberg(
    long *forwardScoreRowL = 0;
    long *reverseScoreRowL = 0;
 
+   struct alnStruct *alnST = 0;
    struct twoBitAry *refTwoBitST = 0;// Holds ref alignment
    struct twoBitAry *qryTwoBitST = 0;//Holds queryAlignment
    //struct alnStruct *alignmentST = 0; // returned alignment
@@ -105,25 +106,33 @@ struct alnStruct * Hirschberg(
    *  - Initalize the ouput alignment structure 
    \******************************************************/
 
-   refTwoBitST = makeTwoBitArry(lenRefUL, 0);
+   refTwoBitST = makeTwoBitArry(lenRefUL + 1, 0);
     // + 2 for index 0
 
    if(refTwoBitST == 0) return 0;
 
-   // Makign sure that the query alignment array is at
-   // least as long as tle reference. This is so I can
-   // use in the reverse scoring and keepl alnSeq thread
-   // safe
-   if(lenQryUL >= lenRefUL)
-     qryTwoBitST = makeTwoBitArry(lenQryUL, 0);
-   else
-     qryTwoBitST = makeTwoBitArry(lenRefUL, 0);
+   /*Mark the end of the alignment*/
+   moveXElmFromStart(refTwoBitST, lenRefUL);
+   changeTwoBitElm(refTwoBitST, defEndAlnFlag);
+   moveXElmFromStart(refTwoBitST, 0);
+   
+
+   /*TODO MAKE A SEPARATE SECOND ROW SO THIS IS THREAD
+   ` SAFE.
+   ` Using qry as direction row messes up the alignment
+   */
+   qryTwoBitST = makeTwoBitArry(lenQryUL, 0);
 
    if(qryTwoBitST == 0)
    { // If had a memroy allocation error
      freeTwoBitAry(refTwoBitST, 0, 0);
      return 0;
    } // If had a memroy allocation error
+
+   /*Mark the end of the alignment*/
+   moveXElmFromStart(qryTwoBitST, lenRefUL);
+   changeTwoBitElm(qryTwoBitST, defEndAlnFlag);
+   moveXElmFromStart(qryTwoBitST, 0);
 
    /******************************************************\
    * Fun-01 Sec-02 Sub-02:
@@ -180,21 +189,14 @@ struct alnStruct * Hirschberg(
    free(forwardScoreRowL);
    free(reverseScoreRowL);
 
-   // Free the variables that are no longer used
-   printTwoBitAln(
-     stdout,
-     refST->seqCStr,
-     qryST->seqCStr,
-     refTwoBitST,
-     qryTwoBitST,
-     59
-   );
+   alnST =
+     twoBitAlnToAlnST(refST,qryST,refTwoBitST,qryTwoBitST);
 
    freeTwoBitAry(refTwoBitST, 0, 0);
    freeTwoBitAry(qryTwoBitST, 0, 0);
 
-   return 0;
-} // Hirschberg
+   return alnST; /*Is 0 if twoBitAlnToAlnSt failed*/
+} /*Hirschberg*/
 
 /*--------------------------------------------------------\
 | Output:
@@ -564,7 +566,7 @@ long scoreForwardHirsch(
 
    indelColL = 0;
 
-   *scoreOnPtrL = settings->gapStartPenaltyI;
+   *scoreOnPtrL = settings->gapOpenI;
    changeTwoBitElm(dirRowST, defMoveLeft);
 
    ++scoreOnPtrL;
@@ -581,7 +583,7 @@ long scoreForwardHirsch(
      ++refBaseCStr
    ){ // Loop:Set the initial blank scores
      *scoreOnPtrL =
-       *(scoreOnPtrL-1) +settings->gapExtendPenaltyI;
+       *(scoreOnPtrL-1) +settings->gapExtendI;
 
      changeTwoBitElm(dirRowST, defMoveLeft);
 
@@ -623,11 +625,11 @@ long scoreForwardHirsch(
      // This is here so I can overwrite the array with the
      // new scores
 
-   indelColL += settings->gapStartPenaltyI;
+   indelColL += settings->gapOpenI;
 
    // Find the first insertion and deletion scores
-   insScoreL =  *scoreOnPtrL + settings->gapExtendPenaltyI;
-   delScoreL = indelColL + settings->gapExtendPenaltyI;
+   insScoreL =  *scoreOnPtrL + settings->gapExtendI;
+   delScoreL = indelColL + settings->gapExtendI;
 
    /******************************************************\
    * Fun-03 Sec-03 Sub-02:
@@ -729,8 +731,8 @@ long scoreForwardHirsch(
        // This is here so I can overwrite the array with the
        // new scores
 
-     indelColL += settings->gapExtendPenaltyI;
-     delScoreL = indelColL+settings->gapExtendPenaltyI;
+     indelColL += settings->gapExtendI;
+     delScoreL = indelColL+settings->gapExtendI;
    } // Loop: score all query bases (rows)
   
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -814,7 +816,7 @@ long scoreReverseHirsch(
 
    indelColL = 0;
 
-   *scoreOnPtrL = settings->gapStartPenaltyI;
+   *scoreOnPtrL = settings->gapOpenI;
    changeTwoBitElm(dirRowST, defMoveLeft);
 
    --scoreOnPtrL;
@@ -835,7 +837,7 @@ long scoreReverseHirsch(
      --refBaseCStr
    ){ // Loop:Set the initial blank scores
      *scoreOnPtrL =
-       *(scoreOnPtrL+1) +settings->gapExtendPenaltyI;
+       *(scoreOnPtrL+1) +settings->gapExtendI;
 
      changeTwoBitElm(dirRowST, defMoveLeft);
 
@@ -878,9 +880,9 @@ long scoreReverseHirsch(
      // new scores
 
    // Find the first insertion and deletion scores
-   indelColL += settings->gapStartPenaltyI;
-   insScoreL = indelColL + settings->gapExtendPenaltyI;
-   delScoreL = indelColL + settings->gapExtendPenaltyI;
+   indelColL += settings->gapOpenI;
+   insScoreL = indelColL + settings->gapExtendI;
+   delScoreL = indelColL + settings->gapExtendI;
 
    /******************************************************\
    * Fun-04 Sec-03 Sub-02:
@@ -983,8 +985,8 @@ long scoreReverseHirsch(
        // This is here so I can overwrite the array with the
        // new scores
 
-     indelColL += settings->gapExtendPenaltyI;
-     delScoreL = indelColL+settings->gapExtendPenaltyI;
+     indelColL += settings->gapExtendI;
+     delScoreL = indelColL+settings->gapExtendI;
    } // Loop: score all query bases (rows)
   
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -1065,7 +1067,7 @@ void positionSingleBase(
    matchScoreL =
        getBasePairScore(seqBaseCStr, &baseC, settings);
 
-   insScoreL = settings->gapStartPenaltyI;
+   insScoreL = settings->gapOpenI;
    delScoreL = insScoreL;
 
    ++seqBaseCStr;
@@ -1091,18 +1093,18 @@ void positionSingleBase(
          insScoreL
        + getBasePairScore(seqBaseCStr,&baseC,settings);
 
-     insScoreL += settings->gapExtendPenaltyI;
+     insScoreL += settings->gapExtendI;
 
      switch(getTwoBitAryElm(seqAlnST))
      { // Switch: Check if keeping the score
        case defMoveDiagnol:
          lastMatchCStr = seqBaseCStr - 1;
-         delScoreL = curScoreL+settings->gapStartPenaltyI;
+         delScoreL = curScoreL+settings->gapOpenI;
          break;
 
        case defMoveLeft:
        case defMoveUp:
-         delScoreL = curScoreL+settings->gapExtendPenaltyI;
+         delScoreL = curScoreL+settings->gapExtendI;
          break;
        case defMoveStop: break; // Never fires
      } // Switch: Check if keeping the score
@@ -1190,197 +1192,268 @@ void positionSingleBase(
 /*--------------------------------------------------------\
 | Output:
 |  - Returns:
-|    o 0: for success
-|    o 1: No valid output file (alnFILE)
-|    o 64: for memroy error
-|  - Prints:
-|    o Alginmetns to alnFILE
+|    o 0: for error
+|    o pointer to alnStruct with alignment
 \--------------------------------------------------------*/
-char printTwoBitAln(
-  FILE *alnFILE,               // File to save alignment to
-  char *refSeqCStr,
-  char *qrySeqCStr,
+struct alnStruct * twoBitAlnToAlnST(
+  struct seqStruct *refST,
+   /*Has reference alignment start/end & reference length*/
+  struct seqStruct *qryST,
+   /*Has query alignment start/end and query length*/
   struct twoBitAry *refTwoBitST,
-    // Two bir array with the referenc alignmetn
-  struct twoBitAry *qryTwoBitST,
-    // Two bir array with the query alignmetn
-  unsigned long lnWrapUL
-    // How many characters to pritn per line. Do
-    // length(query) + length(ref) to have no line wrap
+    /*Two bit array with the reference alignment*/
+  struct twoBitAry *qryTwoBitST
+    /*Two bit array with the query alignment*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-06 TOC: printTwoBitAln
+   ' Fun-06 TOC: twoBitAlnToAlnST
    '  - Converts a two bit array with an alignment to an
-   '    alnStruct structure for printing
+   '    alnStruct structure
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   char *refAlnCStr = 0;
-   char *qryAlnCStr = 0;
-   char *eqxAlnCStr = 0;
+   char *refAlnStr = 0;
+   char *qryAlnStr = 0;
+   uint8_t bitUC = 0;
 
-   char *tmpRefCStr = 0;
-   char *tmpQryCStr = 0;
-   char *tmpEqxCStr = 0;
+   long refIndexUL = 0;
+   long qryIndexUL = 0;
 
-   unsigned long lenBuffUL = 0;
+   long refFirstAlnBaseL = -1;
+   long refLastAlnBaseL = 0;
+   long qryFirstAlnBaseL = -1;
+   long qryLastAlnBaseL = 0;
+
+   long numDelsL = 0;
+   long numInssL = 0;
+   long numSnpsL = 0;
+   long numMatchesL = 0;
+
+   struct alnStruct *alnST = 0;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-0? Sec-02:
+   ^ Fun-06 Sec-02:
    ^  - Allocate memory
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   moveXElmFromStart(refTwoBitST, 0);
-   moveXElmFromStart(qryTwoBitST, 0);
+   alnST = malloc(sizeof(alnStruct));
+   if(alnST == 0) return 0; /*Memory error*/
+   initAlnST(alnST);
 
-   if(alnFILE == 0) return 1; // Invalid file
+   refAlnStr = calloc(refST->lenSeqUL + 1, sizeof(char));
 
-   refAlnCStr = malloc(sizeof(char) * (lnWrapUL + 2));
+   if(refAlnStr == 0)
+   { /*If had a memor error*/
+      freeAlnST(alnST, 1); /*1 for freeing heap memory*/
+      alnST = 0;
+      return 0;
+   } /*If had a memor error*/
 
-   if(refAlnCStr == 0) return 64;
+   alnST->refAlnStr = refAlnStr;
 
-   qryAlnCStr = malloc(sizeof(char) * (lnWrapUL + 2));
+   qryAlnStr = calloc(qryST->lenSeqUL + 1, sizeof(char));
 
-   if(qryAlnCStr == 0)
+   if(qryAlnStr == 0)
    { // IF had a memory allocation error
-     free(refAlnCStr);
-     refAlnCStr = 0;
-     return 64;
+     freeAlnST(alnST, 1); /*1 for freeing heap memory*/
+     alnST = 0;
+     refAlnStr = 0;
+     return 0;
    } // IF had a memory allocation error
 
-   eqxAlnCStr = malloc(sizeof(char) * (lnWrapUL + 2));
-
-   if(eqxAlnCStr == 0)
-   { // IF had a memory allocation error
-     free(refAlnCStr);
-     refAlnCStr = 0;
-
-     free(eqxAlnCStr);
-     eqxAlnCStr = 0;
-
-     return 64;
-   } // IF had a memory allocation error
-
-   *(refAlnCStr + lnWrapUL) = '\n';
-   *(qryAlnCStr + lnWrapUL) = '\n';
-   *(eqxAlnCStr + lnWrapUL) = '\n';
-
-   *(refAlnCStr + lnWrapUL + 1) = '\0';
-   *(qryAlnCStr + lnWrapUL + 1) = '\0';
-   *(eqxAlnCStr + lnWrapUL + 1) = '\0';
+   alnST->qryAlnStr = qryAlnStr;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-0? Sec-03:
-   ^  - Finish printing the reference
+   ^ Fun-06 Sec-03:
+   ^  - Add in the alignment
+   ^  o fun-06 sec-03 sub-01:
+   ^    - Add in the reference alignment
+   ^  o fun-06 sec-03 sub-02:
+   ^    - Add in the query alignment
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   tmpRefCStr = refAlnCStr;
-   tmpQryCStr = qryAlnCStr;
-   tmpEqxCStr = eqxAlnCStr;
+   /******************************************************\
+   * Fun-06 Sec-03 Sub-01:
+   *  - Add in the reference alignment
+   \******************************************************/
 
-    while(*refSeqCStr != '\0' && *qrySeqCStr != '\0')
-    { // While I have gaps at the start
+   moveXElmFromStart(refTwoBitST, 0);
+   refIndexUL = refST->offsetUL;
+   refAlnStr += refIndexUL;
 
-      // Check if I have any insertions to handle
-      if(getTwoBitAryElm(qryTwoBitST) == defGapFlag)
-      { // If have an insertion
-        *tmpRefCStr = '-';
-        *tmpQryCStr = *qrySeqCStr;
-        *tmpEqxCStr = 'I';
+   bitUC = getTwoBitAryElm(refTwoBitST);
+   while(bitUC != defEndAlnFlag)
+   { /*Loop: Add reference aligned bases to alnStruct*/
+      switch(bitUC)
+      { /*Switch: Check the error type*/
+         case 0: break;
 
-        ++qrySeqCStr;
-        twoBitAryMoveToNextElm(qryTwoBitST);
+         case defSnpFlag:
+         /*Case: snp*/
+            ++numSnpsL;
 
-        goto checkIfPrint;
-      } // If have an insertion
+            if(refFirstAlnBaseL < 0) /*Start of alignment*/
+               refFirstAlnBaseL = refIndexUL;
 
-      // Check what the reference postion is
-      switch(getTwoBitAryElm(refTwoBitST))
-      { // Switch; check if match, SNP, or deletion
-        case defSnpFlag:
-        // Case: Have a SNP
-          *tmpRefCStr = *refSeqCStr;
-          *tmpQryCStr = *qrySeqCStr;
-          *tmpEqxCStr = 'X';
+            refLastAlnBaseL=refIndexUL;/*end of alignment*/
+            break;
+         /*Case: snp*/
 
-          ++refSeqCStr;
-          ++qrySeqCStr;
-          twoBitAryMoveToNextElm(refTwoBitST);
-          twoBitAryMoveToNextElm(qryTwoBitST);
-          break;
-        // Case: Have a SNP
+         case defMatchFlag:
+         /*Case: matches*/
+            ++numMatchesL;
 
-        case defMatchFlag:
-        // Case: Have a Match
-          *tmpRefCStr = *refSeqCStr;
-          *tmpQryCStr = *qrySeqCStr;
-          *tmpEqxCStr = '=';
+            if(refFirstAlnBaseL < 0) /*Start of alignment*/
+               refFirstAlnBaseL = refIndexUL;
 
-          ++refSeqCStr;
-          ++qrySeqCStr;
-          twoBitAryMoveToNextElm(refTwoBitST);
-          twoBitAryMoveToNextElm(qryTwoBitST);
-          break;
-        // Case: Have a Match
- 
-        case defGapFlag:
-        // Case: have a deletion
-          *tmpRefCStr = *refSeqCStr;
-          *tmpQryCStr = '-';
-          *tmpEqxCStr = 'D';
+            refLastAlnBaseL=refIndexUL;/*end of alignment*/
+            break;
+         /*Case: matches*/
 
-          ++refSeqCStr;
-          twoBitAryMoveToNextElm(refTwoBitST);
-          break;
-        // Case: have a deletion
-      } // Switch; check if match, SNP, or deletion
+         case defGapFlag:
+         /*Case: Deletions*/
+            ++numDelsL;
+            break;
+         /*Case: Deletions*/
+      } /*Switch: Check the error type*/
 
-      checkIfPrint:
 
-      if(lenBuffUL >= lnWrapUL - 1)
-      { // IF at the end of the buffer
-        // Write out the entry with the new line at the end
-        fwrite(refAlnCStr,sizeof(char),lnWrapUL+1,alnFILE);
-        fwrite(qryAlnCStr,sizeof(char),lnWrapUL+1,alnFILE);
-        fwrite(eqxAlnCStr,sizeof(char),lnWrapUL+1,alnFILE);
+      *refAlnStr = bitUC;
+      twoBitAryMoveToNextElm(refTwoBitST);
+      bitUC = getTwoBitAryElm(refTwoBitST);
+      ++refAlnStr;
+      ++refIndexUL;
+   } /*Loop: Add reference aligned bases to alnStruct*/
 
-        // Make sure a new line between entries
-        fwrite("\n" , sizeof(char), 1, alnFILE);
+   if(refFirstAlnBaseL >= 0) /*Start of alignment*/
+      alnST->refStartAlnUL = refFirstAlnBaseL;
+   else alnST->refStartAlnUL = refST->lenSeqUL;
+     /*One base of last base*/
 
-        lenBuffUL = 0;
-        tmpRefCStr = refAlnCStr;
-        tmpQryCStr = qryAlnCStr;
-        tmpEqxCStr = eqxAlnCStr;
-      } // IF at the end of the buffer
+   if(refLastAlnBaseL > 0)
+      alnST->refEndAlnUL = refLastAlnBaseL;
+   else alnST->refEndAlnUL = refST->lenSeqUL;
+     /*One base of last base*/
 
-      else
-      { // Else I have more space in the buffer
-        ++lenBuffUL;
-        ++tmpRefCStr;
-        ++tmpQryCStr;
-        ++tmpEqxCStr;
-      } // Else I have more space in the buffer
-  } // While I have gaps at the start
+   /******************************************************\
+   * Fun-06 Sec-03 Sub-01:
+   *  - Add in the query alignment
+   \******************************************************/
 
-  if(lenBuffUL > 0)
-  { // If have a final bit of the buffer to print out
-    // Write out the entry with the new line at the end
-    fwrite(refAlnCStr, sizeof(char), lenBuffUL, alnFILE);
-    fwrite("\n" , sizeof(char), 1, alnFILE);
+   moveXElmFromStart(qryTwoBitST, 0);
+   qryIndexUL = qryST->offsetUL;
+   qryAlnStr += qryIndexUL;
 
-    fwrite(qryAlnCStr, sizeof(char), lenBuffUL, alnFILE);
-    fwrite("\n" , sizeof(char), 1, alnFILE);
+   bitUC = getTwoBitAryElm(qryTwoBitST);
+   while(bitUC != defEndAlnFlag)
+   { /*Loop: Add query aligned bases to alnStruct*/
+      switch(bitUC)
+      { /*Switch: Check the error type*/
+         case 0: break;
 
-    fwrite(eqxAlnCStr, sizeof(char), lenBuffUL, alnFILE);
-    fwrite("\n" , sizeof(char), 1, alnFILE);
-  } // If have a final bit of the buffer to print out
+         case defSnpFlag:
+         /*Case: snp*/
+            if(qryFirstAlnBaseL < 0) /*Start of alignment*/
+               qryFirstAlnBaseL = qryIndexUL;
 
-  free(refAlnCStr);
-  refAlnCStr = 0;
+            qryLastAlnBaseL=qryIndexUL;/*end of alignment*/
+            break;
+         /*Case: snp*/
 
-  free(qryAlnCStr);
-  qryAlnCStr = 0;
+         case defMatchFlag:
+         /*Case: matches*/
+            if(qryFirstAlnBaseL < 0) /*Start of alignment*/
+               qryFirstAlnBaseL = qryIndexUL;
 
-  free(eqxAlnCStr);
-  eqxAlnCStr = 0;
+            qryLastAlnBaseL=qryIndexUL;/*end of alignment*/
+            break;
+         /*Case: matches*/
 
-  return 0;
-} // printTwoBitAln
+         case defGapFlag:
+         /*Case: Insertions*/
+            ++numInssL;
+            break;
+         /*Case: inerstions*/
+      } /*Switch: Check the error type*/
+
+      *qryAlnStr = bitUC;
+      twoBitAryMoveToNextElm(qryTwoBitST);
+      bitUC = getTwoBitAryElm(qryTwoBitST);
+      ++qryIndexUL;
+      ++qryAlnStr;
+   } /*Loop: Add query aligned bases to alnStruct*/
+
+   if(qryFirstAlnBaseL >= 0) /*Start of alignment*/
+      alnST->qryStartAlnUL = qryFirstAlnBaseL;
+   else alnST->qryStartAlnUL = qryST->lenSeqUL;
+     /*One base of last base*/
+
+   if(qryLastAlnBaseL > 0)
+      alnST->qryEndAlnUL = qryLastAlnBaseL;
+   else alnST->qryEndAlnUL = qryST->lenSeqUL;
+     /*One base of last base*/
+
+   /******************************************************\
+   * Fun-06 Sec-03 Sub-01:
+   *  - Add in the alignment stats
+   \******************************************************/
+
+   alnST->numInssUL = (unsigned long) numInssL;
+   alnST->numDelsUL = (unsigned long) numDelsL;
+   alnST->numSnpsUL = (unsigned long) numSnpsL;
+   alnST->numMatchesUL = (unsigned long) numMatchesL;
+
+   alnST->lenAlnUL =
+      (unsigned long)
+      (numInssL + numDelsL + numSnpsL + numMatchesL);
+
+   alnST->refLenUL = refST->lenSeqUL;
+   alnST->qryLenUL = qryST->lenSeqUL;
+
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-06 Sec-04:
+   ^  - Add in softmasking
+   ^  o fun-06 sec-03 sub-01:
+   ^    - Add soft masking to the un-aligned ending bases
+   ^  o fun-06 sec-03 sub-02:
+   ^    - Add soft masking to the un-aligned starting bases
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   /******************************************************\
+   * Fun-06 Sec-03 Sub-01:
+   *  - Add soft masking to the un-aligned ending bases
+   \******************************************************/
+
+    while(refIndexUL < refST->lenSeqUL)
+    { /*Loop: Apply mask to starting reference bases*/
+       *refAlnStr = defSoftMaskFlag;
+       ++refAlnStr;
+       ++refIndexUL;
+    } /*Loop: Apply mask to starting reference bases*/
+
+    while(qryIndexUL < qryST->lenSeqUL)
+    { /*Loop: Apply mask to starting query bases*/
+       *qryAlnStr = defSoftMaskFlag;
+       ++qryAlnStr;
+       ++qryIndexUL;
+    } /*Loop: Apply mask to starting query bases*/
+
+   /******************************************************\
+   * Fun-06 Sec-03 Sub-02:
+   *  - Add soft masking to the un-aligned starting bases
+   \******************************************************/
+
+    refAlnStr = alnST->refAlnStr; 
+    while(*refAlnStr == 0)
+    { /*Loop: Apply mask to starting reference bases*/
+       *refAlnStr = defSoftMaskFlag;
+       ++refAlnStr;
+    } /*Loop: Apply mask to starting reference bases*/
+
+    qryAlnStr = alnST->qryAlnStr; 
+    while(*qryAlnStr == 0)
+    { /*Loop: Apply mask to starting query bases*/
+       *qryAlnStr = defSoftMaskFlag;
+       ++qryAlnStr;
+    } /*Loop: Apply mask to starting query bases*/
+
+    return alnST;
+} /*twoBitAlnToAlnST*/

@@ -7,21 +7,9 @@ This log records how alnSeq has changed between versions.
 
 # TODO or to fix list
 
-- The Hirschberg currently prints the alignment separately.
-  It should return an alnStruct with the alignment to be
-  printed out.
-  - Reference is always the top line, query is the second
-    line (this is not marked).
-- Have alnStruct store matches (revise how I print out
-  alignments).
-  - Or modify it use use two two bit arrays like the
-    Hirschberg (likely will set up a conversion of 
-    Hirschberg to alnStruct).
 - Make Hirschberg thread safe (just in case I want to
   multithread it). This will increase memory usage by a
   very slight amount (~ bytes = 1/4 \* reference length).
-- The Smith Waterman only prints alignments out correctly
-  with -line-wrap 0
 - Set up Smith Waterman Hirschberg combination
 - Add in a match matrix. Currently I am using a switch
   table set up for nucleotides to identify matches/snps.
@@ -30,6 +18,15 @@ This log records how alnSeq has changed between versions.
 - Set alternative alignment printing (multi-base printing
   and matrix scanning) to print out only the start and end
   of alignments instead of cigars.
+- Updated using this code guide for the new printing and
+  alnStruct changes.
+- Change Hirschberg to use 1 byte arrays instead of two
+  bit arrays for the directional rows. This will increase
+  memory usage by 1/8th (most of the used memory is in
+  the scoring rows). However, the two bit arrays are
+  slower, so it should increase speed.
+  - I will include a compiler option to complied the old
+    two bit array version.
 
 # Ideas that would be cool, but not worth working on
 
@@ -50,6 +47,38 @@ These ideas are a future vision that is not worth the
     if printing or not.
 
 # Log
+
+## Version 20230803
+
+- The Hirschberg now prints using the normal functions.
+  - I corrected an error were I was sending in the query as
+    the reference to the Hirschberg.
+- alnStruct has been changed. It now stores two alignment
+  arrays. One for the reference and one for the query.
+  - Each array tells if a specific reference base or query
+    base mapped to a gap, snp, match, or was soft masked.
+  - Also added in are insertion, deletion, snp, and match
+    counts.
+  - Also includes the first match/snp and last base in the
+    alignment
+  - The alignment arrays now include matches.
+- The Smith Waterman is now printing correctly when a line
+  wrap is applied.
+- Changed printAln (alnStruct.c/h, function 03 used to be
+  04) to take in more input. This allowed me to print
+  out more to the header.
+  - You can now print the output file in fasta, clustal,
+    or, an emboss like format. The old expanded cigar
+    format is still the default option.
+  - I am hoping the change in printing method got rid of a
+    rare error I found a few days ago, were one or two
+    bases would be replaced with an deletion. I have not
+    confirmed if my hope is correct.
+- Added in an option `-print-alinged` to only print out the
+  aligned bases in the alignment.
+- Added in option `-print-position` to include starting and
+  ending base numbers at each line.
+  - Always set when output is in the EMBOSS like format.
 
 ## Version 20230726
 

@@ -9,6 +9,7 @@ CFLAGS=\
   -O3
 
 SOURCE=\
+  alnSeqDefaults.c \
   cStrToNumberFun.c \
   twoBitArrays.c \
   seqStruct.c\
@@ -51,6 +52,7 @@ clean:
 	rm alnSeqO3 || printf "";
 	rm alnSeqO2 || printf "";
 	rm alnSeqO0 || printf "";
+	rm alnSeq*.core || printf "";
 	# || printf ""; is so it does not error out
 
 install:

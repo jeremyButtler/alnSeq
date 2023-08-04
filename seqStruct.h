@@ -38,6 +38,10 @@
 '      of interest in a sequence
 '  o fun-10 initSeqST:
 '     - Sets values in seqST to blank values
+'  o fun-11 cpReadIdRPad:
+'     - Copies read id to a buffer and adds in endIdC to
+'       the end. If needed, this function will add right
+'       padding of spaces to the end.
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #ifndef SEQSTRUCT_H
@@ -266,6 +270,29 @@ void blankSeqST(
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-10 TOC: Sec-01: initSeqST
    '  - Sets values in seqST to blank values
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o buffStr to hold the sequence id + endIdC. If the
+|      id + endIdC is shorter than padRI, the copied id is
+|      padded with spaces on the right till it is the same
+|      size as padRI.
+|  - Returns:
+|    o Pointer to end of copied id or padding if padding
+|      was applied.
+\--------------------------------------------------------*/
+char * cpReadIdRPad(
+   struct seqStruct *seqST, /*Has read id to copy*/
+   char *buffStr,           /*Buffer to add read id to*/
+   char endIdC,    /*Char to add to end of id (0 to skip)*/
+   int padRI       /*Padding to add to right of id*/
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-11 TOC: cpReadIdRPad
+   '  - Copies read id to a buffer and adds in endIdC to
+   '    the end. If needed, this function will add right
+   '    padding of spaces to the end.
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #endif

@@ -33,6 +33,10 @@
 '    - Sets vlues in seqST to zero
 '  o fun-10 initSeqST:
 '     - Sets values in seqST to blank values
+'  o fun-11 cpReadIdRPad:
+'     - Copies read id to a buffer and adds in endIdC to
+'       the end. If needed, this function will add right
+'       padding of spaces to the end.
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #include "seqStruct.h"
@@ -723,3 +727,56 @@ void blankSeqST(
 
    return;
 } // initSeqST
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o buffStr to hold the sequence id + endIdC. If the
+|      id + endIdC is shorter than padRI, the copied id is
+|      padded with spaces on the right till it is the same
+|      size as padRI.
+|  - Returns:
+|    o Pointer to end of copied id or padding if padding
+|      was applied.
+\--------------------------------------------------------*/
+char * cpReadIdRPad(
+   struct seqStruct *seqST, /*Has read id to copy*/
+   char *buffStr,           /*Buffer to add read id to*/
+   char endIdC,    /*Char to add to end of id (0 to skip)*/
+   int padRI       /*Padding to add to right of id*/
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-11 TOC: cpReadIdRPad
+   '  - Copies read id to a buffer and adds in endIdC to
+   '    the end. If needed, this function will add right
+   '    padding of spaces to the end.
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+   int idCntI = 0;
+   char *tmpStr = seqST->idCStr;
+
+   if(*tmpStr == '>') ++tmpStr; /*Get of header*/
+
+   while(*tmpStr != '\0')
+   { /*While I have a read id to copy over*/
+      *buffStr = *tmpStr;
+      ++buffStr;
+      ++tmpStr;
+      ++idCntI;
+   } /*While I have a read id to copy over*/
+
+   if(endIdC)
+   { /*If adding in a character after the read id*/
+      *buffStr = endIdC;
+      ++buffStr; /*If not a null*/
+      ++idCntI;
+   } /*If adding in a character after the read id*/
+
+   while(idCntI < padRI)
+   { /*While I have padding to add to the end*/
+      *buffStr = ' ';
+      ++buffStr;
+      ++idCntI;
+   } /*While I have padding to add to the end*/
+
+   return buffStr;
+} /*cpReadIdRPad*/

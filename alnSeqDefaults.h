@@ -11,12 +11,22 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings (version this ports with)*/
-#define defVersion 20230726  // Version number for alnSeq
+#define defVersion 20230803  // Version number for alnSeq
 
 // Aligment method being used
 #define defUseNeedle 1     // do Needleman-Wunsch alignment
 #define defUseWater 0     // Do a waterman smith alignment
 #define defUseHirsch 0     // Use a Hirschberg alignment
+
+/*Output file formating (only change defFormat)*/
+#define defExpandCig 0 /*Expanded cigar format flag*/
+#define defEMBOSS 1    /*EMBOSS format flag*/
+#define defClustal 2   /*Clustal format flag*/
+#define defFasta 3     /*Fasta format flag*/
+#define defFormat defExpandCig
+   /*Change defFormat to change the default output
+   ` The current default format is expand cigar
+   */
 
 // Doing printing out more than one aligment
 #define defMultiBaseWater 0
@@ -27,6 +37,8 @@
 #define defMatrixScan 0 // Do not do a matrix scan
 
 // Output settings
+#define defPAln 1     /*1: Print out the entire alignment*/
+#define defPPos 0     /*1: Print base positions*/
 #define defLineWrap 59         // Max chars per line in 
                                // output file (min 40)
 // Alignment matrix movements
@@ -52,12 +64,15 @@
 #define defLeftPriority 2     // Deletions prefered
 
 // Scoring variables
-#define defGapStartPenalty -10// Penalty for starting indel
-#define defGapExtendPenalty -1//penalty for extending indel
+#define defGapOpen -10  /*Penalty for starting indel*/
+#define defGapExtend -1 /*penalty for extending indel*/
 
 // Scoring matrix is EDNAFULL or something close to it. I
 //  think I have the anonymous bases with the correct
 // scores.
+
+/*Chage this value in alnSeqDefaults.c*/
+extern char defMatrixNameStr[]; /*Name of default matrix*/
 
 // Needleman-Wunsch alignment scoring matrix (non-anonymous)
 #define defAToA 5        // Penalty for an query A to reference A

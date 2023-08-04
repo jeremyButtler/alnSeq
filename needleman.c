@@ -156,7 +156,7 @@ struct alnMatrixStruct * NeedlemanAln(
    twoBitAryMoveToNextElm(dirMatrix);
 
    // 2nd score (first indel in matrix)
-   *scoreOnLPtr = settings->gapStartPenaltyI;
+   *scoreOnLPtr = settings->gapOpenI;
    ++scoreOnLPtr;      // Move to the 2nd reference base
 
    changeTwoBitElm(dirMatrix, defMoveLeft);
@@ -167,8 +167,7 @@ struct alnMatrixStruct * NeedlemanAln(
 
    while(*tmpRefCStr != '\0')
    { // loop; till have initalized the first row
-     *scoreOnLPtr =
-       *(scoreOnLPtr - 1) + settings->gapExtendPenaltyI;
+     *scoreOnLPtr = *(scoreOnLPtr-1) +settings->gapExtendI;
 
      // Move to the next cell (ref base)
      ++scoreOnLPtr;
@@ -219,7 +218,7 @@ struct alnMatrixStruct * NeedlemanAln(
    \******************************************************/
 
     *scoreOnLPtr =
-      *lastBaseLPtr + settings->gapExtendPenaltyI;
+      *lastBaseLPtr + settings->gapExtendI;
 
     changeTwoBitElm(dirMatrix, defMoveUp);
 
@@ -316,7 +315,7 @@ struct alnMatrixStruct * NeedlemanAln(
        \**************************************************/
 
        *scoreOnLPtr =
-         *lastBaseLPtr + settings->gapExtendPenaltyI;
+         *lastBaseLPtr + settings->gapExtendI;
 
        changeTwoBitElm(dirMatrix, defMoveUp);
        twoBitAryMoveToNextElm(dirMatrix);

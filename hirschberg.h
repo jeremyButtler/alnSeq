@@ -35,9 +35,9 @@
 '      alignment (reverse direction)
 '  o fun-05 positionSingleRefBase:
 '    - Align a single reference base to a query sequence
-'  o fun-06 twoBitAlnAryToAlnST:
+'  o fun-06 twoBitAlnToAlnST:
 '    - Converts a two bit array with an alignment to an
-'      alnStruct structure for printing
+'      alnStruct structure
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #ifndef HIRSCHBERG_H
@@ -218,27 +218,22 @@ void positionSingleBase(
 /*--------------------------------------------------------\
 | Output:
 |  - Returns:
-|    o 0: for success
-|    o 1: No valid output file (alnFILE)
-|    o 64: for memroy error
-|  - Prints:
-|    o Alginmetns to alnFILE
+|    o 0: for error
+|    o pointer to alnStruct with alignment
 \--------------------------------------------------------*/
-char printTwoBitAln(
-  FILE *alnFILE,               // File to save alignment to
-  char *refSeqCStr,
-  char *qrySeqCStr,
+struct alnStruct * twoBitAlnToAlnST(
+  struct seqStruct *refST,
+   /*Has reference alignment start/end & reference length*/
+  struct seqStruct *qryST,
+   /*Has query alignment start/end and query length*/
   struct twoBitAry *refTwoBitST,
-    // Two bir array with the referenc alignmetn
-  struct twoBitAry *qryTwoBitST,
-    // Two bir array with the query alignmetn
-  unsigned long lnWrapUL
-    // How many characters to pritn per line. Do
-    // length(query) + length(ref) to have no line wrap
+    /*Two bit array with the reference alignment*/
+  struct twoBitAry *qryTwoBitST
+    /*Two bit array with the query alignment*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-06 TOC: printTwoBitAln
+   ' Fun-06 TOC: twoBitAlnToAlnST
    '  - Converts a two bit array with an alignment to an
-   '    alnStruct structure for printing
+   '    alnStruct structure
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #endif

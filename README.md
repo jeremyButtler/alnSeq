@@ -13,6 +13,9 @@ There are faster and less memory hungry Waterman Smith
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
   for an very fast striped Waterman Smith aligner.
 
+This program is dual licensed for MIT and CC0. Pick the
+  license which works best for you.
+
 # Current work
 
 I know I said I was finished, but I just thought I would
@@ -35,11 +38,7 @@ I then could also allow recording of the best score for
 
 ## Hirschberg Update
 
-I have the Hirschberg working, but it still needs some work
-  to join it in with the rest of the code. Currently it is
-  using its own printing method to print alignments with
-  the default line wrapping only. It does not mark which
-  is the reference (fist line) or query (second line).
+The Hirschberg is working.
 
 The Hirschberg in alnSeq is not thread safe, but can be
   easily made thread safe by providing an additional
@@ -89,27 +88,37 @@ chmod a+x /path/to/install/alnSeq
 ## How to run alnSeq
 
 ```
-# For the help message
-alnSeq -h
+# help message
+alnSeq -h | less
 
-# For a global alignment (Needleman Wunsch)
+# Alignment formats 
+
+## For a global alignment (Needleman Wunsch)
 alnSeq -query query.fasta -ref ref.fasta > alignment.aln
 
-# For a Hirschberg global alignment (slow, but low memory
-# usage
+## For a Hirschberg global alignment (slow, but low memory
+# usage)
 alnSeq -use-hirschberg -query query.fasta -ref ref.fasta > alignment.aln
 
-# For a single local alignment (Waterman Smith) (not working)
+## For a single local alignment (Waterman Smith) (not working)
 alnSeq -use-water -query query.fasta -ref ref.fasta > out.aln
 
-# For printing out a best score for each base
-alnSeq -query-ref-scan-water -query query.fasta -ref ref.fasta -out prefix 
+# File formatting
 
-# For a matrix scan
-alnSeq -matrix-scan-water -query query.fasta -ref ref.fasta -out prefix 
+## Output an EMBOSS like file
+alnSeq -format-emboss -query query.fasta -ref ref.fasta -out out.aln
 
-# Help message
-alnSeq -h
+## Output a clustal file
+alnSeq -format-clustal -query query.fasta -ref ref.fasta -out out.aln
+
+## Output a fasta file
+alnSeq -format-fasta -query query.fasta -ref ref.fasta -out out.aln
+
+## Trim sequences
+alnSeq -print-aligned -query query.fasta -ref ref.fasta -out out.aln
+
+## Print positions for non EMBOSS files
+alnSeq -print-positions -query query.fasta -ref ref.fasta -out out.aln
 ```
 
 # Explaining alnSeq

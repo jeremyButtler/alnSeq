@@ -44,11 +44,11 @@ long getIndelScore(
    { // Switch; check if this is the first indel
      case defMoveStop:     // At the end of the matrix
      case defMoveDiagnol:  // Top base was a SNP
-         return *lastBaseL + alnSetST->gapStartPenaltyI;
+         return *lastBaseL + alnSetST->gapOpenI;
 
      case defMoveUp:   // Top base was an insertion
      case defMoveLeft: // Top base was an deletion
-         return *lastBaseL + alnSetST->gapExtendPenaltyI;
+         return *lastBaseL + alnSetST->gapExtendI;
    } // Switch; check if this is the first indel
 
    return 0; // Somthing went wrong

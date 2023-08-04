@@ -30,12 +30,6 @@
 #define defMoveUp 2      // Move up (insertion) in alignment matrix
 #define defMoveDiagnol 3 // Move on a diagnol (snp/match) in alignment
 
-#define defDelFlag 1    // deletion
-#define defInsFlag 2    // insertion
-#define defBaseFlag 4   // match or snp
-#define defSoftQueryFlag 8 // Softmask a query base
-#define defSoftRefFlag 16  // Softmask a reference base
-
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOH: Start Of Header
 '  o st-01 alnSet:
@@ -52,41 +46,58 @@
 '     o Reads in a file of scores for a scoring matrix
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-/*---------------------------------------------------------------------\
+/*--------------------------------------------------------\
 | ST-01: alnSet
 | Use: Holds settings for my alignment program
-\---------------------------------------------------------------------*/
+\--------------------------------------------------------*/
 typedef struct alnSet
 { /*alnSet*/
    // Line wrap for printing out an alignment
    unsigned short lineWrapUS;
    unsigned short lenFileNameUS;
+   char pBasePosBl; /*1 Print out base numbers*/
+   char pFullAlnBl;
+     /*1: Print out the full alignmnet
+     ` 0: Print out the aligned region
+     */
+   char formatFlag;
+     /*defExpandCig: is default format (S D I = X)
+     ` defEMBOSS: is EMBOSS format (| space)
+     ` defClustal: is clustal format (* space)
+     */
 
-   //kmer mapping variables
-   char diagnolPriorityC; // 0 favor snps; 1 kinda; 2 do not
-   char topPriorityC;     // 0 favor insertions; 1 kinda; 2 do not
-   char leftPriorityC;    // 0 favor deletions; 1 kinda; 2 do not
-
-   // Needleman-Wunsch / Waterman Smith variables
+   /*Preference for alignment algorithim used*/
    char useNeedleBl;
    char useWaterBl;
    char useHirschBl;
 
-   char multiBaseWaterBl; // Keep more than best aligment
-   char refQueryScanBl;   // Keep best score for ref/query
-   char matrixScanBl;  // Fur doing a matrix scan
-     // If set to 1: Recored a best score for each base
-     //   in the reference and query in a Smith Waterman
-     // alignment
-   int16_t snpPenaltyC[26][26];   // Penalty for mismatches (in matrix)
-     // Size is due to wanting a look up table that can handle
-     // anonymous bases. Most cells will be set to 0.
-     // value = snpPenaltyC[(uint8_t) (base1 & defClearNonAlph) - 1 ]
-     //                    [(uint8_t) (base2 & defClearNonAlph) - 1 ]
-   int32_t gapStartPenaltyI;     // Penalty for starting an indel
-   int32_t gapExtendPenaltyI;    // Penalty for extending an indel
-   uint32_t minScoreUI;        // Minimum score needed to keep alignment
-   //uint32_t minBasesUI; // NO LONGER USED
+   /*Directional priorities*/
+   /* 0 = first option; 1 second option; 2 last option*/
+   char diagnolPriorityC; /*SNPs/matches*/
+   char topPriorityC;     /*Insertions*/
+   char leftPriorityC;    /*Deletions*/
+
+   /*General alignment variables*/
+   int32_t gapOpenI;    /*Penalty for starting an indel*/
+   int32_t gapExtendI;  /* Penalty for extending an indel*/
+   int16_t snpPenaltyC[26][26]; /*Scoring matrix*/
+     /* Size is due to wanting a look up table that can
+     `  handle anonymous bases. Most cells will be set to
+     `  0. 
+     `  How to get score
+     `  score =
+     `   snpPenaltyC[(uint8_t) (base1 & defClearNonAlph)-1]
+     `              [(uint8_t) (base2 & defClearNonAlph)-1]
+     */
+
+   /*Waterman smith specific variables*/
+   char multiBaseWaterBl; /*Keep more than best aligment*/
+   char refQueryScanBl;   /*Keep best score for ref/query*/
+   char matrixScanBl;     /*For doing a matrix scan*/
+     /* If set to 1: Recored a best score for each base
+     `  in the reference and query in a Waterman alignment
+     */
+   uint32_t minScoreUI;  /*Min score to keep alignment*/
 }alnSet;
 
 /*---------------------------------------------------------------------\

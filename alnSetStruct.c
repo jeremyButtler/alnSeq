@@ -41,35 +41,35 @@ void initAlnSet(
    '    structure to defaults
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-   // Choose the aligment style
+   /*Set the default output settings*/
+   alnSetST->lineWrapUS = defLineWrap;
+   alnSetST->lenFileNameUS = 1024;
+
+   alnSetST->pBasePosBl = defPPos;
+   alnSetST->pFullAlnBl = defPAln;
+   alnSetST->formatFlag = defFormat;
+
+   /*Choose the aligment style*/
    alnSetST->useNeedleBl = defUseNeedle;
    alnSetST->useWaterBl = defUseWater;
    alnSetST->useHirschBl = defUseHirsch;
 
-   // Set the base style ouput for the waterman alignment
-   alnSetST->multiBaseWaterBl = defMultiBaseWater;
-   alnSetST->matrixScanBl = defMatrixScan;
-   alnSetST->refQueryScanBl = defMatrixScan;
-
-   // Aligment Needleman-Wunsch settings
-   alnSetST->gapStartPenaltyI = defGapStartPenalty;
-   alnSetST->gapExtendPenaltyI = defGapExtendPenalty;
-
+   /*Direction priorities*/
    alnSetST->diagnolPriorityC = defDiagnolPriority;
    alnSetST->topPriorityC = defTopPriority;
    alnSetST->leftPriorityC = defLeftPriority;
 
-   // Min settings to keep an non-best alternateve
-   // alignment for eac base
-   //alnSetST->minBasesUI = defMinBasesUI;
-      // minBaseUI is NO LONGER USED
+   /*General alignment variables*/
+   alnSetST->gapOpenI = defGapOpen;
+   alnSetST->gapExtendI = defGapExtend;
+
+   /*Waterman specific variables*/
+   alnSetST->multiBaseWaterBl = defMultiBaseWater;
+   alnSetST->matrixScanBl = defMatrixScan;
+   alnSetST->refQueryScanBl = defMatrixScan;
    alnSetST->minScoreUI = defMinScore;
   
-   // Set the default output line wrapping
-   alnSetST->lineWrapUS = defLineWrap;
-   alnSetST->lenFileNameUS = 1024;
-
-   // Aligment Needleman-Wunsch scoring matrix
+   /*score matrix Initalize*/
    for(uint8_t colUC = 0; colUC < 26; ++colUC)
    { // loop for all columns in the comparison matrix
        for(uint8_t rowUC = 0; rowUC < 26; ++rowUC)
