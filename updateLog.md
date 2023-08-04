@@ -64,11 +64,11 @@ These ideas are a future vision that is not worth the
   - The alignment arrays now include matches.
 - The Smith Waterman is now printing correctly when a line
   wrap is applied.
-- Changed printAln (alnStruct.c/h, function 03 used to be
+- Changed printAln (alnStruct.c/h, function 03, used to be
   04) to take in more input. This allowed me to print
   out more to the header.
   - You can now print the output file in fasta, clustal,
-    or, an emboss like format. The old expanded cigar
+    or an emboss like format. The old expanded cigar
     format is still the default option.
   - I am hoping the change in printing method got rid of a
     rare error I found a few days ago, were one or two
@@ -79,6 +79,11 @@ These ideas are a future vision that is not worth the
 - Added in option `-print-position` to include starting and
   ending base numbers at each line.
   - Always set when output is in the EMBOSS like format.
+- Updated the help message. I also made a printHelpMesg
+  function, which adds in the default values in 
+  alnSeqDefualts.h/c to the help message and prints it out.
+  This should avoid the help message getting out of date
+  in the future.
 
 ## Version 20230726
 
