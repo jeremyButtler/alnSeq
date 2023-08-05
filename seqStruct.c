@@ -507,7 +507,7 @@ unsigned char addLineToBuffSeqFun(
             return 64; /*Memory allocation error*/
 
         /*Amount of extra space in the buffer*/
-        spareBuffUL = resBuffUL;
+        spareBuffUL = resBuffUL - 1; /*resBuff is index 1*/
     } /*If need to resize the buffer*/
 
     else

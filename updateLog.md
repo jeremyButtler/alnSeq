@@ -48,6 +48,15 @@ These ideas are a future vision that is not worth the
 
 # Log
 
+## Version 20230804
+
+- Fixed base getting removed on printing. It turned out to
+  be error in my fasta reader (assigning an index 0
+  variable an index 1 value). So, it was not a printing
+  error.
+  - line 510 in seqStruct.c `spareBuffUL = resBuffUL;` was
+    changed to `spareBuffUL = resBuffUL - 1;`.
+
 ## Version 20230803
 
 - The Hirschberg now prints using the normal functions.

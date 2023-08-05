@@ -1,12 +1,14 @@
 set confirm off
 set confirm off
 #break alnSeq.c:400
+break seqStruct.c:522
 #break alnStruct.c:841
-break hirschberg.c:112
+#break hirschberg.c:112
 
 define runcmd
   #run -use-hirschberg -query test-query.fasta -ref test-ref.fasta
-  run -use-hirschberg -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Small-ref.fasta
+  run -use-water -line-wrap 0 -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Small-ref.fasta
+  #run -use-water -line-wrap 0 -query ukrCrimeaEnv.fasta -ref ukrCrimeaEnv.fasta
   #run -query test-qry.fasta -ref test-ref.fasta
 end
 
