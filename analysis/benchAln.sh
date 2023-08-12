@@ -1,21 +1,3 @@
-# git clone https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
-# cd Complete-Striped-Smith-Waterman-Library/src
-# make
-
-# git clone https://github.com/masyagin1998/bio-alignment
-# cd bio-alignment
-# make
-
-# Does not work on openbsd
-# git clone --recursive https://github.com/noporpoise/seq-align
-# cd seq-align
-# make
-
-# git clone https://github.com/OryzaBioinformatics/emboss
-# cd emboss
-# ./configure
-# Had issue with missing files
-
 smallTestQueryStr="genomes/Small-query.fasta";
 smallTestRefStr="genomes/Small-ref.fasta";
 
@@ -44,15 +26,16 @@ iCnt=0;
 # --in query.fasta,ref.fasta
 
 {
-    printf "Program\ttest\telapsedTime\tuserTime\tsystemTime";
+    printf "Program\tref\tquery\talgorithm\telapsedTime\tuserTime\tsystemTime";
     printf "\tmaxResidentMemory\tCPU\n";
 } > "$statsFileStr";
 
-for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKillerTestRefStr"; do
+#for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKillerTestRefStr"; do
+for strRef in "$ramKillerTestRefStr"; do
 # For all references
-  for strQuery in "$smallTestQueryStr" "$midTestQueryStr" "$largeTestQueryStr" "$ramKillerTestQueryStr"; do
+#  for strQuery in "$smallTestQueryStr" "$midTestQueryStr" "$largeTestQueryStr" "$ramKillerTestQueryStr"; do
+  for strQuery in "$smallTestQueryStr" "$midTestQueryStr"; do
   # For all queries
-    #printf "%s\t%s\n" "$strRef" "$strQuery"; continue;
     iCnt=0;
 
     while [[ "$iCnt" -lt "$numRepI" ]]; do
@@ -84,83 +67,40 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
          continue; # null entry??
        fi # done
 
-       #printf "%s\t%s\n" "$refInStr" "$queryInStr"; continue;
-
-       # alnigSeq oFast
        /usr/bin/time \
-           -f "alnSeqOFast\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
+           -f "alnSeq\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqOfast \
+           ./alnSeqHirschTwoBit \
               -query "$strQuery" \
               -ref "$strRef" \
               -out "tmp.aln";
 
        /usr/bin/time \
-           -f "alnSeqOFast\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
+           -f "alnSeq\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqOfast \
+           ./alnSeqHirschTwoBit \
               -use-water \
               -query "$strQuery" \
               -ref "$strRef" \
               -out "tmp.aln";
-    
-       /usr/bin/time \
-           -f "alnSeqO3\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
-           -o "$statsFileStr" \
-           -a \
-           ./alnSeqO3 \
-              -query "$strQuery" \
-              -ref "$strRef" \
-              -out "tmp.aln";
 
        /usr/bin/time \
-           -f "alnSeqO3\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
+           -f "alnSeq\t$refInStr\t$queryInStr\thb-2bit\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqO3 \
-              -use-water \
+           ./alnSeqHirschTwoBit \
+              -use-hirschberg \
               -query "$strQuery" \
               -ref "$strRef" \
               -out "tmp.aln";
-    
-       # alnigSeq O2
        /usr/bin/time \
-           -f "alnSeqO2\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
+           -f "alnSeq\t$refInStr\t$queryInStr\thb-btye\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqO2 \
-              -query "$strQuery" \
-              -ref "$strRef" \
-              -out "tmp.aln";
-
-       # alnigSeq O2
-       /usr/bin/time \
-           -f "alnSeqO2\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
-           -o "$statsFileStr" \
-           -a \
-           ./alnSeqO2 \
-              -use-water \
-              -query "$strQuery" \
-              -ref "$strRef" \
-              -out "tmp.aln";
-    
-       /usr/bin/time \
-           -f "alnSeqO0\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
-           -o "$statsFileStr" \
-           -a \
-           ./alnSeqO0 \
-              -query "$strQuery" \
-              -ref "$strRef" \
-              -out "tmp.aln";
-
-       /usr/bin/time \
-           -f "alnSeqO0\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
-           -o "$statsFileStr" \
-           -a \
-           ./alnSeqO0 \
-              -use-water \
+           ./alnSeqHirschByte \
+	      -use-hirschberg \
               -query "$strQuery" \
               -ref "$strRef" \
               -out "tmp.aln";
@@ -171,15 +111,15 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
            -o "$statsFileStr" \
            -a \
            ./bio-alignment/bin/bio-alignment \
-              --in "$strQuery,$smallTestRefStr" \
-    	  --algo hb \
+              --in "$strQuery,$strRef" \
+          --algo hb \
               > tmp.aln;
 
        /usr/bin/time \
            -f "ssw_test\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./Complete-Striped-Smith-Waterman-Library/src/ssw_test -c \
+           ./fastSW/ssw_test -c \
              "$strQuery" \
              "$strRef" \
            > "tmp.aln";
@@ -206,28 +146,6 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
               --algo nw \
               --out tmp.aln;
     
-       /usr/bin/time \
-           -f "bio-align\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
-           -o "$statsFileStr" \
-           -a \
-           ./bio-alignment/bin/bio-alignment \
-              --in "$strQuery,$strRef" \
-    	  --algo sw \
-          --out tmp.aln;
-    
-       # seq-align
-       /usr/bin/time \
-           -f "seq-align\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
-           -o "$statsFileStr" \
-           -a \
-           ./seq-align/bin/needleman_wunsch --files "$strQuery" "$strRef" > tmp.aln;
-    
-       /usr/bin/time \
-           -f "seq-align\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
-           -o "$statsFileStr" \
-           -a \
-           ./seq-align/bin/smith_waterman --maxhits 1 --files "$strQuery" "$strRef" > tmp.aln;
-    
        # emboss's needle
        /usr/bin/time \
            -f "emboss\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
@@ -236,8 +154,8 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
            needle \
               -bsequence "$strQuery" \
               -asequence "$strRef" \
-    	  -gapextend -4 \
-    	  -gapopen -1 \
+          -gapextend -4 \
+          -gapopen -1 \
               -out "tmp.aln";
     
        /usr/bin/time \
@@ -247,12 +165,9 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
            water \
               -bsequence "$strQuery" \
               -asequence "$strRef" \
-    	  -gapextend -4 \
-    	  -gapopen -1 \
+          -gapextend -4 \
+          -gapopen -1 \
               -out "tmp.aln";
     done # While I have replicates to run
   done  # For all queries
 done # For all references
-
-rm "tmp.aln";
-exit;

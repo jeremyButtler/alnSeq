@@ -83,7 +83,7 @@ graphObj = NULL;      # Holds the output graph
 # query-ramKiller is 199984 bases
 # reference-ramKiller is 199982 bases
 
-dataDT$test=paste(dataDT$query,dataDT$reference,sep = "-");
+dataDT$test=paste(dataDT$query, dataDT$ref, sep = "-");
 dataDT$test = gsub("ramKiller", "huge", dataDT$test);
 
 dataDT$test = gsub("mid-small", "small-mid", dataDT$test);
@@ -115,27 +115,23 @@ dataDT$test =
 #    in the hb tag for Hirschberg from bio-align
 #*********************************************************/
 
-dataDT =
-  dataDT[
-    dataDT$Program != "alnSeqOFast" &
-    dataDT$Program != "alnSeqO2" &
-    dataDT$Program != "alnSeqO0"
-    , # Not filtering by columns
-]; # Remove the various compiler options
-
-dataDT$Program =
+dataDT$key =
   paste(
     dataDT$Program,
     dataDT$algorithm,
     sep = "-"
 ); # Comibine program name and aligorithm
 
-# Remove the "-water" and "-needle" program ids
-dataDT$Program = gsub("-water", "", dataDT$Program);
-dataDT$Program = gsub("-needle", "", dataDT$Program);
+# Remove waterman and needleman labels from key
+dataDT$key = gsub("-water", "", dataDT$key);
+dataDT$key = gsub("-needle", "", dataDT$key);
+dataDT$key = sub("ssw_test$", "bio-align_or_ssw", dataDT$key);
+dataDT$key = sub("bio-align$", "bio-align_or_ssw", dataDT$key);
 
 # Replacne hb with needle, so is kept same in graphs
-dataDT$algorithm = gsub("hb", "needle", dataDT$algorithm);
+dataDT$catagory = gsub("hb.*", "global", dataDT$algorithm);
+dataDT$catagory =gsub("needle.*","global",dataDT$catagory);
+dataDT$catagory =gsub("water.*", "local", dataDT$catagory);
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
 # Sec-04:
@@ -146,24 +142,12 @@ dataDT$algorithm = gsub("hb", "needle", dataDT$algorithm);
 
 graphObj = 
   ggplot(
-    data =
-      dataDT[
-        #dataDT$algorithm == "water" &
-        dataDT$Program != "seq-align" &
-        (
-          paste(
-            dataDT$Program,
-            dataDT$algorithm,
-            sep = "-"
-          ) != "bio-align-water"
-        )
-        ,
-    ],
+    data = dataDT,
     aes(
       x = test,
       y = elapsedTime, # time in seconds
-      color = Program,
-      shape = Program    
+      color = key,
+      shape = key    
     ),
 );  
 
@@ -176,7 +160,7 @@ graphObj =
 ); # Add points to graph and jitter, to reduce overlap
 
 # separate graphs by neelde/water
-graphObj = graphObj + facet_grid(cols = vars(algorithm));
+graphObj = graphObj + facet_grid(cols = vars(catagory));
 
 # Transform y-axis by log10, so trends are more clear
 graphObj = graphObj + scale_y_sqrt();
@@ -187,7 +171,7 @@ graphObj =
     discrete = FALSE,   # Using continous data
     direction = -1,     # Darkets color used first
     option = "D",       # Default color scheme
-    name = "Program"    # name of label
+    name = "key"    # name of label
 ); # Color scheme to use
 
 # Add x and y axis labels
@@ -215,12 +199,12 @@ saveGraph("alnSeq-time");
 
 graphObj = 
   ggplot(
-    data = dataDT[ dataDT$Program != "seq-align",],
+    data = dataDT,
     aes(
       x = test,
       y = maxResidentMemory / 1000, # convert from kb to mb
-      color = Program,
-      shape = Program    
+      color = key,
+      shape = key    
     ),
 );  
 
@@ -233,7 +217,7 @@ graphObj =
 ); # Add points to graph and jitter, to reduce overlap
 
 # separate graphs by neelde/water
-graphObj = graphObj + facet_grid(cols = vars(algorithm));
+graphObj = graphObj + facet_grid(cols = vars(catagory));
 
 graphObj =
   graphObj +

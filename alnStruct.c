@@ -263,14 +263,15 @@ struct alnStruct * dirMatrixToAlnST(
 
   long qryIndexL = 0;     /*Index of query base*/
   long refIndexL = 0;     /*Index of reference base*/
-  unsigned long lastRefMatchSnpL = 0;
-  unsigned long lastQryMatchSnpL = 0;
-  unsigned long lenRefUL=refST->endAlnUL-refST->offsetUL+1;
+  long lastRefMatchSnpL = 0;
+  long lastQryMatchSnpL = 0;
+  long lenRefL = 
+      (long) refST->endAlnUL - (long) refST->offsetUL + 1;
 
   /* Find the starting query and reference base
-  `  - (lenQryUL or lenRefUL) + 1:
+  `  - (lenQryUL or lenRefL) + 1:
   `    o gives the length of each column in the matrix
-  `  - bestScoreUI (/ or %) (lenRefUL + 1)
+  `  - bestScoreUI (/ or %) (lenRefL + 1)
   `    o gives the index of the base for the best score
   `  - -1:
   `    o converts the index 1 output to index 0
@@ -278,11 +279,11 @@ struct alnStruct * dirMatrixToAlnST(
 
   char *qrySeqStr =
       qryST->seqCStr + qryST->offsetUL
-    + (scoreST->indexUL / (lenRefUL + 1))
+    + (scoreST->indexUL / (lenRefL + 1))
     - 1;
   char *refSeqStr =
       refST->seqCStr + refST->offsetUL
-    + (scoreST->indexUL % (lenRefUL + 1))
+    + (scoreST->indexUL % (lenRefL + 1))
     - 1;
 
   struct alnStruct *alnST = 0;
@@ -356,27 +357,27 @@ struct alnStruct * dirMatrixToAlnST(
   *  - Find the best path
   \*******************************************************/
 
-  while(bitElmUC != defMoveStop)
+  while(bitElmUC != defMvStop)
   { /*While I have more bases in the alignment*/
     switch(bitElmUC)
     { /*Switch: check if bases is gap, match, or snp*/
-      case defMoveStop: goto finishAlignment;
-      case defMoveUp:
-      /*Case: insertion (defMoveUp)*/
+      case defMvStop: goto finishAlignment;
+      case defMvIns:
+      /*Case: insertion (defMvIns)*/
         *(alnST->qryAlnStr + qryIndexL) = defGapFlag;
 
         --qrySeqStr; /*insertion only query has a base*/
         --qryIndexL;
         ++(alnST->numInssUL);
-        twoBitAryMoveBackXElm(dirMatrxST, lenRefUL + 1);
-          /* lenRefUL (index 1) cells per row; need + 1 to
+        twoBitAryMoveBackXElm(dirMatrxST, lenRefL + 1);
+          /* lenRefL (index 1) cells per row; need + 1 to
           `  get to the cell above
           */
         break;
-      /*Case: insertion (defMoveUp)*/
+      /*Case: insertion (defMvIns)*/
 
-      case defMoveDiagnol:
-      /*Case: match/snp (defMoveDiagnol)*/
+      case defMvSnp:
+      /*Case: match/snp (defMvSnp)*/
 
         lastRefMatchSnpL = (unsigned long) refIndexL;
         lastQryMatchSnpL = (unsigned long) qryIndexL;
@@ -395,7 +396,7 @@ struct alnStruct * dirMatrixToAlnST(
           ++(alnST->numSnpsUL);
         } /*Else was a SNP*/
 
-        twoBitAryMoveBackXElm(dirMatrxST, lenRefUL + 2);
+        twoBitAryMoveBackXElm(dirMatrxST, lenRefL + 2);
           /*need + 2 to get to the next diagnol cell*/
         --qrySeqStr;
         --qryIndexL;
@@ -403,17 +404,17 @@ struct alnStruct * dirMatrixToAlnST(
         --refSeqStr;
         --refIndexL;
         break;
-      /*Case: match/snp (defMoveDiagnol)*/
+      /*Case: match/snp (defMvSnp)*/
 
-      case defMoveLeft:
-      /*Case: deletion (defMoveLeft)*/
+      case defMvDel:
+      /*Case: deletion (defMvDel)*/
         *(alnST->refAlnStr + refIndexL) = defGapFlag;
         ++(alnST->numDelsUL);
         twoBitAryMoveBackOneElm(dirMatrxST);
         --refSeqStr;
         --refIndexL;
         break;
-      /*Case: deletion (defMoveLeft)*/
+      /*Case: deletion (defMvDel)*/
     } /*Switch: check if bases is gap, match, or snp*/
 
     /*Get the next direction to move*/

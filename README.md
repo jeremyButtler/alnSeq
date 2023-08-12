@@ -11,7 +11,10 @@ There are faster and less memory hungry Waterman Smith
   Waterman Smith alignment, which I think reduces both
   scoring and direction matrix to just a few rows. See 
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
-  for an very fast striped Waterman Smith aligner.
+  for an very fast striped Waterman Smith aligner. This
+  one does have an issue when the alignment exceeds 33,000
+  bases. However, I think there are alternatives without
+  these issues.
 
 This program is dual licensed for MIT and CC0. Pick the
   license which works best for you.
@@ -36,34 +39,6 @@ I then could also allow recording of the best score for
   reference base, and ending query base for alternative
   alignments.
 
-## Hirschberg Update
-
-The Hirschberg is working.
-
-The Hirschberg in alnSeq is not thread safe, but can be
-  easily made thread safe by providing an additional
-  reference sized two bit array to score directions in for
-  the reverse direction. I will add this in later.
-
-I ran a single test using my Huge sequences (RamKiller) to
-  get an idea of how long the Hirschber would take.
-
-The Hirschberg takes twice the amount of time to run as my
-  Needleman (~1405 seconds versus ~750 seconds), but also
-  takes much less memory usage (~4.3Mb instead of ~10Gb).
-  Both of these results were expected.
-
-It looks like alnSeq will be much slower than bio-alignment
-  (~1405 versus 183 seconds). The Hirschberg in alnSeq is
-  using an insignificant amount of less ram (4.3MB versus
-  5.4MB) than bio-alignment. The only real advantage alnSeq
-  offers is that it allows gap opening and extension
-  penalties.
-
-The 183 seconds is slower than my bio-alignment benchmarks.
-  I should go back and make sure I am running the
-  Hirschberg in bio-aligment correctly.
-
 # Building and running alnSeq
 
 ## How to build alnSeq
@@ -84,6 +59,21 @@ make
 mv alnSeq /path/to/install
 chmod a+x /path/to/install/alnSeq
 ```
+
+Their are a couple of flags that alnSeq can be compiled
+  with. The first is `make CFLAGS="-DHIRSCHTWOBIT"`
+  compiles alnseq with a Hirschberg that uses two bit
+  arrays instead of byte arrays. This is slower, but does
+  use slightly less memory (not much less). The second is
+  `make CFLAGS="-DNOSEQCNVT", which does not convert
+  the sequence to an index in my scoring matrix. Uinsg this
+  flag increases the speed slightly, but not by much. You
+  can combine flags together if needed
+  `make CFLAGS="-DHIRSCHTWOBIT -DNOSEQCNVT".
+
+I am planning, but may not get around to adding in flag
+  for no gap opening and a byte waterman/needle program
+  (4x more memory, but faster) later.
 
 ## How to run alnSeq
 
@@ -269,32 +259,70 @@ This was an intresting idea, but for the few tests that I
 
 ## Some light benchmarking
 
-I compared alnSeq to the Waterman Smith and Needleman
-  Wunsch aligners in bio-alignment (bio-align), emboss,
-  and Complete-Striped-Smith-Waterman-Library (ssw_test).
+I compared alnSeq to the Needleman algorithm in
+  bio-alignment (bio_or_ssw), the Needleman and Waterman
+  in emboss, and the waterman from the
+  Complete-Striped-Smith-Waterman-Library (bio_or_ssw).
   I also included an Hirschberg alignment in bio-alignment
   (bio-align-hb) in my tests.
+
+I split the facets into if it was a global alignment
+  (Needleman/Hirschberg) or a local alignment (Waterman).
+  Bio-alignment is only present on the global facet, while
+  ssw is only present on the local facet.
 
 ![Memory usage of alnSeq compared to the Waterman Smith,
   Needleman Wunsch, and Hirschberg (hb) aligners from
   bio-alignment (bio-align), emobss, and
   Complete-Striped-Smith-Waterman-Library.
-  The alnSeqO3 means alnSeq was complied with the O3
-  option.
 ](analysis/alnSeq-memory.svg)
 
 As expected the memory usage was much lower for the
-  Hirschberg and striped Smith Waterman (ssw_test), while
-  alnSeq, emboss, and bio-alginment needed large amounts
-  of memory.
-However, alnSeq needed less memory than emboss of
+  Hirschberg aligners and striped Smith Waterman
+  (local facet; bio_or_ssw), while the non-Hirschberg
+  aligners for alnSeq, emboss, and bio-alginment needed
+  large amounts of memory.
+For the non-Hirschberg's and striped smith waterman
+  alignments, AlnSeq needed less memory than emboss or
   bio-alignment.
-Also, we found that though ssw_test had low memory usage
-  when aligning similar genomes, it had a much higher
-  memory usage when the genomes were very different, such
-  as from different viruses.
-However, in all cases ssw_test still had better memory
-  usage than alnSeq.
+When compared to bio-alignments Hirschberg, alnSeq's
+  Hirschberg used less memory than bio-alignments
+  Hirschberg, however, the difference was so small that
+  this this memory saving is of no of real value.
+The one byte (chars instead of two bit arrays) version 
+  of alnSeq's Hirschberg used a bit more memory than the
+  two bit array version, but still used less memory than
+  bio-alignment's Hirschberg.
+
+Bio-alignment's Hirschberg did have one odd event for the
+  large-huge alignment (this only happened when huge
+  was the reference (not shown in graph)).
+In this case Bio-alignment's Hirschberg used a very small
+  amount of extra memory (~5mb) over all its other
+  alignments.
+From a glance at the code I suspect this was due to 
+  bio-alignment allocating memory for its returned scoring
+  arrays at each recursion call.
+For highly different alignments this would result in
+  the midpoint being closer to 1, which would result in
+  an nearly identical returned scoring row size in the next
+  recursion call.
+Since, bio-alignment is not freeing these arrays right
+  away, it is possible that these arrays would continue to
+  build up at each call, which results in increased memory
+  usage.
+However, you should use a Waterman, not Hirschberg or
+  Needleman in these cases, so the point is mute.
+Also, this is just a guess.
+
+We found that though ssw had low memory usage when aligning
+  similar genomes.
+However, it had a much higher memory usage when the genomes
+  were very different.
+I am not sure why this is happening, but it may be due to
+  how much of the matrix it has to construct.
+Despite this ssw still uses less memory than alnSeq's
+  Waterman alignment.
 
 ![Time usage of alnSeq compared to the Waterman Smith,
     Needleman Wunsch, and Hirschberg (hb) aligners from
@@ -307,29 +335,29 @@ However, in all cases ssw_test still had better memory
     algorithm printing out the scoring matrix.
 ](analysis/alnSeq-time.svg)
 
-For time usage we find that alnSeq was often the slowest
-  algorithm, while the Hirschberg and ssw_test were often
-  the fastest algorithms.
+For time usage we found that emboss or alnSeqs two bit
+  Hirschberg were often the slowest algorithms, while
+  ssw was the fastest algorithm, followed by
+  bio-alignment's Hirschberg and Needleman.
+AlnSeq's byte Hirschberg, Waterman, and Needleman often
+  took twice the time as bio-alignment.
 
-The differences in memory and time usage for the Hirschberg
-  and ssw_test for the Small-Mid, Small-Large, Small-Huge,
-  Mid-Large, Mid-Huge, and Large-Huge are likely due to
-  half of the data points using the larger genome as the
-  query and the other half using the larger genome as the
-  reference. Also, a different reference and query genome
-  was used for the different tests.
+The time difference for Emboss could be due to its
+  calculating both a gap opening and gap
+  ending penalty.
+Bio-alignment does not calculate any of these penalties and
+  alnSeq only calculates the gap opening penalty.
+We also saw that the two bit arrays used in alnSeq's 
+  Hirschberg resulted in twice the time usage.
+So, it is possible that alnSeq's Needleman and Waterman
+  would be comparable to bio-alignments Needleman once the
+  two bit arrays are replaced with character arrays
+  (bytes).
+However, it will likely still be slower.
 
-When I inspected the huge-huge alignments for ssw_test I
-  found that ssw_test output an alignment score of 32767,
-  which is one off the maximum value for a short (32768).
-  I also found out that ssw_test would only print out the
-  first 16486 bases. This is likely due to ssw_test using
-  shorts to record scores. This is further supported by
-  ssw_test being able to print out the full alignment for
-  the huge-large alignment test (maximum score of 5449).
-
-For now, do not use ssw_test if you expect your scores to
-  exceeded 32768.
+One note I should add. I choose emboss because it was an
+  tool kit and bio-alignment because it had an Hirschberg.
+  It is likely that their are faster algorithms out their.
 
 ## Final notes
 

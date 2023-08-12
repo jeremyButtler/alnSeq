@@ -20,13 +20,11 @@ This log records how alnSeq has changed between versions.
   of alignments instead of cigars.
 - Updated using this code guide for the new printing and
   alnStruct changes.
-- Change Hirschberg to use 1 byte arrays instead of two
-  bit arrays for the directional rows. This will increase
-  memory usage by 1/8th (most of the used memory is in
-  the scoring rows). However, the two bit arrays are
-  slower, so it should increase speed.
-  - I will include a compiler option to complied the old
-    two bit array version.
+- Waterman is not printing out full length alignments. It
+  is limited to either the shorter sequences length or the
+  queries length.
+  - Not supper big on my list since this is just a minor
+    annoyance.
 
 # Ideas that would be cool, but not worth working on
 
@@ -47,6 +45,23 @@ These ideas are a future vision that is not worth the
     if printing or not.
 
 # Log
+
+## Version 20230811
+
+- Switched from converting my bases to a look up table on
+  checks to the read in sequence.
+  - (disable with `make CFLAGS="-DNOSEQCNVT"`)
+- Improved speed by inlining several functions and adding
+  some branchless operations at key points
+  (selecting max score, and zeroing waterman values). Other
+  places not worth it.
+  - All functions in twoBitArrays.c have been inlined and
+    are now in twoBitArrays.h.
+  - Scoring functions are macros in generalAlnFun.h
+- Hirschberg is now compiled with 1 byte arrays by default
+  - This is faster, but use a small amount of extra memory.
+  - enable twobit version with
+    `make CFLAGS=`-DHIRSCHTWOBIT`.
 
 ## Version 20230804
 
