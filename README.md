@@ -275,7 +275,7 @@ I split the facets into if it was a global alignment
   Needleman Wunsch, and Hirschberg (hb) aligners from
   bio-alignment (bio-align), emobss, and
   Complete-Striped-Smith-Waterman-Library.
-](analysis/alnSeq-memory.svg)
+(analysis/alnSeq-memory.svg)
 
 As expected the memory usage was much lower for the
   Hirschberg aligners and striped Smith Waterman
@@ -333,7 +333,7 @@ Despite this ssw still uses less memory than alnSeq's
   The Waterman Smith Bio-alignment (bio-align) tests were
     discarded due to Bio-alignments Waterman Smith
     algorithm printing out the scoring matrix.
-](analysis/alnSeq-time.svg)
+(analysis/alnSeq-time.svg)
 
 For time usage we found that emboss or alnSeqs two bit
   Hirschberg were often the slowest algorithms, while
