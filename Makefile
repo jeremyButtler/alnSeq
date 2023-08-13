@@ -11,7 +11,7 @@ COREFLAGS=\
   -O3
 
 # These are here for the user to overwrite
-CFLAGS=""
+CFLAGS="-DBLANK"
 DEBUGFLAGS="-DNOSEQCNVT"
 # Current options: -DNOSEQCNVT, -DHIRSCHTWOBIT
 
