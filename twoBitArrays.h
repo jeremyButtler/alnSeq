@@ -36,41 +36,41 @@ static inline char getCNegBit(
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOF: Start Of Functions
-'  - fun-01 getElmFromToBitUCAry:
+'  - fun-01 getTwoBitElm:
 '     o Get an element from a two bit array
 '  - fun-02 twoBitAryShiftBytsForNewElm:
 '     o Make room in unit8_t for two more two-bit elements
-'  - fun-03 twoBitAryMoveToNextElm:
+'  - fun-03 twoBitMvToNextElm:
 '     o Moves to the next element in a two-bit array
-'  - fun-04 twoBitAryMoveForXElm:
+'  - fun-04 twoBitMvForXElm:
 '     o Moves two bit array pointer by x to next element
-'  - fun-05 twoBitAryMoveBackOneElm:
+'  - fun-05 twoBitMvBackOneElm:
 '     o Moves back one element in a 2-bit array
-'  - fun-06 twoBitAryMoveBackXElm:
+'  - fun-06 twoBitMvBackXElm:
 '     o Moves back x elements in a 2-bit array
 '  - fun-08 changeTwoBitElm:
 '     o Changes a single two bit value in a two bit array.
-'  - fun-09 blankLimb:
+'  - fun-09 blankTwoBitLimb:
 '     o Sets a uint8_t (a limb) in a two bit array to 0.
 '       Each limb holds four two bit elments.
-'  - fun-10 moveToNextLimb:
+'  - fun-10 twoBitMvToNextLimb:
 '     o Moves to start of the next limb (uint8_t) in two
 '       bit array
-'  - fun-11 moveToLastLimb:
+'  - fun-11 twoBitMvToLastLimb:
 '     o Moves to start of the previous limb (uint8_t) in
 '       two bit array
-'  - fun-12 makeTwoBitArry:
+'  - fun-12 makeTwoBit:
 '     o Make a two bit array struct
 '  - fun-13 cpTwoBitPos:
 '     o copy pointers of cpTwoBitST to dupTwoBitST
-'  - fun-14 freeTwoBitAry:
+'  - fun-14 freeTwoBit:
 '     o Frees a two bit array
-'  - fun-15 moveXElmFromStart:
+'  - fun-15 twoBitMvXElmFromStart:
 '     o Change the two bit array postion to x elements
 '       from the starting position
-'  - fun-16 lenTwoBitAry:
+'  - fun-16 twoBitGetLen:
 '     o Get the length of a two-bit array
-'  - fun-17 getTwoBitAryIndex:
+'  - fun-17 twoBitGetIndex:
 '    - Returns the index of the current two bit element
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -93,7 +93,7 @@ typedef struct twoBitAry
 | Note:
 |  - Each limb has four two bit elements
 \--------------------------------------------------------*/
-static inline uint8_t getTwoBitAryElm(
+static inline uint8_t getTwoBitElm(
   struct twoBitAry *twoBitST // Array to get element from
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: Sec-1 Sub-1: getElmFromToBitUCAry
@@ -107,18 +107,18 @@ static inline uint8_t getTwoBitAryElm(
     char shiftC = twoBitST->elmOnC << 1;
     return
         (*twoBitST->limbOnUCPtr & (3 << shiftC)) >> shiftC;
-} // getTwoBitAryElm
+} // getTwoBitElm
 
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies:
 |    o twoBitST to point to next element in two-bit array
 \--------------------------------------------------------*/
-static inline void twoBitAryMoveToNextElm(
+static inline void twoBitMvToNextElm(
   struct twoBitAry *twoBitST
     // Two bit array to change index
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: Sec-1 Sub-1: twoBitAryMoveToNextElm
+   ' Fun-03 TOC: Sec-1 Sub-1: twoBitMvToNextElm
    '  - Moves to the next element in a two-bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -126,18 +126,18 @@ static inline void twoBitAryMoveToNextElm(
    twoBitST->limbOnUCPtr += (twoBitST->elmOnC >> 2);
    twoBitST->elmOnC &= 3;
    return;
-} // twoBitAryMoveToNextElm
+} // twoBitMvToNextElm
 
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies:
 |    o twoBitAry to point to x elements ahead
 \--------------------------------------------------------*/
-static inline void twoBitAryMoveForXElm(
+static inline void twoBitMvForXElm(
   struct twoBitAry *twoBitST,// Array to change index for
   unsigned long shiftByUL    // Number elements to shift by
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-04 TOC: Sec-1 Sub-1: twoBitAryMoveForXElm
+   ' Fun-04 TOC: Sec-1 Sub-1: twoBitMvForXElm
    '  - Moves forward in two bit array by x elements
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -146,17 +146,17 @@ static inline void twoBitAryMoveForXElm(
    twoBitST->limbOnUCPtr += (shiftByUL >> 2);
    twoBitST->elmOnC = (shiftByUL & 3);
    return;
-} // twoBitAryMoveForXElm
+} // twoBitMvForXElm
 
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies:
 |    o twoBitST to point to the previous element
 \--------------------------------------------------------*/
-static inline void twoBitAryMoveBackOneElm(
+static inline void twoBitMvBackOneElm(
   struct twoBitAry *twoBitST // array to move back in
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-05 TOC: Sec-1 Sub-1: twoBitAryMoveBackOneElm
+   ' Fun-05 TOC: Sec-1 Sub-1: twoBitMvBackOneElm
    '  - Moves back one element in a 2-bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -169,18 +169,18 @@ static inline void twoBitAryMoveBackOneElm(
     ` so remain the same
     */
    return; 
-} // twoBitAryMoveToNextElm
+} // twoBitMvToNextElm
 
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies:
 |    o twoBotST to point to X elements back    
 \--------------------------------------------------------*/
-static inline void twoBitAryMoveBackXElm(
+static inline void twoBitMvBackXElm(
   struct twoBitAry *twoBitST, // To bit array to move back
   long shiftL  // number elements to shift back
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-06 TOC: Sec-1 Sub-1: twoBitAryMoveBackXElm
+   ' Fun-06 TOC: Sec-1 Sub-1: twoBitMvBackXElm
    '  - Moves back X elements back in a 2-bit array
    '  - THIS HAS NO BEEN TESTED
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -212,7 +212,7 @@ static inline void twoBitAryMoveBackXElm(
      `   This returns elmOnC
      */
    return;
-} // twoBitAryMoveBackXElm
+} // twoBitMvBackXElm
 
 /*--------------------------------------------------------\
 | Output:
@@ -258,17 +258,17 @@ static inline void changeTwoBitElm(
 |  - Modifies:
 |    - Sets the current limb in a two-bit array to 0
 \--------------------------------------------------------*/
-static inline void blankLimb(
+static inline void blankTwoBitLimb(
   struct twoBitAry *twoBitST // two bit array to restart
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-09 TOC: Sec-1 Sub-1: blankLimb
+   ' Fun-09 TOC: Sec-1 Sub-1: blankTwoBitLimb
    '  - Sets a limb in a two bit array to 0.
    '    Each limb holds four two bit elments.
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    twoBitST->limbOnUCPtr = 0;
    twoBitST->elmOnC = 0;
-} // blankLimb
+} // blankTwoBitLimb
 
 /*--------------------------------------------------------\
 | Output:
@@ -278,10 +278,10 @@ static inline void blankLimb(
 |    o 0: For a succesfull move
 |    o 1: For memory out of bounds error
 \--------------------------------------------------------*/
-static inline void moveToNextLimb(
+static inline void twoBitMvToNextLimb(
   struct twoBitAry *twoBitST // two-bit array to move back
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-10 TOC: Sec-1 Sub-1: moveToNextLimb
+   ' Fun-10 TOC: Sec-1 Sub-1: twoBitMvToNextLimb
    '  - Moves back to start of limb in a two bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -289,17 +289,17 @@ static inline void moveToNextLimb(
    twoBitST->elmOnC = 0;
 
    return;
-} // moveToNextLimb
+} // twoBitMvToNextLimb
 
 /*--------------------------------------------------------\
 | Output:
 |  - Modifies:
 |    o lastLimbUCPtr to point to the previous limb
 \--------------------------------------------------------*/
-static inline void moveToLastLimb(
+static inline void twoBitMvToLastLimb(
     struct twoBitAry *twoBitST // array to move back in
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-11 TOC: Sec-1 Sub-1: moveToLastLimb
+   ' Fun-11 TOC: Sec-1 Sub-1: twoBitMvToLastLimb
    '  - Moves to the start of the previous limb (uint8_t)
    '    in the two bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -308,7 +308,7 @@ static inline void moveToLastLimb(
    twoBitST->elmOnC = 0;
 
    return;
-} // moveToLastLimb
+} // twoBitMvToLastLimb
 
 /*--------------------------------------------------------\
 | Output:
@@ -316,12 +316,12 @@ static inline void moveToLastLimb(
 |    - twoBitAry structure with an unit8_t array of limbs
 |    - blankAryBl = 1: returns a blank twoBitAry structer
 \--------------------------------------------------------*/
-static inline struct twoBitAry * makeTwoBitArry(
+static inline struct twoBitAry * makeTwoBit(
   unsigned long lenArryUL, // Length of new array
   char blankAryBl          // 1: Make a blank strucuter
                            // 0: Make structure with array
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-12 TOC: Sec-1 Sub-1: makeTwoBitArry
+   ' Fun-12 TOC: Sec-1 Sub-1: makeTwoBit
    '  - Make a two bit array struct
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -379,7 +379,7 @@ static inline void cpTwoBitPos(
 | Output:
 |  Frees: the input towBitAry strucuter
 \--------------------------------------------------------*/
-static inline void freeTwoBitAry(
+static inline void freeTwoBit(
   struct twoBitAry *stToFree, // Two bit array to free
   char twoBitOnStackBl,       // 0: free stToFree
                               // 1: stToFree on stack
@@ -387,7 +387,7 @@ static inline void freeTwoBitAry(
       // 1: Do not free the structer in the array. Only
       //    use this if this stuct is a copy
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-14 TOC: Sec-1 Sub-1: freeTwoBitAry
+   ' Fun-14 TOC: Sec-1 Sub-1: freeTwoBit
    '  - Frees a two bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -404,7 +404,7 @@ static inline void freeTwoBitAry(
    } // switch; check if freeing the twobit structer
 
    return;
-} // freeTwoBitAry
+} // freeTwoBit
 
 /*--------------------------------------------------------\
 | Output:
@@ -412,11 +412,11 @@ static inline void freeTwoBitAry(
 |    o twoBitAry to point to x elements after the start of
 |      the array
 \--------------------------------------------------------*/
-static inline void moveXElmFromStart(
+static inline void twoBitMvXElmFromStart(
   struct twoBitAry *twoBitST,// Array to change index for
   unsigned long shiftByUL     // Number elements to shift by
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-15 TOC: Sec-1 Sub-1: moveXElmFromStart
+   ' Fun-15 TOC: Sec-1 Sub-1: twoBitMvXElmFromStart
    '  - Change the two bit array postion to x elements
    '    from the starting position
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -427,33 +427,33 @@ static inline void moveXElmFromStart(
 
    twoBitST->elmOnC = (shiftByUL & 3);
    return;
-} // moveXElmFromStart
+} // twoBitMvXElmFromStart
 
 /*--------------------------------------------------------\
 | Output:
 |  - Returns:
 |    o Length of the two bit array
 \--------------------------------------------------------*/
-static inline unsigned long lenTwoBitAry(
+static inline unsigned long twoBitGetLen(
   struct twoBitAry *twoBitST
     // two-bit array to get length for
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-16 TOC: Sec-1 Sub-1: lenTwoBitAry
+   ' Fun-16 TOC: Sec-1 Sub-1: twoBitGetLen
    '  - Get the length of a two-bit array
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    return twoBitST->lenAryUL << 2;
-} // lenTwoBitAry
+} // twoBitGetLen
 
 /*--------------------------------------------------------\
 | Output:
 |  - Returns
 |    o The index of the elemen on in the twoBitST struct
 \--------------------------------------------------------*/
-static inline unsigned long getTwoBitAryIndex(
+static inline unsigned long twoBitGetIndex(
   struct twoBitAry *twoBitST
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-17 TOC: Sec-01: getTwoBitAryIndex
+   ' Fun-17 TOC: Sec-01: twoBitGetIndex
    '  - Returns the index of the current two bit element
    '    on
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -461,6 +461,6 @@ static inline unsigned long getTwoBitAryIndex(
      ((twoBitST->limbOnUCPtr-twoBitST->firstLimbUCPtr) <<2)
     + twoBitST->elmOnC
   ); // Return the index
-} // getTwoBitAryIndex
+} // twoBitGetIndex
 
 #endif

@@ -51,12 +51,13 @@
 |    o 0 For memory errors
 \--------------------------------------------------------*/
 struct alnStruct * Hirschberg(
-  struct seqStruct *refST, // Reference sequence to align
-  struct seqStruct *qryST, // Qeury sequence to align
-    // For refST and qryST, use seqStruct->offsetUI to set
-    // the starting point for the alignmnet and
-    // seqStruct->endAlnUI to set the ending point
-  struct alnSet *settings  // Settings to use for alignment
+  struct seqStruct *refST, /*Reference sequence to align*/
+  struct seqStruct *qryST, /*Qeury sequence to align*/
+    /* For refST and qryST, use seqStruct->offsetUL to set
+    `  the starting point for the alignmnet and
+    `  seqStruct->endAlnUL to set the ending point
+    */
+  struct alnSet *settings /*Settings to use for alignment*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: Hirschberg
    '  - Sets up for and calls the recursvie function to
@@ -77,30 +78,33 @@ struct alnStruct * Hirschberg(
 |    o twoBitAlnST to hold the output alignment
 \--------------------------------------------------------*/
 void HirschbergFun(
-  char *refSeqCStr,          // Reference sequence
-  unsigned long refStartUL,// index 0 Starting point on ref
-  unsigned long refLenUL,//index 1 length of region toAlign
+  char *refSeqCStr,          /*Reference sequence*/
+  unsigned long refStartUL,
+    /*index 0: 1st bast to algin in reference*/
+  unsigned long refLenUL,
+    /*index 1 length of region to Align*/
 
-  char *qrySeqCStr,          // Query sequence
-  unsigned long queryStartUL,//index 0 Starting query base
-  unsigned long queryLenUL,//index 1 Length of target
+  char *qrySeqCStr,          /*Query sequence*/
+  unsigned long qryStartUL,/*index 0 Starting query base*/
+  unsigned long qryLenUL,/*index 1 Length of query region*/
 
-  long *forwardScoreRowL,   // Holds final forward row
-  long *reverseScoreRowL,   // For finding reverse scores
-    // both the forward and reverse scoring rows must be
-    // the size of the full length reference.
-
+  long *forwardScoreRowL,   /*Holds final forward row*/
+  long *reverseScoreRowL,   /*For finding reverse scores*/
+    /* both the forward and reverse scoring rows must be
+    `  the size of the full length reference.
+    */
+  
   #ifdef HIRSCHTWOBIT
-     struct twoBitAry *refAlnST,   // For gap extension
-     struct twoBitAry *qryAlnST,  // Holds alignment codes
-     struct twoBitAry *dirRow, /*row thread safe scoring*/
+     struct twoBitAry *refAlnST,/*Holds ref alignment*/
+     struct twoBitAry *qryAlnST,/*Holds query alignment*/
+     struct twoBitAry *dirRow,
+       /*spare direction row (makes thread safe)*/
   #else
-     char *refAlnST,   // For gap extension
-     char *qryAlnST,  // Holds alignment codes
+     char *refAlnST,   /*Holds output reference alignment*/
+     char *qryAlnST,   /*Holds the output query alignment*/
      char *dirRow,/*direction row for thread safe scoring*/
   #endif
-
-  struct alnSet *settings  // Settings to use for alignment
+  struct alnSet *settings /*Settings to use for alignment*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: HirschbergFun
    '  - Does the recursive part of a Hirschberg alignment
@@ -127,21 +131,21 @@ void HirschbergFun(
 |      Needleman Wunsch / Smith Waterman alignment
 \--------------------------------------------------------*/
 long scoreForwardHirsch(
-  char *refSeqCStr,          // Reference sequence
-  unsigned long refStartUL,  // index 0 starting ref base
-  unsigned long refLenUL,    // index 1 Length of target
+  char *refSeqCStr,          /*Reference sequence*/
+  unsigned long refStartUL,  /*index 0 starting ref base*/
+  unsigned long refLenUL,    /*index 1 Length of target*/
 
-  char *qrySeqCStr,          // Query sequence
-  unsigned long queryStartUL,// Index 0 Starting query base
-  unsigned long queryLenUL,  // index 1 length of target
+  char *qrySeqCStr,          /*Query sequence*/
+  unsigned long qryStartUL, /*Index 0 Starting query base*/
+  unsigned long qryLenUL,    /*index 1 length of target*/
 
-  long *scoreRowPtrL,        // Array of scores to fill
+  long *scoreRowPtrL,        /*Array of scores to fill*/
   #ifdef HIRSCHTWOBIT
-     struct twoBitAry *dirRowST,//direction row gap extend
+     struct twoBitAry *dirRowST,/*direction row*/
   #else
-     char *dirRowST,//direction row gap extend
+     char *dirRowST,      /*direction row, for gap extend*/
   #endif
-  struct alnSet *settings    // setttings to use
+  struct alnSet *settings    /*setttings to use*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-03 TOC: scoreForwardHirsch
    '  - Does a single round of scoring for a hirschberg
@@ -167,23 +171,21 @@ long scoreForwardHirsch(
 |      backwards Needleman Wunsch /Smith Waterman alignment
 \--------------------------------------------------------*/
 long scoreReverseHirsch(
-  char *refSeqCStr,          // Reference sequence
-  unsigned long refStartUL,  // index 0 starting ref base
-  unsigned long refLenUL,    // index 1 Length of target
+  char *refSeqCStr,          /*Reference sequence*/
+  unsigned long refStartUL,  /*index 0 starting ref base*/
+  unsigned long refLenUL,    /*index 1 Length of target*/
 
-  char *qrySeqCStr,          // Query sequence
-  unsigned long queryStartUL,// Index 0 Starting query base
-  unsigned long queryLenUL,  // index 1 length of target
+  char *qrySeqCStr,          /*Query sequence*/
+  unsigned long qryStartUL, /*Index 0 Starting query base*/
+  unsigned long qryLenUL,    /*index 1 length of target*/
 
-  long *scoreRowPtrL,        // Array of scores to fill
-     // This needs to be as long as the full length
-     // reference sequence
+  long *scoreRowPtrL,        /*Array of scores to fill*/
   #ifdef HIRSCHTWOBIT
-     struct twoBitAry *dirRowST,//direction row gap extend
+     struct twoBitAry *dirRowST,/*direction row*/
   #else
-     char *dirRowST,//direction row gap extend
+     char *dirRowST,      /*direction row, for gap extend*/
   #endif
-  struct alnSet *settings    // setttings to use
+  struct alnSet *settings    /*setttings to use*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-04 TOC: scoreReverseHirsch
    '  - Does a single round of scoring for a hirschberg
@@ -205,25 +207,27 @@ long scoreReverseHirsch(
 |      base aligned to the sequence
 \--------------------------------------------------------*/
 void positionSingleBase(
-  char baseC,             // Single base to align to a seq
-  unsigned long baseIndexUL, // Index base is at
-  char *seqCStr,            // Sequence to position base on
+  char baseC,             /*Single base to align to a seq*/
+  unsigned long baseIndexUL,/*Index base is at*/
+  char *seqCStr,            /*Sequence position on*/
   unsigned long startOfSeqUL,
-    // Index 0 of first base to align bascC to in seqCStr
+    /*Index 0 of first base to align bascC to in seqCStr*/
   unsigned long lenSeqUL,
-    //index 1; Length of the aligned region in seqCStr
+    /*Index 1; Length of the aligned region in seqCStr*/
   #ifdef HIRSCHTWOBIT
      struct twoBitAry *baseCAlnST,
-       // Two bit alingment array for the sequence having
-       // baseC
+       /* Two bit alingment array for the sequence having
+       `  baseC
+       */
      struct twoBitAry *seqAlnST, 
-       // Two bit alignment array for the sequence aliging
-       // baseC to
+       /* Two bit alignment array for the sequence alinging
+       `  baseC to
+       */
   #else
      char *baseCAlnST,
      char *seqAlnST, 
   #endif
-  struct alnSet *settings        // setttings to use
+  struct alnSet *settings        /*setttings to use*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-05 TOC: positionSingleRefBase
    '  - Align a single base to a sequence

@@ -34,16 +34,20 @@
 |    single aligment
 \--------------------------------------------------------*/
 typedef struct alnMatrixStruct
-{ // alnStruct
-  struct twoBitAry *dirMatrixST;
+{ /*alnStruct*/
+  struct scoresStruct bestScoreST;
+
+  #if !defined BYTEMATRIX
+     struct twoBitAry *dirMatrixST;
+  #else
+     char *dirMatrixST;
+  #endif
 
   struct scoresStruct *refBasesST;
   unsigned long lenRefScoresUL;
 
   struct scoresStruct *qryBasesST;
   unsigned long lenQueryScoresUL;
-
-  struct scoresStruct bestScoreST;
 }alnMatrixStruct;
 
 /*--------------------------------------------------------\
@@ -52,7 +56,7 @@ typedef struct alnMatrixStruct
 |    o All variables in matrixST to be 0
 \--------------------------------------------------------*/
 void initAlnMatrixST(
-  struct alnMatrixStruct *matrixST // Struct to initialize
+  struct alnMatrixStruct *matrixST /*Struct to initialize*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: Sec-01: initAlnMatrixST
    '  - Sets all variables in matrixST to 0
@@ -64,7 +68,7 @@ void initAlnMatrixST(
 |    o Frees alnMatrix and all of its held variables
 \--------------------------------------------------------*/
 void freeAlnMatrixST(
-  struct alnMatrixStruct *matrixST // Struct to initialize
+  struct alnMatrixStruct *matrixST /*Struct to free*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: Sec-01: freeAlnMatrixST
    '  - Sets all variables in matrixST to 0

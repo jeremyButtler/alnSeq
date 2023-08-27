@@ -9,6 +9,7 @@
 #  - "scoresST.h"
 #  - "alnSetStruct.h"
 #  - "generalAlnFun.h"
+#  - include "alnMatrixStruct.h"
 #  o "twoBitArrays.h"
 #  o "alnSeqDefaults.h"
 # C Standard Libraries:
@@ -62,6 +63,7 @@
 #include "seqStruct.h"
 #include "scoresST.h"
 #include "generalAlnFun.h"
+#include "alnMatrixStruct.h"
 
 #define defEndAlnFlag 0
 
@@ -145,8 +147,13 @@ char * alnSTToSeq(
 struct alnStruct * dirMatrixToAlnST(
     struct seqStruct *refST,     /*Reference seq & length*/
     struct seqStruct *qryST,     /*Query seq & length*/
-    struct twoBitAry *dirMatrxST,/*Direction matrix*/
-    struct scoresStruct *scoreST /*Index of best score*/
+    struct scoresStruct *scoreST,
+    /*Matrix to use in finding the alignment*/
+    #if !defined BYTEMATRIX
+       struct twoBitAry *dirMatrixST
+    #else
+       char *dirMatrixST
+    #endif
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: getAlnAry
    '  - Builds an anlignment array for the input direction

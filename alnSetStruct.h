@@ -44,7 +44,7 @@
 '  o fun-03 setBasePairScore:
 '    - Changes SNP/Match penalty for one query/reference
 '      combination
-'  o fun-04 getBasePairScore:
+'  o fun-04 getBaseScore:
 '    - Get the score for a pair of bases from an alignment
 '  - fun-05 readInScoreFile
 '     o Reads in a file of scores for a scoring matrix
@@ -108,13 +108,11 @@ typedef struct alnSet
      */
 
    /*Waterman smith specific variables*/
-   char multiBaseWaterBl; /*Keep more than best aligment*/
    char refQueryScanBl;   /*Keep best score for ref/query*/
-   char matrixScanBl;     /*For doing a matrix scan*/
      /* If set to 1: Recored a best score for each base
      `  in the reference and query in a Waterman alignment
      */
-   uint32_t minScoreUI;  /*Min score to keep alignment*/
+   long minScoreL;  /*Min score to keep alignment*/
 }alnSet;
 
 /*---------------------------------------------------------------------\
@@ -156,7 +154,7 @@ void setBasePairScore(
 |  - Returns
 |    o score of a single pair of bases
 \--------------------------------------------------------*/
-static inline int16_t getBasePairScore(
+static inline int16_t getBaseScore(
     const char *queryBaseC,
     const char *refBaseC,
        /*Both query and reference bases should be
@@ -166,7 +164,7 @@ static inline int16_t getBasePairScore(
        */
     struct alnSet *alnSetST /*has scoring matrix*/
 ){/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-  ' Fun-04 TOC: getBasePairScore:
+  ' Fun-04 TOC: getBaseScore:
   '  - Get the score for a pair of bases from an alignment
   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -181,7 +179,7 @@ static inline int16_t getBasePairScore(
             [(uint8_t) *queryBaseC][(uint8_t) *refBaseC];
    #endif
 
-} // getBasePairScore
+} // getBaseScore
 
 unsigned long readInScoreFile(
     struct alnSet *alnSetST,  // structure with scoring matrix to change

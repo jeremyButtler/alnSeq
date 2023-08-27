@@ -38,13 +38,13 @@
 |      the direction matrix
 \--------------------------------------------------------*/
 struct alnMatrixStruct * NeedlemanAln(
-    struct seqStruct *queryST, // query sequence and data
+    struct seqStruct *qryST, // query sequence and data
     struct seqStruct *refST,  // ref sequence and data
-      // both queryST and refST have the sequence,
-      // they also have the point to start the alignment
-      // seqST->offsetUL (index 0) and the point to end
-      // the alignment seqST->endAlnUL (index 0).
-      // CURRENTLY THIS ONLY WORKS FOR FULL ALIGNMENTS
+      /* both qryST and refST have the sequence,
+      `  they also have the point to start the alignment
+      `  seqST->offsetUL (index 0) and the point to end
+      `  the alignment seqST->endAlnUL (index 0).
+      */
     struct alnSet *settings // Settings for the alignment
     // *startI and *endI paramaters should be index 1
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
@@ -66,78 +66,87 @@ struct alnMatrixStruct * NeedlemanAln(
    ^  - Variable declerations
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   // Get the start of the query and reference sequences
-   char *refStartCStr = refST->seqCStr + refST->offsetUL;
+   /*Get start & end of the query and reference sequences*/
+   char *refStartStr = refST->seqCStr + refST->offsetUL;
+   char *refEndStr = refST->seqCStr + refST->endAlnUL;
 
-   char *queryStartCStr =
-        queryST->seqCStr + queryST->offsetUL;
+   char *qryStartStr = qryST->seqCStr + qryST->offsetUL;
+   char *qryEndStr = qryST->seqCStr + qryST->endAlnUL;
 
-   char *tmpQueryCStr = 0;
-   char *tmpRefCStr = 0;
+   char *qryIterStr = 0;
+   char *refIterStr = 0;
 
-   // Find the length of the reference and query
-   unsigned long lenQueryUL =
-       queryST->endAlnUL - queryST->offsetUL + 1;
-       // + 1 to Account for index 0
+   /*Find the length of the reference and query. The +1
+   ` is to account for offsetUL being index 0
+   */
+   unsigned long lenQryUL =
+       qryST->endAlnUL - qryST->offsetUL + 1;
    unsigned long lenRefUL =
        refST->endAlnUL - refST->offsetUL + 1;
-       // + 1 to Account for index 0
 
-   // Scoring variables 
-   long insScoreL = 0;     // Score of the top cell
-   long snpScoreL = 0; // Score of the diagnol cell
-   long delScoreL = 0;    // Score of the left cell
+   /*Scoring variables*/
+   long insScoreL = 0;   /*Score for doing an insertion*/
+   long snpScoreL = 0;   /*Score for doing an match/snp*/
+   long delScoreL = 0;   /*Score for doing an deletion*/
+   long nextSnpSL = 0;   /*Score for the next match/snp*/
 
-   long *scoreMatrixL = 0; // matrix to use in alignment
-   long *scoreOnLPtr = 0;  // Score I am working on
-   long *lastBaseLPtr = 0; // Pointer to score above base
+   long *scoreRowLP = 0; /*matrix to use in alignment*/
+   long *scoreOnLP = 0;  /*Score I am working on*/
 
-   // For Swaping score buffers each round
-   char swapBuffBl = 1;
+   /*Direction matrix (one cell holds a single direction)*/
+   #if !defined BYTEMATRIX && !defined NOGAPOPEN
+      struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
+      struct twoBitAry insDir;     /*Direction above cell*/
+   #elif !defined BYTEMATRIX
+      struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
+   #elif !defined NOGAPOPEN 
+      char *dirMatrix = 0;/*Direction matrix*/
+      char *insDir;       /*Direction above cell*/
+   #else
+      char *dirMatrix = 0;    /*Direction matrix*/
+   #endif
 
-   // Direction matrix (one cell holds a single direction)
-   struct twoBitAry *dirMatrix = 0;// Direction matrix
-   struct twoBitAry topDir;        // Direction above cell
-   struct twoBitAry leftDir;       // Direction before cell
-
-   struct alnMatrixStruct *retMtxST =
-     calloc(1, sizeof(struct alnMatrixStruct));
+   /*Structure to return*/
+   struct alnMatrixStruct *retMtxST = 0;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-02:
    ^  - Allocate memory for alignment
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+   retMtxST = calloc(1, sizeof(struct alnMatrixStruct));
    if(retMtxST == 0) return 0;
 
    initAlnMatrixST(retMtxST);
+   scoreRowLP = calloc(lenRefUL + 1, sizeof(long));
+      /*I need two rows to keep track of the scores (2x)
+      ` - lenRefUL + 1 is to account for insertion column
+      */
 
-   scoreMatrixL =
-     calloc(2 * (lenRefUL + 1) + 2, sizeof(unsigned long));
-       // I need two rows to keep track of the scores (2x)
-       // lenRefUL + 1 is to account for insertion column
-
-   if(scoreMatrixL == 0)
-   { // If I had a memory error
-     free(retMtxST);
+   if(scoreRowLP == 0)
+   { /*If I had a memory error*/
+     freeAlnMatrixST(retMtxST);
      return 0;
-   } // If I had a memory error
+   } /*If I had a memory error*/
 
-   dirMatrix =
-     makeTwoBitArry(
-       (lenRefUL + 1) * (lenQueryUL + 1) + 2,
-       0
-   );
-     // Calls calloc and adds an extra element at end
-       // lenRefUL + 1 accounts for insertion reference row
-       // lenQeurI + 1 accounts for insertion query column
+   #if !defined BYTEMATRIX
+      dirMatrix=
+         makeTwoBit((lenRefUL+1) * (lenQryUL+1) + 2,0);
+     /* Calls calloc and adds an extra element at end
+     `  - lenRefUL + 1 accounts for insertion reference row
+     `  - lenQeurI + 1 accounts for insertion query column
+     */
+   #else
+      dirMatrix =
+         calloc((lenRefUL+1) *(lenQryUL+1)+2,sizeof(char));
+   #endif
 
    if(dirMatrix == 0)
-   { // If I do not have a direction matrix for each cell
-     free(retMtxST);
-     free(scoreMatrixL);
+   { /*If I do not have a direction matrix for each cell*/
+     freeAlnMatrixST(retMtxST);
+     free(scoreRowLP);
      return 0;
-   } // If I do not have a direction matrix for each cell
+   } /*If I do not have a direction matrix for each cell*/
 
    retMtxST->dirMatrixST = dirMatrix;
 
@@ -146,34 +155,59 @@ struct alnMatrixStruct * NeedlemanAln(
    ^  - Fill in the initial negatives for the reference
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   // Build up the indels for the reference row
-   scoreOnLPtr = scoreMatrixL;
-   *scoreOnLPtr = 0;         // Top left cell starts at 0
-   ++scoreOnLPtr;            // Move to next cell (score)
+   /*Build up the indels for the reference row*/
+   scoreOnLP = scoreRowLP;
+   *scoreOnLP = 0;         /*Top left cell starts at 0*/
+   ++scoreOnLP;            /*Move to next cell (score)*/
 
-   changeTwoBitElm(dirMatrix, defMvStop);
-   twoBitAryMoveToNextElm(dirMatrix);
+   /*The insertion/match/snp score is on the previous row*/
+   #if !defined BYTEMATRIX
+      #if !defined NOGAPOPEN
+         cpTwoBitPos(dirMatrix, &insDir);
+      #endif
 
-   // 2nd score (first indel in matrix)
-   *scoreOnLPtr = settings->gapOpenI;
-   ++scoreOnLPtr;      // Move to the 2nd reference base
+      changeTwoBitElm(dirMatrix, defMvStop);
+      twoBitMvToNextElm(dirMatrix);
+      changeTwoBitElm(dirMatrix, defMvDel);
+      twoBitMvToNextElm(dirMatrix);
+   #else
+      #if !defined NOGAPOPEN
+         insDir = dirMatrix;
+      #endif
 
-   changeTwoBitElm(dirMatrix, defMvDel);
-   twoBitAryMoveToNextElm(dirMatrix);
+      *dirMatrix = defMvStop;
+      ++dirMatrix;
+      *dirMatrix = defMvDel;
+      ++dirMatrix;
+   #endif
 
-   // Set up scores for the remaning cells in the first row
-   tmpRefCStr = refStartCStr + 1;
+   /*2nd score (first indel in matrix)*/
+   #ifdef NOGAPOPEN
+      *scoreOnLP = settings->gapExtendI;
+   #else
+      *scoreOnLP = settings->gapOpenI;
+   #endif
 
-   while(*tmpRefCStr != '\0')
-   { // loop; till have initalized the first row
-     *scoreOnLPtr = *(scoreOnLPtr-1) +settings->gapExtendI;
+   /*Set up scores for remaning cells in the first row*/
+   ++scoreOnLP;      /*Move to the 2nd reference base*/
+   refIterStr = refStartStr;
 
-     // Move to the next cell (ref base)
-     ++scoreOnLPtr;
-     changeTwoBitElm(dirMatrix, defMvDel);
-     twoBitAryMoveToNextElm(dirMatrix);
-     ++tmpRefCStr;
-   } // loop; till have initalized the first row
+   while(refIterStr < refEndStr)
+   { /*loop; till have initalized the first row*/
+     *scoreOnLP = *(scoreOnLP - 1) + settings->gapExtendI;
+
+     /*Move to the next cell (ref base)*/
+     #if !defined BYTEMATRIX
+        changeTwoBitElm(dirMatrix, defMvDel);
+        twoBitMvToNextElm(dirMatrix);
+     #else
+        *dirMatrix = defMvDel;
+        ++dirMatrix;
+     #endif
+
+     ++scoreOnLP;
+     ++refIterStr;
+   } /*loop; till have initalized the first row*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-04:
@@ -195,158 +229,304 @@ struct alnMatrixStruct * NeedlemanAln(
    ^  - Set up for filling the rest of the matrix
    \******************************************************/
 
-   // One element back will put me on the previous value
-   cpTwoBitPos(dirMatrix, &leftDir);
-   twoBitAryMoveBackOneElm(&leftDir);
+   qryIterStr = qryStartStr;
+   refIterStr = refStartStr;
 
-   // The start of the limb is hte cell above the currnt
-   // cell
-   cpTwoBitPos(dirMatrix, &topDir);
-   moveXElmFromStart(&topDir, 0);
+   /*Add the insertion to the first score
+   ` The first score on the second row is in the insertion
+   ` column and is always the start of a new insertion.
+   */
+   scoreOnLP = scoreRowLP;
 
-   // Set up the previous score
-   lastBaseLPtr = scoreMatrixL; // Set to first row
-   swapBuffBl = 1;
+   nextSnpSL =
+        getBaseScore(qryIterStr,refIterStr,settings)
+      + *scoreOnLP;
 
-   tmpQueryCStr = queryStartCStr;
-   tmpRefCStr = refStartCStr;
+   /*Fill in the current indel column for this row*/
+   #ifndef NOGAPOPEN
+      *scoreOnLP = settings->gapOpenI;
+      /**scoreOnLP = settings->gapExtendI;
+      ` This was the old version. However, this was a
+      ` mistake and can result in slightly worse alignments
+      ` (when alignments have many gaps).
+      */
+   #else
+      *scoreOnLP = settings->gapExtendI;
+   #endif
+
+   delScoreL = *scoreOnLP + settings->gapExtendI;
+   ++scoreOnLP;
+   insScoreL = *scoreOnLP + settings->gapExtendI;
+
+   #if !defined BYTEMATRIX && !defined NOGAPOPEN
+      changeTwoBitElm(dirMatrix, defMvIns);
+      twoBitMvToNextElm(dirMatrix);
+      twoBitMvToNextElm(&insDir);
+      twoBitMvToNextElm(&insDir);
+   #elif !defined BYTEMATRIX
+      changeTwoBitElm(dirMatrix, defMvIns);
+      twoBitMvToNextElm(dirMatrix);
+   #elif !defined NOGAPOPEN
+     *dirMatrix = defMvIns;
+     ++dirMatrix;
+     insDir += 2;
+   #else
+     *dirMatrix = defMvIns;
+     ++dirMatrix;
+   #endif
 
    /******************************************************\
    * Fun-01 Sec-04 Sub-02:
    *  - Fill in the first cell (indel column)
    \******************************************************/
 
-    *scoreOnLPtr =
-      *lastBaseLPtr + settings->gapExtendI;
+   /******************************************************\
+   * Fun-01 Sec-04 Sub-03:
+   *  - Get scores for insertion, deletion, match
+   \******************************************************/
 
-    changeTwoBitElm(dirMatrix, defMvIns);
+   /*Starting on the first sequence row*/
+   while(qryIterStr <= qryEndStr)
+   { /*loop; fill the direction matrix with socres*/
 
-    twoBitAryMoveToNextElm(dirMatrix);
-    twoBitAryMoveToNextElm(&topDir);
-    twoBitAryMoveToNextElm(&leftDir);
+       /*I have already found the first bases match*/
+       refIterStr = refStartStr + 1;
 
-    // Move to the first base comparison
-    ++scoreOnLPtr;  // Move of the indel column
-    ++lastBaseLPtr; // Move off the indel column
+       /*Find scores/directions for all basepairs in row*/
+       /*I am doing one of the end to avoid caculating
+       ` extra scores for each base
+       */
+       while(refIterStr <= refEndStr)
+       { /*loop; compare one query to all reference bases*/
+           /*Find the score for a match/snp*/
+           snpScoreL = nextSnpSL;
 
-    /*****************************************************\
-    * Fun-01 Sec-04 Sub-03:
-    *  - Get scores for insertion, deletion, match
-    \*****************************************************/
-
-   // Starting on the first sequence row
-   while(*tmpQueryCStr != '\0')
-   { // loop; fill the direction matrix with socres
-
-       tmpRefCStr = refStartCStr;
-
-       // Find scores & directions for all basepairs in row
-       while(*tmpRefCStr != '\0')
-       { // loop; compare one query to all reference bases
-           snpScoreL =
-              getBasePairScore(
-                  tmpQueryCStr,
-                  tmpRefCStr,
-                  settings
-           ); // Find the score for the two base pairs
-
-           // Find the score for diagnol cell (snp/match)
-           snpScoreL = *(lastBaseLPtr - 1) + snpScoreL;
-
-           indelScore(
-              insScoreL,
-              getTwoBitAryElm(&topDir),
-              *lastBaseLPtr,
-              settings
-           ); /*macro in genralAlnFun.h*/
-
-           indelScore(
-              delScoreL,
-              getTwoBitAryElm(&leftDir),
-              *(scoreOnLPtr - 1),
-              settings
+           /*Find the next score for an snp/match*/
+           nextSnpSL = 
+              getBaseScore(
+                 qryIterStr,
+                 refIterStr,
+                 settings
            );
+           nextSnpSL += *scoreOnLP;
 
-           twoBitMaxScore(
-             dirMatrix,       // Direction matrix
-             settings,        // has direction preference
-             &insScoreL,      // Score for an insertion
-             &snpScoreL,  // Score for an deletion
-             &delScoreL,     // Score for an match/snp
-             scoreOnLPtr      // Cell on in score matrxi
-           ); // Update the scores
+           /*Find the best score*/
+           #if !defined BYTEMATRIX
+              twoBitMaxScore(
+                dirMatrix,
+                settings,
+                &insScoreL,
+                &snpScoreL,
+                &delScoreL,
+                scoreOnLP
+              ); /*Update the score and direction*/
+           #else
+              charMaxScore(
+                dirMatrix,
+                settings,
+                &insScoreL,
+                &snpScoreL,
+                &delScoreL,
+                scoreOnLP
+              ); /*Update the score and direction*/
+           #endif
+
+           /*Find the next deletion score*/
+           /*Need to move the direction here, so I have
+           ` the previous bases direction.
+           */
+           #if !defined BYTEMATRIX && !defined NOGAPOPEN
+              indelScore(
+                 delScoreL,
+                 getTwoBitElm(dirMatrix),
+                 *scoreOnLP,
+                 settings
+              );
+           #elif !defined NOGAPOPEN
+              indelScore(
+                 delScoreL,
+                 *dirMatrix,
+                 *scoreOnLP,
+                 settings
+              );
+           #else
+              delScoreL = *scoreOnLP+settings->gapExtendI;
+           #endif
+
+           /*Find the next insertion score (Is one score
+           ` ahead of the just filled score).
+           */
+           ++scoreOnLP;
+
+           #if !defined BYTEMATRIX && !defined NOGAPOPEN
+              indelScore(
+                 insScoreL,
+                 getTwoBitElm(&insDir),
+                 *scoreOnLP,
+                 settings
+              );
+           #elif !defined NOGAPOPEN
+              indelScore(
+                 insScoreL,
+                 *insDir,
+                 *scoreOnLP,
+                 settings
+              );
+           #else
+              insScoreL = *scoreOnLP +settings->gapExtendI;
+           #endif
+
+           /*Move to the next direction*/
+           #if !defined BYTEMATRIX && !defined NOGAPOPEN
+              twoBitMvToNextElm(dirMatrix);
+              twoBitMvToNextElm(&insDir);
+           #elif !defined BYTEMATRIX
+              twoBitMvToNextElm(dirMatrix);
+           #elif !defined NOGAPOPEN
+              ++dirMatrix;
+              ++insDir;
+           #else
+              ++dirMatrix;
+           #endif
 
            /**********************************************\
            * Fun-01 Sec-04 Sub-04:
            *  - Move to the next refernce/query base
            \**********************************************/
        
-           // Move to the next cell to score
-           ++scoreOnLPtr;  // Move to the next open score
-           ++lastBaseLPtr; // Move to the score I just did
-           ++tmpRefCStr;   // Move to next reference base
+           /*Move to the next reference base*/
+           ++refIterStr;
+       } /*loop; compare one query to all reference bases*/
 
-           // Move to the next base pair to score
-           twoBitAryMoveToNextElm(dirMatrix);
-           twoBitAryMoveToNextElm(&topDir);
-           twoBitAryMoveToNextElm(&leftDir);
-       } // loop; compare one query to all reference bases
+       /**************************************************\
+       * Fun-01 Sec-04 Sub-05:
+       *  - Find the best score for the last base
+       \**************************************************/
 
-       // Check if I still need to first row of scores
-       // THis is to see what I can overwrite/reuse
-       if(swapBuffBl & 1)
-       { // If need to swap the buffers
-           scoreOnLPtr = scoreMatrixL;
-           swapBuffBl = 0;
-       } // If need to swap the buffers
-
-       else // Else 2nd row of scores is no longer needed
-       { // Else need to reset the score part
-           lastBaseLPtr = scoreMatrixL;
-           swapBuffBl = 1;
-       } // Else need to reset the score part
-
-       ++tmpQueryCStr; // Move to the next query base
+       /*Find the best score for the last base. In this
+       ` case, this score can only apply to indels. So,
+       ` I need to move off it to avoid overwirting it
+       */
+       #if !defined BYTEMATRIX
+          twoBitMaxScore(
+            dirMatrix,
+            settings,
+            &insScoreL,
+            &nextSnpSL,
+            &delScoreL,
+            scoreOnLP
+          ); /*Update the score and direction*/
+       #else
+          charMaxScore(
+            dirMatrix,
+            settings,
+            &insScoreL,
+            &nextSnpSL,
+            &delScoreL,
+            scoreOnLP
+          ); /*Update the score and direction*/
+       #endif
 
        /**************************************************\
        *  Fun-01 Sec-04 Sub-05:
-       *    - Handle the first cell (indel col) in new row
+       *   - Update the indel columns directoin
        \**************************************************/
 
-       *scoreOnLPtr =
-         *lastBaseLPtr + settings->gapExtendI;
+       /*I need to move dirMatrix and insDir to the first
+       ` first base in the next row (skip indel column).
+       ` The score for the indel column is updated in the
+       ` next subsection. I need to find the score for a
+       ` deletion before the update.
+       */
+       #if !defined BYTEMATRIX && !defined NOGAPOPEN
+          twoBitMvToNextElm(dirMatrix);
+          changeTwoBitElm(dirMatrix, defMvIns);
+          twoBitMvToNextElm(dirMatrix);
 
-       changeTwoBitElm(dirMatrix, defMvIns);
-       twoBitAryMoveToNextElm(dirMatrix);
-       twoBitAryMoveToNextElm(&topDir);
-       twoBitAryMoveToNextElm(&leftDir);
+          twoBitMvToNextElm(&insDir);
+       #elif !defined BYTEMATRIX
+          twoBitMvToNextElm(dirMatrix);
+          changeTwoBitElm(dirMatrix, defMvIns);
+          twoBitMvToNextElm(dirMatrix);
+       #elif !defined NOGAPOPEN
+          ++dirMatrix;
+          *dirMatrix = defMvIns;
+          ++dirMatrix;
+          ++insDir;
+       #else
+          ++dirMatrix;
+          *dirMatrix = defMvIns;
+          ++dirMatrix;
+       #endif
 
-       // Move to the first base comparison
-       ++scoreOnLPtr;  // Move to first base pair in row
-       ++lastBaseLPtr; // Move to last base pair
-   } // loop; fill the direction matrix with socres
+       /**************************************************\
+       * Fun-01 Sec-04 Sub-06:
+       *  - Find the first bases scores
+       \**************************************************/
+
+       /*Move to indel column and apply gap extension*/
+       scoreOnLP = scoreRowLP;
+       ++qryIterStr; /*Move to the next query base*/
+
+       /*Find the next score for an snp/match*/
+       nextSnpSL = 
+            getBaseScore(qryIterStr,refStartStr,settings)
+          + *scoreOnLP;
+
+       /*Update the indel column and find next deletion*/
+       *scoreOnLP += settings->gapExtendI;
+       delScoreL = *scoreOnLP + settings->gapExtendI;
+       ++scoreOnLP; /*Move to the first base pair*/
+
+      /*At this point insDir is on the first base*/
+      #if !defined BYTEMATRIX && !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            getTwoBitElm(&insDir),
+            *scoreOnLP,
+            settings
+         );
+
+         twoBitMvToNextElm(&insDir);
+      #elif !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            *insDir,
+            *scoreOnLP,
+            settings
+         );
+
+         ++insDir;
+      #elif !defined BYTEMATRIX
+         insScoreL = *scoreOnLP + settings->gapExtendI;
+      #endif
+      /*At this piont insDir is on the second base*/
+   } /*loop; fill the direction matrix with socres*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-05:
    ^  - Set up for returing the matrix (clean up/wrap up)
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   // Account for being two cells out of bounds
-   twoBitAryMoveBackOneElm(dirMatrix);
-   changeTwoBitElm(dirMatrix, defMvStop);
-   twoBitAryMoveBackOneElm(dirMatrix);
+   /*Account for being two cells out of bounds*/
+   #if !defined BYTEMATRIX
+      twoBitMvBackOneElm(dirMatrix);
+      changeTwoBitElm(dirMatrix, defMvStop);
+      twoBitMvBackOneElm(dirMatrix);
+   #else
+      *(dirMatrix - 1) = defMvStop;
+   #endif
 
-   // Set the best score to the conor right cell
-   if(swapBuffBl != 0)
-     retMtxST->bestScoreST.scoreL = *(scoreOnLPtr - 2);
-   else
-     retMtxST->bestScoreST.scoreL =
-       *(lastBaseLPtr + lenRefUL - 1);
+   /*Set the best score to the cornor right cell*/
+   retMtxST->bestScoreST.refEndUL =
+      refIterStr - refST->seqCStr - 1;
 
-   retMtxST->bestScoreST.indexUL =
-     getTwoBitAryIndex(dirMatrix);
+   retMtxST->bestScoreST.qryEndUL =
+      qryIterStr - qryST->seqCStr - 1;
 
-   free(scoreMatrixL);
+   retMtxST->bestScoreST.scoreL = *(scoreRowLP + lenRefUL);
 
+   /*Clean UP*/
+   free(scoreRowLP);
    return retMtxST;
-} // NeeldeManWunschAln
+} /*NeeldeManWunschAln*/

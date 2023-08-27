@@ -240,8 +240,14 @@ char * alnSTToSeq(
 struct alnStruct * dirMatrixToAlnST(
     struct seqStruct *refST,     /*Reference seq & length*/
     struct seqStruct *qryST,     /*Query seq & length*/
-    struct twoBitAry *dirMatrxST,/*Direction matrix*/
-    struct scoresStruct *scoreST /*Index of best score*/
+    struct scoresStruct *scoreST,
+       /*Score to get alignment for*/
+    /*Matrix to use in finding the alignment*/
+    #if !defined BYTEMATRIX
+       struct twoBitAry *dirMatrixST
+    #else
+       char *dirMatrixST
+    #endif
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: getAlnAry
    '  - Builds an anlignment array for the input direction
@@ -263,6 +269,7 @@ struct alnStruct * dirMatrixToAlnST(
 
   long qryIndexL = 0;     /*Index of query base*/
   long refIndexL = 0;     /*Index of reference base*/
+  unsigned long startIndexUL = 0;
   long lastRefMatchSnpL = 0;
   long lastQryMatchSnpL = 0;
   long lenRefL = 
@@ -278,18 +285,22 @@ struct alnStruct * dirMatrixToAlnST(
   */
 
   char *qrySeqStr =
-      qryST->seqCStr + qryST->offsetUL
-    + (scoreST->indexUL / (lenRefL + 1))
-    - 1;
+      qryST->seqCStr + scoreST->qryEndUL;
+    /*qryST->offsetUL
+    + (indexUL / (lenRefL + 1))
+    - 1;*/
   char *refSeqStr =
-      refST->seqCStr + refST->offsetUL
-    + (scoreST->indexUL % (lenRefL + 1))
-    - 1;
+      refST->seqCStr + scoreST->refEndUL;
+    /*refST->offsetUL
+    + (indexUL % (lenRefL + 1))
+    - 1;*/
 
   struct alnStruct *alnST = 0;
 
   /*Variables for searching through the direction matrix*/
-  uint8_t bitElmUC = 0;
+  #if !defined BYTEMATRIX
+     uint8_t bitElmUC = 0;
+  #endif
 
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
   ^ Fun-02 Sec-02:
@@ -342,11 +353,28 @@ struct alnStruct * dirMatrixToAlnST(
   *  - Find the cell with the best score
   \*******************************************************/
 
-  /*move to best score using the best scores index*/
-  moveXElmFromStart(dirMatrxST, scoreST->indexUL);
+  startIndexUL = (1 + scoreST->qryEndUL);
+     /* 1 + to account for qryEndUL indel column*/
+     /* Not accounting for qryEndUL being index 0, because
+     `  bestScoreST.refEndUL as the reference position in
+     `  the row*/
+  startIndexUL *= (1 + lenRefL);
+     /*1 + to account for deletion row*/
+  startIndexUL += 1 + scoreST->refEndUL;
+     /* 1 + to account for refEndUL being index 0*/
+  
 
   /*get direction for the best element*/
-  bitElmUC = getTwoBitAryElm(dirMatrxST);
+  #if !defined BYTEMATRIX
+    twoBitMvXElmFromStart(dirMatrixST, startIndexUL);
+    bitElmUC = getTwoBitElm(dirMatrixST);
+  #else
+     dirMatrixST += startIndexUL;
+  #endif
+    /*I have not figured out how to convert end
+    ` coordinates to an index. For some odd reason they
+    ` are off when not at the end.
+    */
 
   /*Grab the index of at the end of the alignment*/
   qryIndexL = qrySeqStr - qryST->seqCStr;
@@ -357,9 +385,17 @@ struct alnStruct * dirMatrixToAlnST(
   *  - Find the best path
   \*******************************************************/
 
+  #if !defined BYTEMATRIX
   while(bitElmUC != defMvStop)
+  #else
+  while(*dirMatrixST != defMvStop)
+  #endif
   { /*While I have more bases in the alignment*/
+    #if !defined BYTEMATRIX
     switch(bitElmUC)
+    #else
+    switch(*dirMatrixST)
+    #endif
     { /*Switch: check if bases is gap, match, or snp*/
       case defMvStop: goto finishAlignment;
       case defMvIns:
@@ -369,7 +405,11 @@ struct alnStruct * dirMatrixToAlnST(
         --qrySeqStr; /*insertion only query has a base*/
         --qryIndexL;
         ++(alnST->numInssUL);
-        twoBitAryMoveBackXElm(dirMatrxST, lenRefL + 1);
+        #if !defined BYTEMATRIX
+           twoBitMvBackXElm(dirMatrixST, lenRefL + 1);
+        #else
+           dirMatrixST -= (lenRefL + 1);
+        #endif
           /* lenRefL (index 1) cells per row; need + 1 to
           `  get to the cell above
           */
@@ -396,7 +436,11 @@ struct alnStruct * dirMatrixToAlnST(
           ++(alnST->numSnpsUL);
         } /*Else was a SNP*/
 
-        twoBitAryMoveBackXElm(dirMatrxST, lenRefL + 2);
+        #if !defined BYTEMATRIX
+           twoBitMvBackXElm(dirMatrixST, lenRefL + 2);
+        #else
+           dirMatrixST -= (lenRefL + 2);
+        #endif
           /*need + 2 to get to the next diagnol cell*/
         --qrySeqStr;
         --qryIndexL;
@@ -410,7 +454,12 @@ struct alnStruct * dirMatrixToAlnST(
       /*Case: deletion (defMvDel)*/
         *(alnST->refAlnStr + refIndexL) = defGapFlag;
         ++(alnST->numDelsUL);
-        twoBitAryMoveBackOneElm(dirMatrxST);
+
+        #if !defined BYTEMATRIX
+           twoBitMvBackOneElm(dirMatrixST);
+        #else
+           --dirMatrixST;
+        #endif
         --refSeqStr;
         --refIndexL;
         break;
@@ -419,7 +468,10 @@ struct alnStruct * dirMatrixToAlnST(
 
     /*Get the next direction to move*/
     ++(alnST->lenAlnUL);
-    bitElmUC = getTwoBitAryElm(dirMatrxST);
+
+    #if !defined BYTEMATRIX
+       bitElmUC = getTwoBitElm(dirMatrixST);
+    #endif
   } /*While I have more bases to add to the path*/
 
   finishAlignment:
@@ -986,7 +1038,7 @@ char printAln(
     \*****************************************************/
 
     while(
-       *refAlnStr != defEndAlnFlag &&
+       *refAlnStr != defEndAlnFlag ||
        *qryAlnStr != defEndAlnFlag
     ){ /*Loop: Print out all bases*/
        /*Check if only printing out aligned portion*/
@@ -1446,6 +1498,7 @@ char pEMBOSSHead(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    /*Get the date*/
+   unsigned long lenAlnUL = 0;
    time_t timeST = time(NULL);
    struct tm *localTimeST = localtime(&timeST);
    char dateStr[64];
@@ -1529,11 +1582,13 @@ char pEMBOSSHead(
       fprintf(outFILE, "# Matrix: %s\n", defMatrixNameStr);
    else fprintf(outFILE,"# Matrix: %s\n",scoreMtxFileStr);
 
-   fprintf(
-      outFILE,
-      "# Gap_penalty: %i\n",
-      setting->gapOpenI
-   );
+   #if !defined NOGAPOPEN
+      fprintf(
+         outFILE,
+         "# Gap_penalty: %i\n",
+         setting->gapOpenI
+      );
+   #endif
 
    fprintf(
      outFILE,
@@ -1546,18 +1601,23 @@ char pEMBOSSHead(
    *  - Print out the alignment stats
    \******************************************************/
 
+   lenAlnUL =
+        alnST->numMatchesUL
+      + alnST->numInssUL
+      + alnST->numDelsUL;
+
    fprintf(
       outFILE,
       "#\n# Length: %lu\n",
-      alnST->lenAlnUL
+      lenAlnUL
    );
 
    fprintf(
      outFILE,
      "# Identity:  %9li/%li (%.1f%%)\n",
      alnST->numMatchesUL,
-     alnST->lenAlnUL,
-     ((double) (100 * alnST->numMatchesUL)/alnST->lenAlnUL)
+     lenAlnUL,
+     ((double) (100 * alnST->numMatchesUL) / lenAlnUL)
    );
 
    /*In may case Similarity (>51% of bases the same) is
@@ -1567,20 +1627,17 @@ char pEMBOSSHead(
      outFILE,
      "# Similarity:%9li/%li (%.1f%%)\n",
      alnST->numMatchesUL,
-     alnST->lenAlnUL,
-     ((double) (100 * alnST->numMatchesUL)/alnST->lenAlnUL)
+     lenAlnUL,
+     ((double) (100 * alnST->numMatchesUL) / lenAlnUL)
    );
 
    fprintf(
      outFILE,
      "# Gaps:      %9li/%li (%.1f%%)\n",
      alnST->numInssUL + alnST->numDelsUL,
-     alnST->lenAlnUL,
+     lenAlnUL,
      ((double)
-        (
-            100 * (alnST->numInssUL + alnST->numDelsUL))
-           / alnST->lenAlnUL
-         ) /*Find the percentage of gaps*/
+        (100*(alnST->numInssUL+alnST->numDelsUL))/lenAlnUL)
    );
 
    fprintf(outFILE, "# Score: %li\n", scoreL);
@@ -1674,11 +1731,13 @@ void pExpandCigHead(
      fprintf(outFILE, "# Matrix: %s\n", defMatrixNameStr);
    else fprintf(outFILE,"# Matrix: %s\n", scoreMtxFileStr);
 
-   fprintf(
-     outFILE,
-     "# Gap open: %i\n",
-      setting->gapOpenI
-   );
+   #if !defined NOGAPOPEN
+      fprintf(
+        outFILE,
+        "# Gap open: %i\n",
+         setting->gapOpenI
+      );
+   #endif
 
    fprintf(
       outFILE,

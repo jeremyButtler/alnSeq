@@ -72,10 +72,8 @@ void initAlnSet(
    alnSetST->gapExtendI = defGapExtend;
 
    /*Waterman specific variables*/
-   alnSetST->multiBaseWaterBl = defMultiBaseWater;
-   alnSetST->matrixScanBl = defMatrixScan;
-   alnSetST->refQueryScanBl = defMatrixScan;
-   alnSetST->minScoreUI = defMinScore;
+   alnSetST->refQueryScanBl = defQueryRefScan;
+   alnSetST->minScoreL = defMinScore;
   
    /*score matrix Initalize*/
    for(uint8_t colUC = 0; colUC < 26; ++colUC)

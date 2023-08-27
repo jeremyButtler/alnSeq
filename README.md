@@ -1,10 +1,11 @@
 # Use
 
 AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
-  that runs with a memory usage of (O(n \* m / 4)).
-  However, it is less speed efficient than a traditional 
-  Smith Waterman and Needleman Wunsch alignment. It can
-  output multiple local alignments from a single alignment.
+  that, depending on flags used when compiling can run
+  with memory usage of O(n \* m / 4) Bytes to O(n \* m)
+  Bytes. However, the O(n \* m / 4) is twice as slow as a
+  traditional Smith Waterman and Needleman Wunsch
+  alignment. AlnSeq also includes an Hirschberg alignment.
 
 There are faster and less memory hungry Waterman Smith
   implementations than alnSeq. One example is the stripped
@@ -58,28 +59,68 @@ make install PREFIX=/path/to/install
 make
 mv alnSeq /path/to/install
 chmod a+x /path/to/install/alnSeq
+
+# Alternative make commands
+make fast
+  # This command disables the opening gap penalty,
+  # directional selection, and two bit arrys. This makes
+  # alnSeq behave somewhat similar to bio-alignment.
+make mid
+  # This command disables directional selection and two
+  # bit arrays, but keeps the gap opening penalty.
 ```
 
-Their are a couple of flags that alnSeq can be compiled
-  with. The first is `make CFLAGS="-DHIRSCHTWOBIT"`
-  compiles alnseq with a Hirschberg that uses two bit
-  arrays instead of byte arrays. This is slower, but does
-  use slightly less memory (not much less). The second is
-  `make CFLAGS="-DNOSEQCNVT", which does not convert
-  the sequence to an index in my scoring matrix. Uinsg this
-  flag increases the speed slightly, but not by much. You
-  can combine flags together if needed
-  `make CFLAGS="-DHIRSCHTWOBIT -DNOSEQCNVT".
+## Extra build options
 
-I am planning, but may not get around to adding in flag
-  for no gap opening and a byte waterman/needle program
-  (4x more memory, but faster) later.
+The flags alnSeq can be compiled with are:
+
+- -DNOGAPOPEN
+  - disable gap opening penalty
+  - This is faster, but may produce lower quality
+    alignments.
+- -DBYTEMATRIX
+  - Waterman and Needleman use a byte matrix instead of
+    a two bit array matrix
+  - Alignment takes half the time, but also takes 4x more
+    memory.
+- -DHIRSCHTWOBIT
+  - Have the Hirschberg use two bit arrays instead of byte
+    arrays for directions (only relevant if not using
+    -DNOGAPOPEN).
+  - This doubles the time to make an alignment for a very
+    minor decrease in memory usage. 
+- -DNOSEQCNVT
+  - This prevents the conversion of each base in the query
+    and reference sequences to an index for alignment.
+  - This option slows down the alignment slightly. The only
+    reason to use this option would be if the input case
+    of a sequence matters.
+- These options force alnSeq to prefer only one direction
+  and disables all other options. This does speed up alnSeq
+  slightly.
+  - It only applies when the insertion (ins), snp, or 
+    deletion (del) scores for a base pair are equal.
+  - -DSNPINSDEL
+  - -DSNPDELINS
+  - -DINSSNPDEL
+  - -DINSDELSNP
+  - -DDELSNPINS
+  - -DDELINSSNP
+
+You can compile with these flags using
+  `make CFLAGS="flag"`. You can also compile multiple 
+  flags with `make CFLAGS="falg1 flag2"`. One example is
+  the `make fast` command, which uses make
+  `CFLAGS="-DNOGAPOPEN -DINSSNPDEL -DBYTEMATRIX"`.
 
 ## How to run alnSeq
 
 ```
 # help message
 alnSeq -h | less
+
+# Get flags set when compiling alnSeq
+alnSeq -flags | less
 
 # Alignment formats 
 
@@ -90,7 +131,7 @@ alnSeq -query query.fasta -ref ref.fasta > alignment.aln
 # usage)
 alnSeq -use-hirschberg -query query.fasta -ref ref.fasta > alignment.aln
 
-## For a single local alignment (Waterman Smith) (not working)
+## For a single local alignment (Waterman Smith)
 alnSeq -use-water -query query.fasta -ref ref.fasta > out.aln
 
 # File formatting
@@ -122,149 +163,50 @@ AlnSeq is an sequence alignment program that uses either
   scoring matrix and the direction matrix.
 
 One thing I do want to point out is that there are very
-  memory efficient algorithms for optimal global alignments
-  (Needleman Wunsch), such as the Hirschberg alignment.
-  The striped Waterman Smith alignment is a very memory
-  efficient algorithm for optimal global alignments.
+  memory efficient algorithms, such as the striped Waterman
+  Smith alignment, for optimal local alignments.
 
 ## The direction matrix
 
-AlnSeq stores each direction in two bits, which are packed
+AlnSeq stores each direction in two bits for the Needleman
+  and Waterman alignments. These bits are packed
   into an 8 bit integer. This reduces the directional
   matrix size by 4, but comes at the cost of slower speed.
   This also means that only one direction is stored,
-  instead of all possible alternatives. However, alnSeq
-  could be modified to keep all directions in a 3 or 4 bit
-  array was used at the cost of using twice the memory. You
-  can modify the twoBitArrays.c functions to make this
-  change.
+  instead of all possible alternatives.
 
-If you do decide to store all directions , then I would
-  recommend using 3 bit directions packed into a 16 bit or
-  32 bit integer. It will be harder and will loose one bit
-  per 16bit integer, but will increase memory usage by 60%
-  instead of 100%.
+## The scoring matrix (Needleman/Waterman)
 
-## The scoring matrix
+AlnSeq also reduces the scoring matrix down to one row,
+  which holds the last scores or the previously updated
+  scores. This removes the scoring matrix, but also removes
+  the ability to scan the scoring matrix for other high
+  scores, which is sometimes done for an Waterman Smith
+  alignment. The best score is found while building the
+  matrix.
 
-AlnSeq also reduces the scoring matrix down to two rows,
-  which are the previous row of scores and the current row
-  of scores. This effectively removes the scoring matrix,
-  but also removes the ability to scan the scoring matrix
-  for other high scores, which is sometimes done for a
-  traditional Waterman Smith alignment. To combat this
-  alnSeq will record the best score (or lower right conner
-  for a Needleman Wunsch) and the best score for each base
-  in the reference and each base in the query sequence.
-
-To reduce the tendency to trace the path of the best
-  alignment each new best score for a bases is check to
-  see if it extends the alignment the previous base was on.
-  If it extends the alignment, then the previous bases best
-  score is set to an previous score for the previous base
-  and the current base is set to the new score. However,
-  this means that alnSeq must keep track of both the
-  current best scores for each base and one past best
-  scores for each base.
-
-Any bases that had a paths (alignments) that had a high
-  enough score are printed out. The total number of printed
-  alignments can be thought of in terms of n (number of 
-  bases in the reference) and m (number of bases in the
-  query). The maximum of number of alignments is n
-  alignments for the reference and m alignments for the
-  query. This could take up a lot of space, so it would
-  be better to integrate your program into this step. You
-  can use the printAlnWaterAlns (Fun-03) in water.c, which
-  does the printing as an example. 
-
-From this you could get an idea of the complete alignment
-  and may even detect duplications that are in only one 
-  sequence. However, detecting duplications that are in
-  both sequences will likely not be possible.
-
-If your willing to modify the code you could make an
-  alternative system that stores every score above a
-  certain threshold or multiple scores per base. For the
-  every score above a certain threshold modification you
-  would need to remove the old scores arrays, which when
-  done would allow you to store up to 25% of the matrix
-  before having similar memory usage to a traditional
-  Smith Waterman. If you did not care about scores you
-  could increase this to 50% of the matrix.
-
-## Memory Cost
-
-The rough planned memory cost of alnSeq is
-
-- Cost of the directional matrix (n\*m)/4
-- Cost to store the reference and query sequence (n + m)
-- Cost of storing the best index 8 \* (n + m)
-  - The index must be stored as unsigned longs
-  - \*2 is because the previous best score needs to be
-    stored
-  - This is for each query and reference base, but not the
-    entire matrix
-- Cost of storing every best score 8 \* (n + m)
-  - Scores are stored as longs
-  - This is for each query and reference base, but not the
-    entire matrix
-- Cost of converting matrix to an alignment 3 \* (n + m)
-- Total rough cost (n\*m)/4 + 19 \* (n + m)
-- Cost of keeping one more score per base 16 \* (n + m)
-  
-The memory cost for two 200,000 base pairs sequences would
-  be ([(200,000 \* 200,000) / 4] + 19 \* 200,000) bytes >
-  10 Gb, but < 11Gb.
-
-This shows that alnSeq has a very high memory cost.
-
-## The matrix scan
-
-Searches the matrix will I am still filling the matrix. It
-  prints out a cigar for any alignment path that is above 
-  the "-min-score " setting (default 1000, which is  at
-  least 200 matches) and if the path is no longer extended
-  on the next row. This results in the full alignment,
-  rather than best alignment being printed. So, you will
-  have to search the cigars for the best sections.
-
-The output file is named prefix--matrix-scan.aln. Each line
-  in the file is tab delimited and has the score,
-  ending query base, ending reference base, cigar (end of
-  alignment to start), start of query, start of reference
-  to a file named.
-  
-One problem is that it will also print out alignments that
-  extend the main alignment by one base, which means this
-  MAKES VERY LARGE FILES and takes a lot of time. Also, the
-  print function is not very well done.
-
-## The multi-base print
-
-This records a best score (above "-min-score") for each
-  reference base and query base. However, this will only
-  record a score if the alignment is not extended into the
-  next row. The alternative alignments are printed out with
-  the same file format as the matrix scan.
-
-Though this will not make as large files as the matrix
-  scan, it still can output files that are the size of the
-  query length * reference length. This can result in VERY
-  LARGE FILES for large alignments.
-
-This was an intresting idea, but for the few tests that I 
-  ran, I found that this mainly feature printed alignments
-  that were just one or two bases off the main alignment.
+AlnSeq also supports alternative alignments with
+  -query-ref-scan-water by storing the best score for each
+  reference base and each query base (Starting positions,
+  ending positions, score). The score, starting reference
+  position, starting query position, ending reference
+  position and ending query position are then printed
+  out (currently in the same file before the alignment).
+  There is no filter, so this will print out everything
+  that is at or above -min-score. This includes duplicate
+  scores.
 
 ## Some light benchmarking
 
-I compared alnSeq to the Needleman algorithm in
-  bio-alignment (bio_or_ssw), the Needleman and Waterman
-  in emboss, and the waterman from the
-  Complete-Striped-Smith-Waterman-Library (bio_or_ssw).
-  I also included an Hirschberg alignment in bio-alignment
-  (bio-align-hb) in my tests.
+I picked out three programs to compare alnSeq to. The first
+  is emboss, which is a more commonly used toolkit. The
+  second is bio-alignment (bio or ssw), which had a
+  Hirschberg. The last was the
+  Complete-Striped-Smith-Waterman-Library (bio or ssw),
+  which supports a vectorized, memory efficient, striped
+  Smith Wateman alignment. This is not an exhaustive list,
+  nor does it include the best programs. It is just a
+  simple and quick list.
 
 I split the facets into if it was a global alignment
   (Needleman/Hirschberg) or a local alignment (Waterman).
@@ -275,7 +217,7 @@ I split the facets into if it was a global alignment
   Needleman Wunsch, and Hirschberg (hb) aligners from
   bio-alignment (bio-align), emobss, and
   Complete-Striped-Smith-Waterman-Library.
-](analysis/alnSeq-memory.svg)
+](analysis/20230811-alnSeq-memory.svg)
 
 As expected the memory usage was much lower for the
   Hirschberg aligners and striped Smith Waterman
@@ -333,7 +275,7 @@ Despite this ssw still uses less memory than alnSeq's
   The Waterman Smith Bio-alignment (bio-align) tests were
     discarded due to Bio-alignments Waterman Smith
     algorithm printing out the scoring matrix.
-](analysis/alnSeq-time.svg)
+](analysis/20230811-alnSeq-time.svg)
 
 For time usage we found that emboss or alnSeqs two bit
   Hirschberg were often the slowest algorithms, while
@@ -352,7 +294,9 @@ We also saw that the two bit arrays used in alnSeq's
 So, it is possible that alnSeq's Needleman and Waterman
   would be comparable to bio-alignments Needleman once the
   two bit arrays are replaced with character arrays
-  (bytes).
+  (bytes) (I have done some light testing and it looks like
+  this might be case. I need to re-benchmark with make
+  fast).
 However, it will likely still be slower.
 
 One note I should add. I choose emboss because it was an
@@ -364,26 +308,6 @@ One note I should add. I choose emboss because it was an
 AlnSeq does not use decimals, so if you want decimals for
   the gap extension penalty, so you will have to multiply
   all scores by 10 to 1000.
-
-My current vision for this code is more to be an example or
-  demonstration of an idea, rather then to have all
-  features added in. This means that I will be done with
-  alnSeq when I am done debugging and that I do not plan to
-  take alnSeq any farther right now. This means some of the
-  additions I mentioned, multi-threading, or even gpu
-  support is up to you.
-
-For multi-threading my thought was to do rows and have each
-  thread launch a thread after it finishes the first cell
-  in the row. I then planned to keep an additional row to
-  have each thread mark their row number for each score
-  they complete. The idea is that a thread only advances to
-  the next cell in the matrix when the required previous
-  scores have been found and marked from the previous row.
-  To conserve memory I would have the threads overwrite the
-  previous scores in the scoring matrix for each cell they
-  complete. You would need a lock when recording the best
-  score(s).
 
 # Thanks
 

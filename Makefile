@@ -11,8 +11,13 @@ COREFLAGS=\
   -O3
 
 # These are here for the user to overwrite
-CFLAGS="-DBLANK"
-DEBUGFLAGS="-DNOSEQCNVT"
+#CFLAGS=-DBLANK
+CFLAGS=-DBLANK
+
+DEBUGFLAGS=\
+   -DNOSEQCNVT\
+   -DBYTEMATRIX
+   #-DNOGAPOPEN
 # Current options: -DNOSEQCNVT, -DHIRSCHTWOBIT
 
 SOURCE=\
@@ -40,11 +45,18 @@ debug:
 	# edit debugCMDs.txt to change the gdb commands
 
 egcc:
+	#egcc $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
 	egcc $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
 gcc:
 	gcc  $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
 cc:
 	cc   $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
+
+# These settings are here for quick compiling
+fast:
+	$(CC) $(COREFLAGS) -DNOGAPOPEN -DBYTEMATRIX -DINSSNPDEL $(CFLAGS) $(SOURCE) -o alnSeqFast
+mid:
+	$(CC) $(COREFLAGS) -DBYTEMATRIX -DINSSNPDEL $(CFLAGS) $(SOURCE) -o alnSeqMid
 
 benchmark:
 	$(CC) $(COREFLAGS) $(SOURCE) -o alnSeqHirschByte

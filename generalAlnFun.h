@@ -24,7 +24,10 @@
 '     base pairs being compared in an alignment. This
 '     function is set up for charters
 '   - Function is inlined and is last function in header
-'  o fun-03 checkIfBasesMatch:
+'  o fun-03 alnMaxScore:
+'    - Picks the best score for the current base pairs
+'      being compared in an alignment.
+'  o fun-04 checkIfBasesMatch:
 '    - Are two bases are same? (includes anonymous bases)
 '  o macro-01 indelScore:
 '    - Calculates the score for an indel
@@ -61,7 +64,7 @@
 #ifndef GENERALLALNFUN_H
 #define GENERALLALNFUN_H
 
-#include "alnSetStruct.h" // Default settings
+#include "alnSetStruct.h"
 
 /*--------------------------------------------------------\
 | Output:
@@ -73,7 +76,7 @@ char checkIfBasesMatch(
     char *queryBaseC,// Query base to compare to reference
     char *refBaseC   // Reference base to compare to query
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: Sec-1 Sub-1: checkIfBasesMatch
+   ' Fun-04 TOC: Sec-1 Sub-1: checkIfBasesMatch
    '  - Are two bases are same? (includes anonymous bases)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -94,31 +97,31 @@ char checkIfBasesMatch(
 |  - Modifies:
 |    o retScore to hold the score for an indel
 \--------------------------------------------------------*/
-#define indelScore(retScore, dirC, oldScore, settings){ \
-   unsigned long dirUL = 0 - ((dirC) == defMvSnp); \
+#define indelScore(retScore, dirC, oldScore, settings){\
+   (retScore) = 0 - ((dirC) == defMvSnp); \
    (retScore) = \
         (oldScore) \
-      + ((settings)->gapOpenI & (dirUL)) \
-      + ((settings)->gapExtendI & (~(dirUL))); \
-       /* Branchless, apply a gap opening and extension
-       `   penalty. This is faster then my old switch
-       `   statment method.
-       ` tmpDirUL = 0 - (direction != diagnol)
-       `   direction != diagnol
-       `     Becomes 1 if the move results in a gap
-       `   0 - direction != diagnol
-       `     Becomes 0 - 1 if have a gap. This results in
-       `       all bits being set to 1.
-       `     Becomes 0 - 0 if have no gaps. This is 0.
-       ` score + (gapOpen & (!dir)) + (gapExtend & dir)
-       `   gapOpen & (~dir)
-       `     ~dir gives zero if all bits are set to one
-       `       (gap), but all bits set to one if 0.
-       `     If ~dir is zero, gapOpen = 0, else applies the
-       `       gap opening penalty.
-       `   gapExtend & (dir)
-       `     Becomes zero when there are no gaps (dir = 0).
-       */ \
+      + ((settings)->gapOpenI & (retScore)) \
+      + ((settings)->gapExtendI & (~(retScore))); \
+    /* Branchless, apply a gap opening and extension
+    `   penalty. This is faster then my old switch
+    `   statment method.
+    ` tmpDirUL = 0 - (direction != diagnol)
+    `   direction != diagnol
+    `     Becomes 1 if the move results in a gap
+    `   0 - direction != diagnol
+    `     Becomes 0 - 1 if have a gap. This results in
+    `       all bits being set to 1.
+    `     Becomes 0 - 0 if have no gaps. This is 0.
+    ` score + (gapOpen & (!dir)) + (gapExtend & dir)
+    `   gapOpen & (~dir)
+    `     ~dir gives zero if all bits are set to one
+    `       (gap), but all bits set to one if 0.
+    `     If ~dir is zero, gapOpen = 0, else applies the
+    `       gap opening penalty.
+    `   gapExtend & (dir)
+    `     Becomes zero when there are no gaps (dir = 0).
+    */ \
 }
 
 /*--------------------------------------------------------\
@@ -378,30 +381,57 @@ static inline void twoBitMaxScore(
 
    uint8_t dirUC = 0;
 
-   switch(alnSetST->bestDirC)
-   { /*Switch; get an snp/match priority*/
-      case defSnpInsDel:
-         snpInsDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
-         break;
-      case defSnpDelIns:
-         snpDelIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
-         break;
-      case defInsSnpDel: 
-         insSnpDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
-         break;
-      case defInsDelSnp:
-         insDelSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
-         break;
-      case defDelSnpIns:
-         delSnpIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
-         break;
-      case defDelInsSnp:
-         delInsSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
-         break;
-   } /*Switch; get an snp/match priority*/
+   #if defined SNPINSDEL
+      snpInsDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+      changeTwoBitElm(dirOnST, dirUC);
+      return;
+   #elif defined SNPDELINS
+      snpDelIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+      changeTwoBitElm(dirOnST, dirUC);
+      return;
+   #elif defined INSSNPDEL 
+      insSnpDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+      changeTwoBitElm(dirOnST, dirUC);
+      return;
+   #elif defined INSDELSNP
+      insDelSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+      changeTwoBitElm(dirOnST, dirUC);
+      return;
+   #elif defined DELSNPINS
+      delSnpIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+      changeTwoBitElm(dirOnST, dirUC);
+      return;
+   #elif defined DELINSSNP
+      delInsSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+      changeTwoBitElm(dirOnST, dirUC);
+      return;
 
-   changeTwoBitElm(dirOnST, dirUC);
-   return;
+   #else
+    switch(alnSetST->bestDirC)
+    { /*Switch; get an snp/match priority*/
+       case defSnpInsDel:
+          snpInsDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+       case defSnpDelIns:
+          snpDelIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+       case defInsSnpDel: 
+          insSnpDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+       case defInsDelSnp:
+          insDelSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+       case defDelSnpIns:
+          delSnpIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+       case defDelInsSnp:
+          delInsSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+    } /*Switch; get an snp/match priority*/
+
+    changeTwoBitElm(dirOnST, dirUC);
+    return;
+  #endif
 } /*twoBitMaxScore*/
 
 /*--------------------------------------------------------\
@@ -423,32 +453,125 @@ static inline void charMaxScore(
    '    function is set up for charters
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+   #if defined SNPINSDEL
+     snpInsDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
+     return;
+   #elif defined SNPDELINS
+     snpDelIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
+     return;
+   #elif defined INSSNPDEL 
+     insSnpDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
+     return;
+   #elif defined INSDELSNP
+     insDelSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
+     return;
+   #elif defined DELSNPINS
+     delSnpIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
+     return;
+   #elif defined DELINSSNP
+     delInsSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
+     return;
+
+   #else
    switch(alnSetST->bestDirC)
    { /*Switch; get an snp/match priority*/
       case defSnpInsDel:
         snpInsDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        break;
+        return;
       case defSnpDelIns:
         snpDelIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        break;
+        return;
       case defInsSnpDel: 
         insSnpDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        break;
+        return;
       case defInsDelSnp:
         insDelSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        break;
+        return;
       case defDelSnpIns:
         delSnpIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        break;
+        return;
       case defDelInsSnp:
         delInsSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        break;
+        return;
    } /*Switch; get an snp/match priority*/
 
    return;
+   #endif
 } /*charMaxScore*/
 
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies
+|    o scoreOnL and dirOnC to hold best score & direction
+\--------------------------------------------------------*/
+static inline void alnMaxScore(
+    struct alnSet *alnSetST,   /*for score selection*/
+    long *insScL,              /*Insertion Score*/
+    long *snpScL,              /*SNP/match score*/
+    long *delScL,              /*Deletion score*/
+    long *retScL               /*Holds best score*/
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-03 TOC: alnMaxScore
+   '  - Picks the best score for the current base pairs
+   '    being compared in an alignment.
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+   #if defined SNPINSDEL
+      max(*retScL, *snpScL, *insScL);
+      max(*retScL, *retScL, *delScL);
+      return;
+   #elif defined SNPDELINS
+      max(*retScL, *snpScL, *delScL);
+      max(*retScL, *retScL, *insScL);
+      return;
+   #elif defined INSSNPDEL
+      max(*retScL, *insScL, *snpScL);
+      max(*retScL, *retScL, *delScL);
+      return;
+   #elif defined INSDELSNP
+      max(*retScL, *insScL, *delScL);
+      max(*retScL, *retScL, *snpScL);
+      return;
+   #elif defined DELSNPINS
+      max(*retScL, *delScL, *snpScL);
+      max(*retScL, *retScL, *insScL);
+      return;
+   #elif defined DELINSSNP
+      max(*retScL, *delScL, *insScL);
+      max(*retScL, *retScL, *snpScL);
+      return;
+   #else
+      switch(alnSetST->bestDirC)
+      { /*Switch; get an snp/match priority*/
+         case defSnpInsDel:
+           max(*retScL, *snpScL, *insScL);
+           max(*retScL, *retScL, *delScL);
+           return;
+         case defSnpDelIns:
+           max(*retScL, *snpScL, *delScL);
+           max(*retScL, *retScL, *insScL);
+           return;
+         case defInsSnpDel: 
+           max(*retScL, *insScL, *snpScL);
+           max(*retScL, *retScL, *delScL);
+           return;
+         case defInsDelSnp:
+           max(*retScL, *insScL, *delScL);
+           max(*retScL, *retScL, *snpScL);
+           return;
+         case defDelSnpIns:
+           max(*retScL, *delScL, *snpScL);
+           max(*retScL, *retScL, *insScL);
+           return;
+         case defDelInsSnp:
+           max(*retScL, *delScL, *insScL);
+           max(*retScL, *retScL, *snpScL);
+           return;
+      } /*Switch; get an snp/match priority*/
+
+      return;
+   #endif
+} /*alnMaxScore*/
 
 #endif
 

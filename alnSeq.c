@@ -77,6 +77,35 @@ void printHelpMesg(
    '    - Output block
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+/*--------------------------------------------------------\
+| Name: printCompilerSettings
+| Call: printCompilerSettings(file, 1/0)
+| Use:
+|   - Prints out the compiler flags used
+|   - Prints out what each possible compiler flag does
+| Input:
+|   - outFILE:
+|     o File to print flags and flag descriptions to
+|   - pDescBl:
+|     o 1: print out descriptions for each flag (all)
+|     o 0: Do not print out any flag descriptions
+| Output:
+|   - Prints flags and description to outFILE
+\--------------------------------------------------------*/
+void printCompileSettings(
+   FILE *outFILE, /*Output file*/
+   char pDescBl   /*not 0: print out flag descriptions*/
+); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-04 TOC:
+   '  - Print out compile flags used and what each compiler
+   '    flag does.
+   '  o fun-04 sec-01:
+   '    - Print out the compiled settings
+   '  o fun-04 sec-02:
+   '    - Print out what each compiler flag does
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
 int main(
     int lenArgsInt,
     char *argsCStr[]
@@ -133,7 +162,7 @@ int main(
    struct alnStruct *alnST = 0;
 
    FILE *faFILE = 0;
-   FILE *outFILE = 0;
+   FILE *outFILE = 0; /*Print alternative aligments to*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Main Sec-2:
@@ -195,7 +224,26 @@ int main(
             exit(0);
         } /*Else if the user wanted the version number*/
 
-        // If file with scoring matrix was invalid
+        else if(strcmp(inputCStr, "-flags") == 0)
+        { /*If user wanted to print the compiler flags*/
+           printCompileSettings(stdout, 1);
+           exit(0);
+        } /*If user wanted to print the compiler flags*/
+
+        /*Just the flags (no descriptions)*/
+        else if(strcmp(inputCStr, "-flags-only") == 0)
+        { /*If user wanted to print the compiler flags*/
+            fprintf(
+                stdout,
+                "alnSeq version: %u\n",
+                defVersion
+            ); /*user will likely want the version number*/
+
+           printCompileSettings(stdout, 0);
+           exit(0);
+        } /*If user wanted to print the compiler flags*/
+
+        /*If file with scoring matrix was invalid*/
         else if(strcmp(inputCStr, "-score-matrix") == 0)
             exit(1);
 
@@ -208,22 +256,22 @@ int main(
    } // If had problematic input
 
    if(outFileCStr != 0)
-   { // If printing output to a file
+   { /*If printing output to a file*/
         outFILE = fopen(outFileCStr, "w");
 
         if(outFILE == 0)
-        { // If an invalid output file
+        { /*If an invalid output file*/
             printf(
               "Output (-out %s) file is invalid.\n",
               outFileCStr
-            ); // Let user know about the invalid file
+            ); /*Let user know about the invalid file*/
 
             exit(-1);
-        } // If an invalid output file
+        } /*If an invalid output file*/
 
         fclose(outFILE);
         outFILE = 0;
-   } // If printing output to a file
+   } /*If printing output to a file*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Main Sec-3:
@@ -322,10 +370,14 @@ int main(
    ^  - Do the alingment
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   // Right know these are hardoced in, but at some piont
-   // it might be nice to allow the user the manipulate.
-   // I would need to set up the Waterman and Needleman
-   // alignments to handle this
+   /*Right know these are hardoced in, but at some piont
+   `  it might be nice to allow the user the manipulate.
+   `  I would need to set up the Waterman and Needleman
+   `  alignments to handle this
+   */
+
+   if(outFileCStr == 0) outFILE = stdout;
+   else outFILE = fopen(outFileCStr, "w");
 
    seqToLookupIndex(&refST);
    seqToLookupIndex(&queryST);
@@ -336,30 +388,34 @@ int main(
    refST.endAlnUL = refST.lenSeqUL - 1;
    refST.offsetUL = 0;
 
-   if(outFileCStr != 0) outFILE = fopen(outFileCStr, "w");
-
-   else
-   { // Else putting output to stdout
-     outFILE = stdout;
-     outFileCStr = "out";
-   } // Else putting output to stdout
-
    if(settings.useNeedleBl != 0)
      alnMtrxST = NeedlemanAln(&queryST, &refST, &settings);
 
    else if(settings.useWaterBl != 0)
-     alnMtrxST =
-       WatermanAln(&queryST,&refST,&settings,outFileCStr);
+   { /*else if doing a waterman alignment*/
+     if(settings.refQueryScanBl)
+     { /*IF keeping some alternative alignments*/
+       alnMtrxST=WatermanAltAln(&queryST,&refST,&settings);
+
+       printAltWaterAlns(
+          alnMtrxST,
+          settings.minScoreL,
+          outFILE /*Prefix to name files*/
+       ); /*Print out alternative alignment positions*/
+     } /*IF keeping some alternative alignments*/
+
+     else alnMtrxST=WatermanAln(&queryST,&refST,&settings);
+   } /*else if doing a waterman alignment*/
 
    else if(settings.useHirschBl != 0)
    { /*Else if doing an Hirschberg alignment*/
      alnST = Hirschberg(&refST, &queryST, &settings);
      if(alnST == 0) goto alignmentFailed;
+     goto noDirMatrix;
 
      /* The Hirschberg returns an alignment structure,
      `  instead of an directional matrix.
      */
-     if(settings.useHirschBl != 0) goto noDirMatrix;
    } /*Else if doing an Hirschberg alignment*/
 
    if(alnMtrxST == 0)
@@ -382,25 +438,21 @@ int main(
    ^    alignment array
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   if(
-     settings.multiBaseWaterBl == 1 &&
-     settings.matrixScanBl == 0
-   ) printAltWaterAlns(
-        alnMtrxST,
-        &queryST,
-        &refST,
-        &settings,
-        outFileCStr /*Prefix to name files*/
-      );
-   
-   alnST =
-     dirMatrixToAlnST(
-       &refST,
-       &queryST,
-       alnMtrxST->dirMatrixST,
-       &alnMtrxST->bestScoreST
-   );
+   if(outFileCStr != 0) outFILE = fopen(outFileCStr, "w");
 
+   else
+   { /*Else putting output to stdout*/
+     outFILE = stdout;
+     outFileCStr = "out";
+   } /*Else putting output to stdout*/
+
+   alnST =
+      dirMatrixToAlnST(
+         &refST,
+         &queryST,
+         &alnMtrxST->bestScoreST,
+         alnMtrxST->dirMatrixST
+   );
    bestScoreL = alnMtrxST->bestScoreST.scoreL;
    freeAlnMatrixST(alnMtrxST); // No longer need
    alnMtrxST = 0;
@@ -474,13 +526,13 @@ int main(
 |  - Prints to stdout when the scoring file is invalid
 \--------------------------------------------------------*/
 char * checkInput(
-    int *lenArgsInt,        // Number arguments user input
-    char *argsCStr[],       // Array with user arguments
-    char **refFileCStr,     // file name of reference file
-    char **queryFileCStr,   // File name of the query file
-    char **outFileCStr,     // Name of the output file
-    char **scoreMtrxFileStr, /*Holds scoring matrix file*/
-    struct alnSet *settings // Aligment settings
+    int *lenArgsInt,        /*Number arguments user input*/
+    char *argsCStr[],       /*Array with user arguments*/
+    char **refFileCStr,     /*file name of reference file*/
+    char **queryFileCStr,   /*File name of the query file*/
+    char **outFileCStr,     /*Name of the output file*/
+    char **scoreMtrxFileStr,/*Holds scoring matrix file*/
+    struct alnSet *settings /*Aligment settings*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: checkInput
    '  - Checks & extracts user input
@@ -494,8 +546,9 @@ char * checkInput(
 
     char *tmpCStr = 0;
     char *singleArgCStr = 0;
+    char *dummyStr = 0;
     unsigned long scoreFileErrUL = 0;
-    FILE *scoreFILE = 0;  // For loading the scoring matrix
+    FILE *scoreFILE = 0; /*For loading the scoring matrix*/
 
     /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     # Fun-01 Sec-2: Look through user input
@@ -503,9 +556,9 @@ char * checkInput(
 
     for(int intArg = 1; intArg < *lenArgsInt; intArg += 2)
     { /*loop through all user input arguments*/
-        // The 0 index holds the program name
-        singleArgCStr = *(argsCStr +intArg + 1);// argument
-        tmpCStr = *(argsCStr + intArg);         // Paramter
+        /*The 0 index holds the program name*/
+        singleArgCStr = *(argsCStr +intArg + 1);/*arg*/
+        tmpCStr = *(argsCStr + intArg);        /*Paramter*/
 
         if(strcmp(tmpCStr, "-ref") == 0)
             *refFileCStr = singleArgCStr;
@@ -516,9 +569,11 @@ char * checkInput(
         else if(strcmp(tmpCStr, "-out") == 0)
             *outFileCStr = singleArgCStr;
 
-        else if(strcmp(tmpCStr, "-gapopen") == 0)
-            settings->gapOpenI =
-                strtol(singleArgCStr, &tmpCStr, 10);
+        #if !defined NOGAPOPEN
+           else if(strcmp(tmpCStr, "-gapopen") == 0)
+               settings->gapOpenI =
+                   strtol(singleArgCStr, &tmpCStr, 10);
+        #endif
 
         else if(strcmp(tmpCStr, "-gapextend") == 0)
           settings->gapExtendI =
@@ -530,6 +585,7 @@ char * checkInput(
            --intArg;
         } /*Else if printing only the aligned region*/
 
+        
         else if(strcmp(tmpCStr, "-print-unaligned") == 0)
         { /*Else if printing only the aligned region*/
            settings->pFullAlnBl = 1;
@@ -552,28 +608,28 @@ char * checkInput(
           cStrToUSht(singleArgCStr, &settings->lineWrapUS);
 
         else if(strcmp(tmpCStr, "-use-needle") == 0)
-        { // Else if disabling match priority
+        { /*Else if using a needleman alignment*/
             settings->useNeedleBl = 1;
             settings->useWaterBl = 0;
             settings->useHirschBl = 0;
             --intArg;
-        } // Else if disabling match priority
+        } /*Else if using a needleman alignment*/
 
         else if(strcmp(tmpCStr, "-use-water") == 0)
-        { // Else if doing a waterman smith alignment
+        { /*Else if doing a waterman smith alignment*/
             settings->useNeedleBl = 0;
             settings->useWaterBl = 1;
             settings->useHirschBl = 0;
             --intArg;
-        } // Else if doing a waterman smith alignment
+        } /*Else if doing a waterman smith alignment*/
 
         else if(strcmp(tmpCStr, "-use-hirschberg") == 0)
-        { // Else if doing a Hirshberg alignment
+        { /*Else if doing a Hirshberg alignment*/
             settings->useNeedleBl = 0;
             settings->useWaterBl = 0;
             settings->useHirschBl = 1;
             --intArg;
-        } // Else if doing a Hirshberg alignment
+        } /*Else if doing a Hirshberg alignment*/
 
         else if(strcmp(tmpCStr, "-format-expand-cig") == 0)
         { /*Else if using the expanded cigar format*/
@@ -602,94 +658,88 @@ char * checkInput(
         else if(
           strcmp(tmpCStr, "-query-ref-scan-water") == 0
         )
-        { // Else if doing more than the best alignment
-          settings->multiBaseWaterBl = 1;
+        { /*Else if doing more than the best alignment*/
           settings->refQueryScanBl = 1;
-          settings->matrixScanBl = 0;
 
           settings->useNeedleBl = 0;
           settings->useWaterBl = 1;
           settings->useHirschBl = 0;
 
           --intArg;
-        } // Else if doing more than the best alignment
-
-        else if(strcmp(tmpCStr, "-matrix-scan-water") == 0)
-        { // Else if doing a matrix scan
-          settings->multiBaseWaterBl = 1;
-          settings->refQueryScanBl = 0;
-          settings->matrixScanBl = 1;
-
-          settings->useNeedleBl = 0;
-          settings->useWaterBl = 1;
-          settings->useHirschBl = 0;
-
-          --intArg;
-        } // Else if doing a matrix scan
+        } /*Else if doing more than the best alignment*/
 
         else if(strcmp(tmpCStr, "-min-score") == 0)
-          cStrToUInt(singleArgCStr, &settings->minScoreUI);
+          settings->minScoreL =
+             strtol(singleArgCStr, &dummyStr, 10);
 
-        // Not used
-        //else if(strcmp(tmpCStr, "-min-bases") == 0)
-        //  cStrToUInt(singleArgCStr, &settings->minBasesUI);
+        /*Only do these checks when the user has not
+        ` called a direction flag during compile time
+        */
+        #if defined SNPINSDEL
+        #elif defined SNPDELINS
+        #elif defined INSSNPDEL 
+        #elif defined INSDELSNP
+        #elif defined DELSNPINS
+        #elif defined DELINSSNP
+        #else
+           else if(strcmp(tmpCStr, "-match-ins-del") == 0)
+           { /*Else if matches->insertions->deletions*/
+               settings->bestDirC = defSnpInsDel;
+               --intArg;
+           } /*Else if matches->insertions->deletions*/
 
-        else if(strcmp(tmpCStr, "-match-ins-del") == 0)
-        { // Else if wants matches->insertions->deletions
-            settings->bestDirC = defSnpInsDel;
-            --intArg;
-        } // Else if wants matches->insertions->deletions
+           else if(strcmp(tmpCStr, "-match-del-ins") == 0)
+           { /*Else if matches->deletions->insertions*/
+               settings->bestDirC = defSnpDelIns;
+               --intArg;
+           } /* Else if matches->deletions->insertions*/
 
-        else if(strcmp(tmpCStr, "-match-del-ins") == 0)
-        { // Else if wants matches->deletions->insertions
-            settings->bestDirC = defSnpDelIns;
-            --intArg;
-        } // Else if wants matches->deletions->insertions
+           else if(strcmp(tmpCStr, "-ins-match-del") == 0)
+           { /*Else if insertions->matches->deletions*/
+               settings->bestDirC = defInsSnpDel;
+               --intArg;
+           } /*Else if insertions->matches->deletions*/
 
-        else if(strcmp(tmpCStr, "-ins-match-del") == 0)
-        { // Else if wants insertions->matches->deletions
-            settings->bestDirC = defInsSnpDel;
-            --intArg;
-        } // Else if wants insertions->matches->deletions
+           else if(strcmp(tmpCStr, "-del-match-ins") == 0)
+           { /*Else if deletions->matches->insertions*/
+               settings->bestDirC = defDelSnpIns;
+               --intArg;
+           } /*Else if deletions->matches->insertions*/
 
-        else if(strcmp(tmpCStr, "-del-match-ins") == 0)
-        { // Else if wants deletions->matches->insertions
-            settings->bestDirC = defDelSnpIns;
-            --intArg;
-        } // Else if wants deletions->matches->insertions
+           else if(strcmp(tmpCStr, "-ins-del-match") == 0)
+           { /*Else if insertions->deletions->matches*/
+               settings->bestDirC = defInsDelSnp;
+               --intArg;
+           } /*Else if insertions->deletions->matches*/
 
-        else if(strcmp(tmpCStr, "-ins-del-match") == 0)
-        { // Else if wants insertions->deletions->matches
-            settings->bestDirC = defInsDelSnp;
-            --intArg;
-        } // Else if wants insertions->deletions->matches
+           else if(strcmp(tmpCStr, "-del-ins-match") == 0)
+           { /*Else if deletions->insertions->matches*/
+               settings->bestDirC = defDelInsSnp;
+               --intArg;
+           } /*Else if deletions->insertions->matches*/
 
-        else if(strcmp(tmpCStr, "-del-ins-match") == 0)
-        { // Else if wants deletions->insertions->matches
-            settings->bestDirC = defDelInsSnp;
-            --intArg;
-        } // Else if wants deletions->insertions->matches
+        #endif
 
         else if(strcmp(tmpCStr, "-score-matrix") == 0)
-        { // else if the user supplied a scoring matrix
+        { /*else if the user supplied a scoring matrix*/
             *scoreMtrxFileStr = singleArgCStr;
             scoreFILE = fopen(singleArgCStr, "r");
 
             if(scoreFILE == 0)
-            { // If I could not open the scoring file
-                return tmpCStr; // So user knows invalid
+            { /*If I could not open the scoring file*/
+                return tmpCStr; /*So user knows invalid*/
 
                 fprintf(stderr,
                   "-score-matrix %s is not an file\n",
                   singleArgCStr
                 ); /*Print out the problem*/
-            } // If I could not open the scoring file
+            } /*If I could not open the scoring file*/
 
             scoreFileErrUL =
               readInScoreFile(settings, scoreFILE);
 
             if(scoreFileErrUL != 0)
-            { // If the scoring file had an error
+            { /*If the scoring file had an errors*/
               fprintf(
                 stderr,
                 "Invalid line (%lu) in -score-matrix %s\n",
@@ -697,11 +747,11 @@ char * checkInput(
                 singleArgCStr
               ); /*Print out the problem*/
 
-                return tmpCStr;    // invalid file
-            } // If the scoring file had an error
-        } // else if the user supplied a scoring matrix
+                return tmpCStr;    /*invalid file*/
+            } /*If the scoring file had an error*/
+        } /*else if the user supplied a scoring matrix*/
             
-        else return tmpCStr; // Invalid parameter
+        else return tmpCStr; /*Invalid parameter*/
     } /*loop through all user input arguments*/
 
     return 0; /*input is valid*/
@@ -819,17 +869,22 @@ void printHelpMesg(
    *  - Alignment paramaters block
    \******************************************************/
 
-   fprintf(outFILE, "  -gapopen: [%i]\n", defGapOpen);
-   fprintf(
-      outFILE,
-      "    o Cost of starting an indel (as integer). A "
-   );
-  fprintf(outFILE,"negative\n      value is a penalty.\n");
+   #if !defined NOGAPOPEN
+      fprintf(outFILE, "  -gapopen: [%i]\n", defGapOpen);
+      fprintf(
+         outFILE,
+         "    o Cost of starting an indel (as integer). A "
+      );
+      fprintf(
+         outFILE,
+         "negative\n      value is a penalty.\n"
+      );
+   #endif
 
-   fprintf(outFILE, "  -gapextend: [%i]\n", defGapExtend);
+   fprintf(outFILE,"  -gapextend: [%i]\n",defGapExtend);
    fprintf(
-      outFILE,
-      "    o Cost of extending an indel one base (< 0 is"
+     outFILE,
+     "    o Cost of extending an indel one base (< 0 is"
    );
    fprintf(outFILE, " penalty).\n");
 
@@ -1045,19 +1100,6 @@ void printHelpMesg(
    );
    fprintf(outFILE, " reference and\n      query base.\n");
 
-   if(defMatrixScan)
-      fprintf(outFILE, "  -matrix-scan-water: [Yes]\n");
-   else fprintf(outFILE, "  -matrix-scan-water: [No]\n");
-
-   fprintf(outFILE, "    o Waterman alignment only.\n");
-   fprintf(
-      outFILE,
-      "    o Print out every full aligment above a min"
-   );
-   fprintf(
-      outFILE,
-      " score\n      in a dirction matrix.\n");
-
    fprintf(outFILE, "  -min-score: [%i]\n", defMinScore);
    fprintf(outFILE, "    o Waterman alignment only.\n");
    fprintf(
@@ -1070,72 +1112,80 @@ void printHelpMesg(
    * Fun-03 Sec-02 Sub-07:
    *  - Selecting alignment direction block
    \******************************************************/
+   #if defined SNPINSDEL
+   #elif defined SNPDELINS
+   #elif defined INSSNPDEL 
+   #elif defined INSDELSNP
+   #elif defined DELSNPINS
+   #elif defined DELINSSNP
+   #else
 
-   if(defBestDir == defSnpInsDel)
-      fprintf(outFILE, "  -match-ins-del: [Yes]\n");
-   else  fprintf(outFILE, "  -match-ins-del: [No]\n");
+      if(defBestDir == defSnpInsDel)
+         fprintf(outFILE, "  -match-ins-del: [Yes]\n");
+      else  fprintf(outFILE, "  -match-ins-del: [No]\n");
 
-   fprintf(
-      outFILE,
-      "    o For equal scores choose matches/SNPs over "
-   );
-   fprintf(outFILE, "insertions\n      and");
-   fprintf(outFILE, " insertions over deletions.\n");
+      fprintf(
+         outFILE,
+         "    o For equal scores choose matches/SNPs over "
+      );
+      fprintf(outFILE, "insertions\n      and");
+      fprintf(outFILE, " insertions over deletions.\n");
 
-   if(defBestDir == defSnpDelIns)
-      fprintf(outFILE, "  -match-del-ins: [Yes]\n");
-   else  fprintf(outFILE, "  -match-del-ins: [No]\n");
+      if(defBestDir == defSnpDelIns)
+         fprintf(outFILE, "  -match-del-ins: [Yes]\n");
+      else  fprintf(outFILE, "  -match-del-ins: [No]\n");
 
-   fprintf(
-      outFILE,
-      "    o For equal scores choose matches/SNPs over "
-   );
-   fprintf(outFILE, "deletions\n      and");
-   fprintf(outFILE, " deletions over insertions.\n");
+      fprintf(
+         outFILE,
+         "    o For equal scores choose matches/SNPs over "
+      );
+      fprintf(outFILE, "deletions\n      and");
+      fprintf(outFILE, " deletions over insertions.\n");
 
-   if(defBestDir == defInsSnpDel)
-      fprintf(outFILE, "  -ins-match-del: [Yes]\n");
-   else  fprintf(outFILE, "  -ins-match-del: [No]\n");
+      if(defBestDir == defInsSnpDel)
+         fprintf(outFILE, "  -ins-match-del: [Yes]\n");
+      else  fprintf(outFILE, "  -ins-match-del: [No]\n");
 
-   fprintf(
-      outFILE,
-      "    o For equal scores choose insertions over "
-   );
-   fprintf(outFILE, "matches/SNPs\n      and");
-   fprintf(outFILE, " matches/SNPs over deletions.\n");
+      fprintf(
+         outFILE,
+         "    o For equal scores choose insertions over "
+      );
+      fprintf(outFILE, "matches/SNPs\n      and");
+      fprintf(outFILE, " matches/SNPs over deletions.\n");
 
-   if(defBestDir == defInsDelSnp)
-      fprintf(outFILE, "  -ins-del-match: [Yes]\n");
-   else  fprintf(outFILE, "  -ins-del-match: [No]\n");
+      if(defBestDir == defInsDelSnp)
+         fprintf(outFILE, "  -ins-del-match: [Yes]\n");
+      else  fprintf(outFILE, "  -ins-del-match: [No]\n");
 
-   fprintf(
-      outFILE,
-      "    o For equal scores choose insertions over "
-   );
-   fprintf(outFILE, "deletions\n      and");
-   fprintf(outFILE, " deletions over matches/SNPs.\n");
+      fprintf(
+         outFILE,
+         "    o For equal scores choose insertions over "
+      );
+      fprintf(outFILE, "deletions\n      and");
+      fprintf(outFILE, " deletions over matches/SNPs.\n");
 
-   if(defBestDir == defDelSnpIns)
-      fprintf(outFILE, "  -del-match-ins: [Yes]\n");
-   else  fprintf(outFILE, "  -del-match-ins: [No]\n");
+      if(defBestDir == defDelSnpIns)
+         fprintf(outFILE, "  -del-match-ins: [Yes]\n");
+      else  fprintf(outFILE, "  -del-match-ins: [No]\n");
 
-   fprintf(
-      outFILE,
-      "    o For equal scores choose deletions over "
-   );
-   fprintf(outFILE, "matches/SNPs\n      and");
-   fprintf(outFILE, " matches/SNPs over insertions.\n");
+      fprintf(
+         outFILE,
+         "    o For equal scores choose deletions over "
+      );
+      fprintf(outFILE, "matches/SNPs\n      and");
+      fprintf(outFILE, " matches/SNPs over insertions.\n");
 
-   if(defBestDir == defDelInsSnp)
-      fprintf(outFILE, "  -del-ins-match: [Yes]\n");
-   else  fprintf(outFILE, "  -del-ins-match: [No]\n");
+      if(defBestDir == defDelInsSnp)
+         fprintf(outFILE, "  -del-ins-match: [Yes]\n");
+      else  fprintf(outFILE, "  -del-ins-match: [No]\n");
 
-   fprintf(
-      outFILE,
-      "    o For equal scores choose deletions over "
-   );
-   fprintf(outFILE, "insertions\n      and");
-   fprintf(outFILE, " insertions over matches/SNPs.\n");
+      fprintf(
+         outFILE,
+         "    o For equal scores choose deletions over "
+      );
+      fprintf(outFILE, "insertions\n      and");
+      fprintf(outFILE, " insertions over matches/SNPs.\n");
+   #endif
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-03 Sec-03:
@@ -1147,8 +1197,33 @@ void printHelpMesg(
    if(breifBl)
      fprintf(
        outFILE,
-       "  -h-all:\n      o Print the entire help message\n"
+       "  -h-all:\n    o Print the entire help message\n"
       );
+
+   fprintf(
+      outFILE,
+      "  -v:\n    o Print alnSeq version.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "  -flags:\n"
+   );
+
+   fprintf(
+      outFILE,
+      "    o Prints complier flags with descriptions\n"
+   );
+
+   fprintf(
+      outFILE,
+      "  -flags-only:\n"
+   );
+
+   fprintf(
+      outFILE,
+      "    o Prints the flags used and version number\n"
+   );
 
    /*Output block*/
    fprintf(outFILE, "Output:\n");
@@ -1160,3 +1235,338 @@ void printHelpMesg(
 
    return;
 } /*printHelpMesg*/
+
+/*--------------------------------------------------------\
+| Name: printCompilerSettings
+| Call: printCompilerSettings(file, 1/0)
+| Use:
+|   - Prints out the compiler flags used
+|   - Prints out what each possible compiler flag does
+| Input:
+|   - outFILE:
+|     o File to print flags and flag descriptions to
+|   - pDescBl:
+|     o 1: print out descriptions for each flag (all)
+|     o 0: Do not print out any flag descriptions
+| Output:
+|   - Prints flags and description to outFILE
+\--------------------------------------------------------*/
+void printCompileSettings(
+   FILE *outFILE, /*Output file*/
+   char pDescBl   /*not 0: print out flag descriptions*/
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-04 TOC:
+   '  - Print out compile flags used and what each compiler
+   '    flag does.
+   '  o fun-04 sec-01:
+   '    - Print out the compiled settings
+   '  o fun-04 sec-02:
+   '    - Print out what each compiler flag does
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-04 Sec-01:
+   ^  - Print out the compiled settings
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   fprintf(outFILE, "Compiler flags:\n");
+
+   #if defined BYTEMATRIX
+      fprintf(outFILE, "   -DBYTEMATRIX\n");
+   #endif
+
+   #if defined HIRSCHTWOBIT
+      fprintf(outFILE, "   -DHIRSCHTWOBIT\n");
+   #endif
+
+   #if defined NOGAPOPEN
+      fprintf(outFILE, "   -DNOGAPOPEN\n");
+   #endif
+
+   #if defined SNPINSDEL
+      fprintf(outFILE, "   -DSNPINSDEL\n");
+   #elif defined SNPDELINS
+      fprintf(outFILE, "   -DSNPDELINS\n");
+   #elif defined INSSNPDEL 
+      fprintf(outFILE, "   -DINSSNPDEL\n");
+   #elif defined INSDELSNP
+      fprintf(outFILE, "   -DINSDELSNP\n");
+   #elif defined DELSNPINS
+      fprintf(outFILE, "   -DDELSNPINS\n");
+   #elif defined DELINSSNP
+      fprintf(outFILE, "   -DDELINSSNP\n");
+   #endif
+
+   if(!pDescBl) return;
+
+   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+   ^ Fun-04 Sec-02:
+   ^  - Print out what each compiler flag does
+   ^  o fun-04 sec-02 sub-01:
+   ^    - Print out the header
+   ^  o fun-04 sec-02 sub-02:
+   ^    - Print out what the -DBYTEMATRIX flag does
+   ^  o fun-04 sec-02 sub-03:
+   ^    - Print out what the -DHIRSCHTWOBIT flag does
+   ^  o fun-04 sec-02 sub-04:
+   ^    - Print out what the -DNOGAPOPEN flag does
+   ^  o fun-04 sec-02 sub-05:
+   ^    - Print out what the -DSNPINSDEL flag does
+   ^  o fun-04 sec-02 sub-06:
+   ^    - Print out what the -DSNPDELINS flag does
+   ^  o fun-04 sec-02 sub-07:
+   ^    - Print out what the -DINSSNPDEL flag does
+   ^  o fun-04 sec-02 sub-08:
+   ^    - Print out what the -DINSDELSNP flag does
+   ^  o fun-04 sec-02 sub-09:
+   ^    - Print out what the -DDELSNPINS flag does
+   ^  o fun-04 sec-02 sub-10:
+   ^    - Print out what the -DDELINSSNP flag does
+   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-01:
+   *  - Print out the header
+   \******************************************************/
+
+   fprintf(outFILE, "What each flag does:\n");
+
+   fprintf(
+      outFILE,
+      "   - These flags are used to make alternative"
+   );
+   fprintf(outFILE, " versions\n     of alnSeq.\n");
+
+   fprintf(
+      outFILE,
+      "   - Make alternate alnSeq:"
+   );
+   fprintf(
+      outFILE,
+      " make CFLAGS=\"flag1 flag2 ...\"\n"
+   );
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-02:
+   *  - Print out what the -DBYTEMATRIX flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DBYTEMATRIX:\n");
+   fprintf(
+      outFILE,
+      "     - Makes the Needleman and Water man alingments"
+   );
+
+   fprintf(outFILE, " use a\n");
+   fprintf(
+      outFILE,
+      "       byte directional matrix instead of a two bit"
+   );
+   fprintf(outFILE, " matrix.\n");
+
+    fprintf(
+       outFILE,
+       "     - This gives a faster Needleman and"
+    );
+    fprintf(
+       outFILE,
+       " Waterman\n       alignment, but also increases "
+    );
+    fprintf( outFILE, " memory usage by 4x.\n");
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-03:
+   *  - Print out what the -DHIRSCHTWOBIT flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DHIRSCHTWOBIT:\n");
+   fprintf(
+      outFILE,
+      "     - This makes the Hirschberg alignment use two"
+   );
+
+   fprintf(outFILE, " bit\n");
+   fprintf(
+      outFILE,
+      "       arrays instead of byte arrays.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - This gives a small reduction in memory, but"
+   );
+   fprintf(
+      outFILE,
+      " also\n       makes alignments take 2x more time.\n"
+   );
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-04:
+   *  - Print out what the -DNOGAPOPEN flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DNOGAPOPEN:\n");
+   fprintf(
+      outFILE,
+      "     - Removes the gap opening penalty.\n"
+   );
+   fprintf(
+      outFILE,
+      "     - This decreases the alignment time, but may"
+   );
+   fprintf(
+      outFILE,
+      " also\n       decrease the alignment quality.\n"
+   );
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-05:
+   *  - Print out what the -DSNPINSDEL flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DSNPINSDEL:\n");
+   fprintf(
+      outFILE,
+      "     - Disables the users ability to choose a "
+   );
+   fprintf(
+      outFILE,
+      "direction\n       when scores are equal. This makes"
+   );
+   fprintf(
+      outFILE,
+      " alignments\n       slightly faster.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - Selects: SNPs/Matches, then insertions, then"
+   );
+   fprintf(outFILE, "\n       deletions.\n");
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-06:
+   *  - Print out what the -DNSNPDELINS flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DSNPDELINS:\n");
+   fprintf(
+      outFILE,
+      "     - Disables the users ability to choose a "
+   );
+   fprintf(
+      outFILE,
+      "direction\n       when scores are equal. This makes"
+   );
+   fprintf(
+      outFILE,
+      " alignments\n       slightly faster.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - Selects: SNPs/Matches, then deletinos, then"
+   );
+   fprintf(outFILE, "\n       insertions.\n");
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-07:
+   *  - Print out what the -DINSSNPDEL flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DINSSNPDEL:\n");
+   fprintf(
+      outFILE,
+      "     - Disables the users ability to choose a "
+   );
+   fprintf(
+      outFILE,
+      "direction\n       when scores are equal. This makes"
+   );
+   fprintf(
+      outFILE,
+      " alignments\n       slightly faster.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - Selects: insertions, then SNPs/Matches, then"
+   );
+   fprintf(outFILE, "\n       deletions.\n");
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-08:
+   *  - Print out what the -DINSDELSNP flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DINSDELSNP:\n");
+   fprintf(
+      outFILE,
+      "     - Disables the users ability to choose a "
+   );
+   fprintf(
+      outFILE,
+      "direction\n       when scores are equal. This makes"
+   );
+   fprintf(
+      outFILE,
+      " alignments\n       slightly faster.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - Selects: insertions, then deletions, then"
+   );
+   fprintf(outFILE, "\n       SNPs/Matches.\n");
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-09:
+   *  - Print out what the -DDELSNPINS flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DDELSNPINS:\n");
+   fprintf(
+      outFILE,
+      "     - Disables the users ability to choose a "
+   );
+   fprintf(
+      outFILE,
+      "direction\n       when scores are equal. This makes"
+   );
+   fprintf(
+      outFILE,
+      " alignments\n       slightly faster.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - Selects: deletions, then SNPs/Matches, then"
+   );
+   fprintf(outFILE, "\n       deletions.\n");
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-10:
+   *  - Print out what the -DDELINSSNP flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DDELINSSNP:\n");
+   fprintf(
+      outFILE,
+      "     - Disables the users ability to choose a "
+   );
+   fprintf(
+      outFILE,
+      "direction\n       when scores are equal. This makes"
+   );
+   fprintf(
+      outFILE,
+      " alignments\n       slightly faster.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - Selects: deletions, then insertions, then"
+   );
+   fprintf(outFILE, "\n       SNPs/Matches.\n");
+
+   return;
+} /*printCompileSettings*/

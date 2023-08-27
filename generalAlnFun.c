@@ -20,12 +20,16 @@
 '   - Picks the best score and direction for the current
 '     base pairs being compared in an alignment. This
 '     function is set up for two bit arrays.
-'   - Function is inlied and 2nd to last function in header
+'   - Function is inlied (in generalAlnFun.h)
 ' o fun-02 charMaxScore:
 '   - Picks the best score and direction for the current
 '     base pairs being compared in an alignment. This
 '     function is set up for charters
-'   - Function is inlined and is last function in header
+'   - Function is inlined (in generalAlnFun.h)
+'  o fun-03 alnMaxScore:
+'    - Picks the best score for the current base pairs
+'      being compared in an alignment.
+'   - Function is inlied (in generalAlnFun.h)
 '  o fun-03 checkIfBasesMatch:
 '    - Are two bases are same? (includes anonymous bases)
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -40,7 +44,7 @@ char checkIfBasesMatch(
     char *queryBaseC,// Query base to compare to reference
     char *refBaseC   // Reference base to compare to query
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: Sec-1 Sub-1: checkIfBasesMatch
+   ' Fun-04 TOC: Sec-1 Sub-1: checkIfBasesMatch
    '  - Are two bases are same? (includes anonymous bases)
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
    

@@ -7,24 +7,16 @@ This log records how alnSeq has changed between versions.
 
 # TODO or to fix list
 
-- Make Hirschberg thread safe (just in case I want to
-  multithread it). This will increase memory usage by a
-  very slight amount (~ bytes = 1/4 \* reference length).
 - Set up Smith Waterman Hirschberg combination
+  - At this point I am close, since the 20230827 updates
+    made my alternative waterman very close to what this
+    waterman would be.
 - Add in a match matrix. Currently I am using a switch
   table set up for nucleotides to identify matches/snps.
   - This is used for printing the alignment eqx line, not
     for finding an optimal alignment (scoring matrix).
-- Set alternative alignment printing (multi-base printing
-  and matrix scanning) to print out only the start and end
-  of alignments instead of cigars.
-- Updated using this code guide for the new printing and
-  alnStruct changes.
-- Waterman is not printing out full length alignments. It
-  is limited to either the shorter sequences length or the
-  queries length.
-  - Not supper big on my list since this is just a minor
-    annoyance.
+- Need to add a separate file for printing out alternative
+  alignments. It currently prints everything in one file.
 
 # Ideas that would be cool, but not worth working on
 
@@ -32,19 +24,70 @@ These ideas are a future vision that is not worth the
   time unless this algorithm becomes useful to others.
 
 - Multithreading & gpu support with openCL
-- Converting Smith Waterman matrix to a jagged cigar
-  matrix.
-  - This would use a three bit matrix, with the third
-    bit marking if the next 16 bit int is a number.
-  - This would be slower, but also use a more compressed
-    alignment matrix.
 - Get a matrix scan function that recalculates scores on
   fly, so that user can search a completed direction
   matrix.
   - Also allow a function to be input, so user can decide
     if printing or not.
+- Add a filter for alternative alignments.
 
 # Log
+
+## 20230827
+
+- Alternative alignment printing now prints out the
+  score, starting bases of alignments, and ending bases of
+  alignments (Used to be cigars).
+  - Still need to add a filter.
+- The query-reference scan has been simplified.
+- Matrix scan has been removed. It was not that great in
+  the first place.
+- Issue with Waterman not printing out full length
+  alignments has been fixed.
+  - It was do to using a `&&` when I should have been
+    using `||` in the while loop in printAln
+    (alnStruct.c Fun-03 Sec-05 Sub-01).
+    ```
+    *refAlnStr != defEndAlnFlag ||
+    *qryAlnStr != defEndAlnFlag
+    ```
+- Fixed an issue in -format-emboss, were it would print
+  out the wrong alignment length. It now prints out the
+  matches + insertions + deletions instead of the longest
+  sequence.
+- Adding in several compiler time flags
+  - -DNOGAPOPEN: Disables gap opening penalties
+    - Default gap penatly is set to -6 for this option
+    - Removed -gapopen option.
+  - -DBYTEMATRIX: Use a character matrix instead of an
+    two bit matrix for the Needleman and Waterman
+    alignments.
+  - Flags to make alnSeq use only one direction
+    - Removes the direction selection options.
+    - -DSNPINSDEL
+    - -DSNPDELINS
+    - -DINSSNPDEL
+    - -DINSDELSNP
+    - -DDELSNPINS
+    - -DDELINSSNP
+- Added in a `-flag` and `-flag-only` options to print out
+  the flags alnSeq was complied with. `-flag` will also
+  print out a description of each flag.
+- Shortened two bit array function names
+  - TwoBitArry -> TwoBit
+    - `sed 's/TwoBitArr*y/TwoBit/g'`
+  - TwoBitAry  -> TwoBit
+    - `sed 's/TwoBitArr*y/TwoBit/g'`
+  - twoBitAryMove -> twoBitAryMv
+    - `sed 's/twoBitAryMove/twoBitAryMv'`
+  - getTwoBitAryIndes -> twoBitGetIndex
+- Added to twoBit to two bit function names missing two bit
+  - moveToNextLimb    -> mvToNextTwoBitLimb
+  - moveToLastLimb    -> twoBitMvToLastLimb
+  - moveXElmFromStart -> twoBitMvXElmFromStart
+  - lenTwoBit         -> twoBitGetLen
+- Updated using this code guide for the new printing and
+  alnStruct changes.
 
 ## Version 20230811
 
@@ -62,6 +105,14 @@ These ideas are a future vision that is not worth the
   - This is faster, but use a small amount of extra memory.
   - enable twobit version with
     `make CFLAGS=`-DHIRSCHTWOBIT`.
+- Made Hirschberg thread safe. This will increased memory
+  usage by a very slight amount
+  - ~ bytes = 1/4 \* reference length for two bit.
+  - ~ bytes = \* reference length for byte arrays
+  - This was added in at this point, but I forgot to 
+    mention the updated. That is why it is added in at
+    a later date.
+
 
 ## Version 20230804
 

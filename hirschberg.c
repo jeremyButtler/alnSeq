@@ -51,12 +51,13 @@
 |    o 0 For memory errors
 \--------------------------------------------------------*/
 struct alnStruct * Hirschberg(
-  struct seqStruct *refST, // Reference sequence to align
-  struct seqStruct *qryST, // Qeury sequence to align
-    // For refST and qryST, use seqStruct->offsetUL to set
-    // the starting point for the alignmnet and
-    // seqStruct->endAlnUL to set the ending point
-  struct alnSet *settings  // Settings to use for alignment
+  struct seqStruct *refST, /*Reference sequence to align*/
+  struct seqStruct *qryST, /*Qeury sequence to align*/
+    /* For refST and qryST, use seqStruct->offsetUL to set
+    `  the starting point for the alignmnet and
+    `  seqStruct->endAlnUL to set the ending point
+    */
+  struct alnSet *settings /*Settings to use for alignment*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: Hirschberg
    '  - Sets up for and calls the recursvie function to
@@ -78,24 +79,28 @@ struct alnStruct * Hirschberg(
    
    unsigned long lenRefUL =
      refST->endAlnUL - refST->offsetUL + 1;
-     // +1 to convert to index 1 (values are index 0)
+     /*+1 to convert to index 1 (values are index 0)*/
    unsigned long lenQryUL =
      qryST->endAlnUL - qryST->offsetUL + 1;
-     // + 1 to convert to index 1 (values are index 0)
+     /*+ 1 to convert to index 1 (values are index 0)*/
 
    long *forwardScoreRowL = 0;
    long *reverseScoreRowL = 0;
 
    struct alnStruct *alnST = 0;
 
-   #ifdef HIRSCHTWOBIT
+   #if defined HIRSCHTWOBIT
       struct twoBitAry *refAln = 0;
-      struct twoBitAry *dirRow = 0;
       struct twoBitAry *qryAln = 0;
    #else
       char *refAln = 0;
-      char *dirRow = 0;
       char *qryAln = 0;
+    #endif
+
+   #if defined HIRSCHTWOBIT
+      struct twoBitAry *dirRow = 0;
+   #else
+      char *dirRow = 0;
     #endif
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -115,15 +120,15 @@ struct alnStruct * Hirschberg(
    \******************************************************/
 
    #ifdef HIRSCHTWOBIT
-      refAln = makeTwoBitArry(lenRefUL + 1, 0);
-       // + 2 for index 0
+      refAln = makeTwoBit(lenRefUL + 1, 0);
+       /*+ 2 for index 0*/
 
       if(refAln == 0) return 0;
 
       /*Mark the end of the alignment*/
-      moveXElmFromStart(refAln, lenRefUL);
+      twoBitMvXElmFromStart(refAln, lenRefUL);
       changeTwoBitElm(refAln, defEndAlnFlag);
-      moveXElmFromStart(refAln, 0);
+      twoBitMvXElmFromStart(refAln, 0);
 
    #else
       refAln = calloc(lenRefUL + 1, sizeof(char));
@@ -131,16 +136,16 @@ struct alnStruct * Hirschberg(
       *(refAln + lenRefUL) = defEndAlnFlag;
    #endif 
 
-   #ifdef HIRSCHTWOBIT
-      dirRow = makeTwoBitArry(lenRefUL + 1, 0);
+   #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+      dirRow = makeTwoBit(lenRefUL + 1, 0);
 
       if(dirRow == 0)
       { /*If I could not make another direction row*/
-         freeTwoBitAry(refAln, 0, 0);
+         freeTwoBit(refAln, 0, 0);
          return 0;
       } /*If I could not make another direction row*/
 
-    #else
+    #elif !defined NOGAPOPEN
       dirRow = calloc(lenRefUL + 1, sizeof(char));
 
       if(dirRow == 0)
@@ -152,19 +157,19 @@ struct alnStruct * Hirschberg(
    #endif
 
    #ifdef HIRSCHTWOBIT
-      qryAln = makeTwoBitArry(lenQryUL, 0);
+      qryAln = makeTwoBit(lenQryUL, 0);
 
       if(qryAln == 0)
-      { // If had a memroy allocation error
-        freeTwoBitAry(refAln, 0, 0);
-        freeTwoBitAry(dirRow, 0, 0);
+      { /*If had a memroy allocation error*/
+        freeTwoBit(refAln, 0, 0);
+        freeTwoBit(dirRow, 0, 0);
         return 0;
-      } // If had a memroy allocation error
+      } /*If had a memroy allocation error*/
 
       /*Mark the end of the alignment*/
-      moveXElmFromStart(qryAln, lenQryUL);
+      twoBitMvXElmFromStart(qryAln, lenQryUL);
       changeTwoBitElm(qryAln, defEndAlnFlag);
-      moveXElmFromStart(qryAln, 0);
+      twoBitMvXElmFromStart(qryAln, 0);
 
    #else
       qryAln = calloc(lenQryUL + 1, sizeof(char));
@@ -173,8 +178,10 @@ struct alnStruct * Hirschberg(
       { /*If I could not make another direction row*/
          free(refAln);
          refAln = 0;
-         free(dirRow);
-         dirRow = 0;
+         #ifndef NOGAPOPEN
+            free(dirRow);
+            dirRow = 0;
+         #endif
          return 0;
       } /*If I could not make another direction row*/
     #endif
@@ -184,50 +191,59 @@ struct alnStruct * Hirschberg(
    *  - Initalize the scoring rows
    \******************************************************/
 
-   // I am using full length arrays to make the later
-   // steps eaiser. This takes more memory, but makes life
-   // nicer
+   /* I am using full length arrays to make the later
+   `  steps eaiser. This takes more memory, but makes life
+   `  nicer
+   */
 
    forwardScoreRowL = malloc(sizeof(long) * lenRefUL);
 
    if(forwardScoreRowL == 0)
-   { // If had a memory allocatoin error
+   { /*If had a memory allocatoin error*/
      #ifdef HIRSCHTWOBIT
-        freeTwoBitAry(refAln, 0, 0);
-        freeTwoBitAry(dirRow, 0, 0);
-        freeTwoBitAry(qryAln, 0, 0);
+        freeTwoBit(refAln, 0, 0);
+        freeTwoBit(qryAln, 0, 0);
      #else
         free(refAln);
         refAln = 0;
-        free(dirRow);
-        dirRow = 0;
         free(qryAln);
         qryAln = 0;
      #endif
  
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+        freeTwoBit(dirRow, 0, 0);
+     #elif !defined NOGAPOPEN
+        free(dirRow);
+        dirRow = 0;
+     #endif
+
      return 0;
-   } // If had a memory allocatoin error
+   } /*If had a memory allocatoin error*/
 
    reverseScoreRowL = malloc(sizeof(long) * lenRefUL);
 
    if(reverseScoreRowL == 0)
-   { // If had a memory allocatoin error
+   { /*If had a memory allocatoin error*/
      #ifdef HIRSCHTWOBIT
-        freeTwoBitAry(refAln, 0, 0);
-        freeTwoBitAry(dirRow, 0, 0);
-        freeTwoBitAry(qryAln, 0, 0);
+        freeTwoBit(refAln, 0, 0);
+        freeTwoBit(qryAln, 0, 0);
      #else
         free(refAln);
         refAln = 0;
-        free(dirRow);
-        dirRow = 0;
         free(qryAln);
         qryAln = 0;
+     #endif
+ 
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+        freeTwoBit(dirRow, 0, 0);
+     #elif !defined NOGAPOPEN
+        free(dirRow);
+        dirRow = 0;
      #endif
 
      free(forwardScoreRowL);
      return 0;
-   } // If had a memory allocatoin error
+   } /*If had a memory allocatoin error*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^  Fun-01 Sec-03:
@@ -239,18 +255,19 @@ struct alnStruct * Hirschberg(
    */
    HirschbergFun(
      refST->seqCStr + refST->offsetUL,
-     0,  // Sendingi in the starting base
-     lenRefUL,         // Length of ref region to align
+     0,                /*1st reference base to align*/
+     lenRefUL,         /*Length of ref region to align*/
      qryST->seqCStr + qryST->offsetUL,
-     0,  // Sending 1st query base to align
-     lenQryUL,         // length of query target region
-     forwardScoreRowL, // For scoring
-     reverseScoreRowL, // For scoring
-     refAln,      // HOlds the reference alignment
-     qryAln,      // Holds the query alignment
+     0,                /*1st query base to align*/
+     lenQryUL,         /*length of query target region*/
+     forwardScoreRowL, /*For scoring*/
+     reverseScoreRowL, /*For scoring*/
+     refAln,      /*Holds the reference alignment*/
+     qryAln,      /*Holds the query alignment*/
      dirRow,      /*Direction row for thread safe scoring*/
-     settings         // Settings for the alignment
+     settings     /*Settings for the alignment*/
    );
+     /*dirRow becomes a dummy variable for -DNOGAPOPEN*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^  Fun-01 Sec-04:
@@ -263,16 +280,20 @@ struct alnStruct * Hirschberg(
    alnST = twoBitAlnToAlnST(refST, qryST, refAln, qryAln);
 
    #ifdef HIRSCHTWOBIT
-      freeTwoBitAry(refAln, 0, 0);
-      freeTwoBitAry(dirRow, 0, 0);
-      freeTwoBitAry(qryAln, 0, 0);
+      freeTwoBit(refAln, 0, 0);
+      freeTwoBit(qryAln, 0, 0);
    #else
       free(refAln);
       refAln = 0;
-      free(dirRow);
-      dirRow = 0;
       free(qryAln);
       qryAln = 0;
+   #endif
+ 
+   #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+      freeTwoBit(dirRow, 0, 0);
+   #elif !defined NOGAPOPEN
+      free(dirRow);
+      dirRow = 0;
    #endif
 
    return alnST; /*Is 0 if twoBitAlnToAlnSt failed*/
@@ -284,29 +305,33 @@ struct alnStruct * Hirschberg(
 |    o twoBitAlnST to hold the output alignment
 \--------------------------------------------------------*/
 void HirschbergFun(
-  char *refSeqCStr,          // Reference sequence
-  unsigned long refStartUL,// index 0 Starting point on ref
-  unsigned long refLenUL,//index 1 length of region toAlign
+  char *refSeqCStr,          /*Reference sequence*/
+  unsigned long refStartUL,
+    /*index 0: 1st bast to algin in reference*/
+  unsigned long refLenUL,
+    /*index 1 length of region to Align*/
 
-  char *qrySeqCStr,          // Query sequence
-  unsigned long qryStartUL,//index 0 Starting query base
-  unsigned long qryLenUL,//index 1 Length of target
+  char *qrySeqCStr,          /*Query sequence*/
+  unsigned long qryStartUL,/*index 0 Starting query base*/
+  unsigned long qryLenUL,/*index 1 Length of query region*/
 
-  long *forwardScoreRowL,   // Holds final forward row
-  long *reverseScoreRowL,   // For finding reverse scores
-    // both the forward and reverse scoring rows must be
-    // the size of the full length reference.
+  long *forwardScoreRowL,   /*Holds final forward row*/
+  long *reverseScoreRowL,   /*For finding reverse scores*/
+    /* both the forward and reverse scoring rows must be
+    `  the size of the full length reference.
+    */
   
   #ifdef HIRSCHTWOBIT
-     struct twoBitAry *refAlnST,   // For gap extension
-     struct twoBitAry *qryAlnST,  // Holds alignment codes
-     struct twoBitAry *dirRow, /*row thread safe scoring*/
+     struct twoBitAry *refAlnST,/*Holds ref alignment*/
+     struct twoBitAry *qryAlnST,/*Holds query alignment*/
+     struct twoBitAry *dirRow,
+       /*spare direction row (makes thread safe)*/
   #else
-     char *refAlnST,   // For gap extension
-     char *qryAlnST,  // Holds alignment codes
+     char *refAlnST,   /*Holds output reference alignment*/
+     char *qryAlnST,   /*Holds the output query alignment*/
      char *dirRow,/*direction row for thread safe scoring*/
   #endif
-  struct alnSet *settings  // Settings to use for alignment
+  struct alnSet *settings /*Settings to use for alignment*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-02 TOC: HirschbergFun
    '  - Does the recursive part of a Hirschberg alignment
@@ -351,9 +376,9 @@ void HirschbergFun(
    \******************************************************/
 
    if(refLenUL == 0)
-   { // If all remaing bases are query insertions
+   { /*If all remaing bases are query insertions*/
      #ifdef HIRSCHTWOBIT
-        moveXElmFromStart(qryAlnST, qryStartUL);
+        twoBitMvXElmFromStart(qryAlnST, qryStartUL);
      #else
         qryAlnST += qryStartUL;
      #endif
@@ -362,18 +387,18 @@ void HirschbergFun(
        unsigned long numInsUI = 0;
        numInsUI < qryLenUL;
        ++numInsUI
-     ){ // Loop: fill in the insertions
+     ){ /*Loop: fill in the insertions*/
        #ifdef HIRSCHTWOBIT
           changeTwoBitElm(qryAlnST, defGapFlag);
-          twoBitAryMoveToNextElm(qryAlnST);
+          twoBitMvToNextElm(qryAlnST);
        #else
           *qryAlnST = defGapFlag;
           ++qryAlnST;
        #endif
-     } // Loop: fill in the insertions
+     } /*Loop: fill in the insertions*/
 
-     return; // Nothing else to do
-   } // If all remaing bases are query insertions
+     return; /*Nothing else to do*/
+   } /*If all remaing bases are query insertions*/
 
    /******************************************************\
    * Fun-02 Sec-02 Sub-02:
@@ -381,9 +406,9 @@ void HirschbergFun(
    \******************************************************/
 
    if(qryLenUL == 0)
-   { // If all remaing bases are query deletions
+   { /*If all remaing bases are query deletions*/
      #ifdef HIRSCHTWOBIT
-        moveXElmFromStart(refAlnST, refStartUL);
+        twoBitMvXElmFromStart(refAlnST, refStartUL);
      #else
         refAlnST += refStartUL;
      #endif
@@ -392,18 +417,18 @@ void HirschbergFun(
        unsigned long numInsUI = 0;
        numInsUI < refLenUL;
        ++numInsUI
-     ){ // Loop: fill in the insertions
+     ){ /*Loop: fill in the insertions*/
        #ifdef HIRSCHTWOBIT
           changeTwoBitElm(refAlnST, defGapFlag);
-          twoBitAryMoveToNextElm(refAlnST);
+          twoBitMvToNextElm(refAlnST);
        #else
           *refAlnST = defGapFlag;
           ++refAlnST;
        #endif
-     } // Loop: fill in the insertions
+     } /*Loop: fill in the insertions*/
 
-     return; // Nothing else to do
-   } // If all remaing bases are query deletions
+     return; /*Nothing else to do*/
+   } /*If all remaing bases are query deletions*/
 
    /******************************************************\
    * Fun-02 Sec-02 Sub-03:
@@ -411,14 +436,14 @@ void HirschbergFun(
    \******************************************************/
 
    if(refLenUL == 1)
-   { // If I have to align the last reference base
+   { /*If I have to align the last reference base*/
      #ifdef HIRSCHTWOBIT
-        moveXElmFromStart(qryAlnST, qryStartUL);
-        moveXElmFromStart(refAlnST, refStartUL);
+        twoBitMvXElmFromStart(qryAlnST, qryStartUL);
+        twoBitMvXElmFromStart(refAlnST, refStartUL);
      #endif
 
      if(qryLenUL == 0)
-     { // If bases are aligned (one reference & one query)
+     { /*If bases are aligned (one reference & one query)*/
         #ifdef HIRSCHTWOBIT
            changeTwoBitElm(refAlnST, defGapFlag);
         #else
@@ -426,10 +451,10 @@ void HirschbergFun(
            *refAlnST = defGapFlag;
         #endif
         return; // Finished
-     } // If bases are aligned (one reference & one query)
+     } /*If bases are aligned (one reference & one query)*/
 
      if(qryLenUL == 1)
-     { // If bases are aligned (one reference & one query)
+     { /*If bases are aligned (one reference & one query)*/
        qrySeqCStr += qryStartUL;
        refSeqCStr += refStartUL;
 
@@ -448,22 +473,22 @@ void HirschbergFun(
            refAlnST += refStartUL;
            *refAlnST = bitC;
         #endif
-        return; // Finished
-     } // If bases are aligned (one reference & one query)
+        return; /*Finished*/
+     } /*If bases are aligned (one reference & one query)*/
 
      positionSingleBase(
-       *(refSeqCStr + refStartUL),// ref base
-       refStartUL,                // Position of ref base
-       qrySeqCStr,              // first base of query
-       qryStartUL,              // positoin of query
-       qryLenUL,                // Length of the query
-       refAlnST,                // Array to hold alignment
-       qryAlnST,                // Array to hold alignment
-       settings                 // Has Scoring variables
+       *(refSeqCStr + refStartUL),/*ref base*/
+       refStartUL,              /*Position of ref base*/
+       qrySeqCStr,              /*first base of query*/
+       qryStartUL,              /*positoin of query*/
+       qryLenUL,                /*Length of the query*/
+       refAlnST,                /*Array to hold alignment*/
+       qryAlnST,                /*Array to hold alignment*/
+       settings                 /*Has Scoring variables*/
      );
 
-     return; // This base is now aligned
-   } // If I have to align the last reference base
+     return; /*This base is now aligned*/
+   } /*If I have to align the last reference base*/
 
    /******************************************************\
    * Fun-02 Sec-02 Sub-04:
@@ -471,25 +496,25 @@ void HirschbergFun(
    \******************************************************/
 
    if(qryLenUL == 1)
-   { // If I have to align the last query base
+   { /*If I have to align the last query base*/
      #ifdef HIRSCHTWOBIT
-        moveXElmFromStart(qryAlnST, qryStartUL);
-        moveXElmFromStart(refAlnST, refStartUL);
+        twoBitMvXElmFromStart(qryAlnST, qryStartUL);
+        twoBitMvXElmFromStart(refAlnST, refStartUL);
      #endif
 
      if(refLenUL == 0)
-     { // If bases are aligned (one reference & one query)
+     { /*If bases are aligned (one reference & one query)*/
         #ifdef HIRSCHTWOBIT
            changeTwoBitElm(qryAlnST, defGapFlag);
         #else
            qryAlnST += qryStartUL;
            *qryAlnST = defGapFlag;
         #endif
-        return; // Finished
-     } // If bases are aligned (one reference & one query)
+        return; /*Finished*/
+     } /*If bases are aligned (one reference & one query)*/
 
      if(refLenUL == 1)
-     { // If bases are aligned (one reference & one query)
+     { /*If bases are aligned (one reference & one query)*/
        qrySeqCStr += qryStartUL;
        refSeqCStr += refStartUL;
 
@@ -507,62 +532,62 @@ void HirschbergFun(
            refAlnST += refStartUL;
            *refAlnST = bitC;
         #endif
-        return; // Finished
-     } // If bases are aligned (one reference & one query)
+        return; /*Finished*/
+     } /*If bases are aligned (one reference & one query)*/
 
      positionSingleBase(
-       *(qrySeqCStr + qryStartUL),// ref base
-       qryStartUL,                // Position of ref base
-       refSeqCStr,              // first base of reference
-       refStartUL,              // positoin of query
-       refLenUL,                // Length of the query
-       qryAlnST,                // Array to hold alignment
-       refAlnST,                // Array to hold alignment
-       settings                 // Has Scoring variables
+       *(qrySeqCStr + qryStartUL),/*ref base*/
+       qryStartUL,              /*Position of ref base*/
+       refSeqCStr,              /*first base of reference*/
+       refStartUL,              /*positoin of query*/
+       refLenUL,                /*Length of the query*/
+       qryAlnST,                /*Array to hold alignment*/
+       refAlnST,                /*Array to hold alignment*/
+       settings                 /*Has Scoring variables*/
      );
 
-     return; // Finshed aligning this query base
-   } // If I have to align the last query base
+     return; /*Finshed aligning this query base*/
+   } /*If I have to align the last query base*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-02 Sec-03:
    ^  - Get scores
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-    // For multithreading I would need need a third
-    // direction row. Otherwise I will have thread racing
-    // for the directional matrix
     forwardIndelColL = 
       scoreForwardHirsch(
-        refSeqCStr,       // Entire reference sequence
-        refStartUL,       // Starting base of ref target
-        refLenUL,         // length of ref target region
-        qrySeqCStr,       // Query seq with coordinates
-        qryStartUL,     // Starting base of query target
-        qryLenUL / 2,   // Length of query target region
-        forwardScoreRowL, // Array of scores to fill
-        refAlnST,         // direction row for gap extend
-        settings         // setttings to use
-    ); // Get the scores for the forward direction
+        refSeqCStr,       /*Entire reference sequence*/
+        refStartUL,       /*Starting base of ref target*/
+        refLenUL,         /*length of ref target region*/
+        qrySeqCStr,       /*Query seq with coordinates*/
+        qryStartUL,       /*Starting base of query target*/
+        qryLenUL / 2,     /*Length of query target region*/
+        forwardScoreRowL, /*Array of scores to fill*/
+        refAlnST,         /*direction row for gap extend*/
+        settings          /*setttings to use*/
+    ); /*Get the scores for the forward direction*/
+    /*For -DNOGAPOPEN, refAlnST is ignored*/
 
     reverseIndelColL = 
       scoreReverseHirsch(
-        refSeqCStr,         // Entire reference sequence
-        refStartUL,         // Starting base of ref target
-        refLenUL,           // length of ref target region
-        qrySeqCStr,         // Query seq with coordinates
-        qryStartUL + (qryLenUL / 2),//Start of query target
-        qryLenUL - (qryLenUL / 2), // New query length
-        reverseScoreRowL,   // Array of scores to fill
-        dirRow,             // direction row for gap extend
-        settings            // setttings to use
-      ); // Get the scores for the reverse direction
-      // I can get away with queryLen/2 here, because 
-      // queryLen is index 1 and the function takes in
-      // an lenth 1 argument
-      // I made this section thread safe by using refAlnST
-      //   for the forward score and dirRow for the
-      //   reverse row.
+        refSeqCStr,         /*Entire reference sequence*/
+        refStartUL,         /*Starting base of ref target*/
+        refLenUL,           /*length of ref target region*/
+        qrySeqCStr,         /*Query seq with coordinates*/
+        qryStartUL + (qryLenUL / 2),/*new query start*/
+        qryLenUL - (qryLenUL / 2),  /*New query length*/
+        reverseScoreRowL,  /*Array of scores to fill*/
+        dirRow,            /*direction row for gap extend*/
+        settings           /* setttings to use*/
+      ); /*Get the scores for the reverse direction*/
+      /*For -DNOGAPOPEN, dirRow is ignored*/
+      /* I can get away with queryLen/2 here, because 
+      `  queryLen is index 1 and the function takes in
+      `  an lenth 1 argument
+      `  I made this section thread safe by using refAlnST
+      `    for the forward score and dirRow for the
+      `    reverse row.
+      */
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^  Fun-02 Sec-04:
@@ -578,16 +603,16 @@ void HirschbergFun(
      unsigned long baseUL = 0;
      baseUL < refLenUL - 1;
      ++baseUL
-   ) { // Loop; add up all scores
+   ) { /*Loop; add up all scores*/
      *(forwardScoreRowL + refStartUL + baseUL) += 
        *(reverseScoreRowL + refStartUL + baseUL + 1);
-       // The reverse row is already reversed
+       /*The reverse row is already reversed*/
 
      if(
        *(forwardScoreRowL + refStartUL + baseUL) >
        *(forwardScoreRowL + refStartUL + midPointUL -1)
      ) midPointUL = baseUL + 1;
-   }// Loop; add up all scores
+   } /*Loop; add up all scores*/
 
    *(reverseScoreRowL + refStartUL) += forwardIndelColL;
 
@@ -603,37 +628,37 @@ void HirschbergFun(
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    HirschbergFun(
-     refSeqCStr,      // Full reference sequence
-     refStartUL,      // Full reference sequence
-     midPointUL,
-     qrySeqCStr,      // Full queyr sequence
-     qryStartUL,    // Start of queyr target region
-     qryLenUL / 2,    // Length of query target region
-     forwardScoreRowL,  // For scoring
-     reverseScoreRowL, // Has last line of scores
-     refAlnST,        // direction row for gap extend
-     qryAlnST,        // Holds the alignment codes
-     dirRow,
-     settings         // Settings for the alignment
+     refSeqCStr,      /*Full reference sequence*/
+     refStartUL,      /*Full reference sequence*/
+     midPointUL,      /*Length of new reference sequence*/
+     qrySeqCStr,      /*Full query sequence*/
+     qryStartUL,      /*Start of queyr target region*/
+     qryLenUL / 2,    /*Length of query target region*/
+     forwardScoreRowL,/*For scoring*/
+     reverseScoreRowL,/*Has last line of scores*/
+     refAlnST,        /*direction row for gap extend*/
+     qryAlnST,        /*Holds the alignment codes*/
+     dirRow,          /*For threadsafe scoreing*/
+     settings         /*Settings for the alignment*/
    );
 
    HirschbergFun(
-     refSeqCStr,                 // Full reference sequence
-     refStartUL + midPointUL,    // New reference start
-     refLenUL - midPointUL,        // New reference end
-     qrySeqCStr,                  // Full query sequence
-     qryStartUL + (qryLenUL / 2),
-     qryLenUL - (qryLenUL / 2),     // New query length
-     forwardScoreRowL,  // For scoring
-     reverseScoreRowL, // Has last line of scores
-     refAlnST,        // direction row for gap extend
-     qryAlnST,        // Holds the alignment codes
-     dirRow,
-     settings         // Settings for the alignment
+     refSeqCStr,              /*Full reference sequence*/
+     refStartUL + midPointUL, /*New reference start*/
+     refLenUL - midPointUL,   /*New reference end*/
+     qrySeqCStr,              /*Full query sequence*/
+     qryStartUL + (qryLenUL / 2), /*New query start*/
+     qryLenUL - (qryLenUL / 2),/*New query length*/
+     forwardScoreRowL,        /*For scoring*/
+     reverseScoreRowL,        /*Has last line of scores*/
+     refAlnST,                /*Holds reference alingment*/
+     qryAlnST,                /*Holds query alingment*/
+     dirRow,                  /*For threadsafe scoring*/
+     settings                 /*Settings for alignment*/
    );
 
    return;
-} // HirschbergFun
+} /*HirschbergFun*/
 
 /*--------------------------------------------------------\
 | Output:
@@ -646,21 +671,21 @@ void HirschbergFun(
 |      Needleman Wunsch / Smith Waterman alignment
 \--------------------------------------------------------*/
 long scoreForwardHirsch(
-  char *refSeqCStr,          // Reference sequence
-  unsigned long refStartUL,  // index 0 starting ref base
-  unsigned long refLenUL,    // index 1 Length of target
+  char *refSeqCStr,          /*Reference sequence*/
+  unsigned long refStartUL,  /*index 0 starting ref base*/
+  unsigned long refLenUL,    /*index 1 Length of target*/
 
-  char *qrySeqCStr,          // Query sequence
-  unsigned long qryStartUL,// Index 0 Starting query base
-  unsigned long qryLenUL,  // index 1 length of target
+  char *qrySeqCStr,          /*Query sequence*/
+  unsigned long qryStartUL, /*Index 0 Starting query base*/
+  unsigned long qryLenUL,    /*index 1 length of target*/
 
-  long *scoreRowPtrL,        // Array of scores to fill
+  long *scoreRowPtrL,        /*Array of scores to fill*/
   #ifdef HIRSCHTWOBIT
-     struct twoBitAry *dirRowST,//direction row gap extend
+     struct twoBitAry *dirRowST,/*direction row*/
   #else
-     char *dirRowST,//direction row gap extend
+     char *dirRowST,      /*direction row, for gap extend*/
   #endif
-  struct alnSet *settings    // setttings to use
+  struct alnSet *settings    /*setttings to use*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-03 TOC: scoreForwardHirsch
    '  - Does a single round of scoring for a hirschberg
@@ -680,6 +705,9 @@ long scoreForwardHirsch(
    ^  - Variable declerations
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+   char *qryStr = 0;
+   char *refStr = 0;
+
    long *scoreOnPtrL = scoreRowPtrL + refStartUL;
    long indelColL = 0;
    long insScoreL = 0;
@@ -687,7 +715,7 @@ long scoreForwardHirsch(
    long matchScoreL = 0;
    long nextMatchScoreL = 0;
 
-   #ifndef HIRSCHTWOBIT
+   #if !defined HIRSCHTWOBIT && !defined NOGAPOPEN
       char *dirRowStart = 0;
    #endif
 
@@ -705,11 +733,11 @@ long scoreForwardHirsch(
    *  - Set up the first two elements (no gat extend)
    \******************************************************/
 
-  #ifdef HIRSCHTWOBIT
-     moveXElmFromStart(dirRowST, refStartUL);
+  #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+     twoBitMvXElmFromStart(dirRowST, refStartUL);
      changeTwoBitElm(dirRowST, defMvDel);
-     twoBitAryMoveToNextElm(dirRowST);
-  #else
+     twoBitMvToNextElm(dirRowST);
+  #elif !defined NOGAPOPEN
      dirRowST += refStartUL;
      dirRowStart = dirRowST;
      *dirRowST = defMvDel;
@@ -717,7 +745,13 @@ long scoreForwardHirsch(
   #endif
 
    indelColL = 0;
-   *scoreOnPtrL = settings->gapOpenI;
+
+   #if !defined NOGAPOPEN
+      *scoreOnPtrL = settings->gapOpenI;
+   #else
+      *scoreOnPtrL = settings->gapExtendI;
+   #endif
+
    ++scoreOnPtrL;
 
    /******************************************************\
@@ -725,36 +759,40 @@ long scoreForwardHirsch(
    *  - Set up remaing elements (indels) (uses gap extend)
    \******************************************************/
 
-   for(
-     char *refBaseCStr = refSeqCStr + refStartUL + 1;
-     refBaseCStr < refSeqCStr + refStartUL + refLenUL;
-     ++refBaseCStr
-   ){ // Loop:Set the initial blank scores
-     *scoreOnPtrL =
-       *(scoreOnPtrL-1) +settings->gapExtendI;
+   refStr = refSeqCStr + refStartUL + 1;
+   while(refStr < refSeqCStr + refStartUL + refLenUL)
+   { /*Loop:Set the initial blank scores*/
+     *scoreOnPtrL = *(scoreOnPtrL-1) +settings->gapExtendI;
 
-     #ifdef HIRSCHTWOBIT
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
         changeTwoBitElm(dirRowST, defMvDel);
-        twoBitAryMoveToNextElm(dirRowST);
-     #else
+        twoBitMvToNextElm(dirRowST);
+     #elif !defined NOGAPOPEN
         *dirRowST = defMvDel;
         ++dirRowST;
      #endif
 
      ++scoreOnPtrL;
-   } // Loop:Set the initial blank scores
+     ++refStr;
+   } /*Loop:Set the initial blank scores*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-03 Sec-03:
    ^  - Score till on the last row
-   ^  o fun-03 sec-03 sub-01:
+   ^  o fun-04 sec-03 sub-01:
    ^    - Set up the first element (indel, has gap open)
-   ^  o fun-03 sec-03 sub-02:
+   ^  o fun-04 sec-03 sub-02:
    ^    - Find the scores for the next row
-   ^  o fun-03 sec-03 sub-03:
+   ^  o fun-04 sec-03 sub-03:
    ^    - Select best score for direction
-   ^  o fun-03 sec-03 sub-04:
-   ^    - Set up for scoring next row (handle indel col)
+   ^  o fun-04 sec-03 sub-04:
+   ^    - Find the scores for the next indels
+   ^  o fun-04 sec-03 sub-05:
+   ^    - Find the best score for last base pair in row
+   ^  o fun-04 sec-03 sub-06:
+   ^    - Move to start of row (direction matrix)
+   ^  o fun-04 sec-03 sub-07:
+   ^    - Find the scores for the 1st baise pair in the row
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    /******************************************************\
@@ -762,30 +800,35 @@ long scoreForwardHirsch(
    *  - Set up the first element (indel, has gap open)
    \******************************************************/
 
-   // Move back to the start of row
-   #ifdef HIRSCHTWOBIT
-      moveXElmFromStart(dirRowST, refStartUL);
-   #else
+   /*Move back to the start of row*/
+   #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+      twoBitMvXElmFromStart(dirRowST, refStartUL);
+   #elif !defined NOGAPOPEN
       dirRowST = dirRowStart;
    #endif
 
    scoreOnPtrL = scoreRowPtrL + refStartUL;
 
-   // Fine the first match/snp score (first ref base)
+   /*Fine the first match/snp score (first ref base)*/
    nextMatchScoreL =
-     getBasePairScore(
-       qrySeqCStr + qryStartUL,   // first query base
-       refSeqCStr + refStartUL,     // first ref base
-       settings                     // Has score matrix
-   ); // Ge the score for the enxt base
+     getBaseScore(
+       qrySeqCStr + qryStartUL,   /*first query base*/
+       refSeqCStr + refStartUL,   /*first ref base*/
+       settings                   /*Has score matrix*/
+   ); /*Get the score for the enxt base*/
 
    nextMatchScoreL += indelColL;
-     // This is here so I can overwrite the array with the
-     // new scores
+     /*This is here so I can overwrite the array with the
+     ` new scores
+     */
 
-   indelColL += settings->gapOpenI;
+   #if !defined NOGAPOPEN
+      indelColL += settings->gapOpenI;
+   #else
+      indelColL += settings->gapExtendI;
+   #endif
 
-   // Find the first insertion and deletion scores
+   /*Find the first insertion and deletion scores*/
    insScoreL =  *scoreOnPtrL + settings->gapExtendI;
    delScoreL = indelColL + settings->gapExtendI;
 
@@ -794,31 +837,29 @@ long scoreForwardHirsch(
    ^  - Find the scores for the next row
    \******************************************************/
 
-   for(
-     char *qryBaseCStr = qrySeqCStr + qryStartUL;
-     qryBaseCStr < qrySeqCStr + qryStartUL + qryLenUL;
-     ++qryBaseCStr
-   ){ // Loop: score all query bases (rows)
+   refStr = refSeqCStr + refStartUL + 1;
+     /*Already found the score for the first base pair*/
+   qryStr = qrySeqCStr + qryStartUL;
 
-     for(
-       char *refBaseCStr = refSeqCStr + refStartUL;
-       refBaseCStr < refSeqCStr + refStartUL + refLenUL -1;
-       ++refBaseCStr
-     ){ // Loop:score all query bases (columns)
+   while(qryStr < qrySeqCStr + qryStartUL + qryLenUL)
+   { /*Loop: score all query bases (rows)*/
 
-       // Get the score for the next match. This allows me
-       // to overwite the last diagnol and thus, use only
-       // one row of scoring
+     while(refStr < refSeqCStr + refStartUL + refLenUL)
+     { /*Loop:score all query bases (columns)*/
+
+       /*Get the score for the next match. This allows me
+       ` to overwite the last diagnol and thus, use only
+       ` one row of scoring
+       */
 
        matchScoreL = nextMatchScoreL;
 
        nextMatchScoreL =
-         getBasePairScore(
-           qryBaseCStr,     // Current query base
-           refBaseCStr + 1, // next reference base
-           settings         // Has score matrix
-       ); // Ge the score for the enxt base
-         // At worst case refBaseCStr will be '\0'
+         getBaseScore(
+           qryStr,     /*Current query base*/
+           refStr, /*next reference base*/
+           settings         /*Has score matrix*/
+       ); /*Get the score for the next base*/
 
        nextMatchScoreL += *scoreOnPtrL;
 
@@ -827,7 +868,7 @@ long scoreForwardHirsch(
        *  - Select best score for direction
        \**************************************************/
 
-       #ifdef HIRSCHTWOBIT
+       #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
           twoBitMaxScore(
             dirRowST,        // Direction matrix
             settings,        // has direction preference
@@ -836,7 +877,7 @@ long scoreForwardHirsch(
             &delScoreL,      // Score for an match/snp
             scoreOnPtrL        // Score position to update
           ); /*Update the score and direction*/
-       #else
+       #elif !defined NOGAPOPEN
           charMaxScore(
             dirRowST,        // Direction matrix
             settings,        // has direction preference
@@ -845,29 +886,46 @@ long scoreForwardHirsch(
             &delScoreL,      // Score for an match/snp
             scoreOnPtrL        // Score position to update
           ); /*Update the score and direction*/
+       #else
+          alnMaxScore(
+             settings,
+             &insScoreL,
+             &matchScoreL,
+             &delScoreL,
+             scoreOnPtrL
+          );
        #endif
+
+       /**************************************************\
+       * Fun-03 Sec-03 Sub-04:
+       *  - Find the scores for the next indels
+       \**************************************************/
 
        /* The deletion scores are based on the found base,
        `  So I can find the next score before moving
        `  Get the deletion score
        */
-       indelScore(
-          delScoreL,
-          #ifdef HIRSCHTWOBIT
-             getTwoBitAryElm(dirRowST),
-          #else
-             *dirRowST,
-          #endif
-          *scoreOnPtrL,
-          settings
-       ); /*Macro from generalAlnFun.h*/
+       #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+          indelScore(
+             delScoreL,
+             getTwoBitElm(dirRowST),
+             *scoreOnPtrL,
+             settings
+          ); /*Macro from generalAlnFun.h*/
 
-       /*Move to the next element*/
-       #ifdef HIRSCHTWOBIT
-          twoBitAryMoveToNextElm(dirRowST);
-       #else
+          twoBitMvToNextElm(dirRowST);
+      #elif !defined NOGAPOPEN
+         indelScore(
+             delScoreL,
+             *dirRowST, /*For no gap open, is a dummy*/
+             *scoreOnPtrL,
+             settings
+          ); /*Macro from generalAlnFun.h*/
+
           ++dirRowST;
-       #endif
+      #else
+         delScoreL = *scoreOnPtrL + settings->gapExtendI;
+      #endif
 
        ++scoreOnPtrL;
 
@@ -875,88 +933,125 @@ long scoreForwardHirsch(
        `  the indel column in a separate variable
        `  Get the insertion score
        */
-       indelScore(
-          insScoreL,
-          #ifdef HIRSCHTWOBIT
-             getTwoBitAryElm(dirRowST),
-          #else
-             *dirRowST,
-          #endif
-          *scoreOnPtrL,
-          settings
-       ); /*Macro from generalAlnFun.h*/
+       #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+          indelScore(
+             insScoreL,
+             getTwoBitElm(dirRowST),
+             *scoreOnPtrL,
+             settings
+          ); /*Macro from generalAlnFun.h*/
+       #elif !defined NOGAPOPEN
+          indelScore(
+              insScoreL,
+              *dirRowST, /*For no gap open, is a dummy*/
+              *scoreOnPtrL,
+              settings
+           ); /*Macro from generalAlnFun.h*/
+       #else
+          insScoreL = *scoreOnPtrL + settings->gapExtendI;
+       #endif
+
+       ++refStr;
      } /*Loop:score all query bases (columns)*/
 
      /****************************************************\
-     * Fun-03 Sec-03 Sub-04:
-     *  - Set up for scoring next row (handle indel col)
+     * Fun-03 Sec-03 Sub-05:
+     *  - Find the best score for last base pair in row
      \****************************************************/
 
-     // Update the final score in the row
-     #ifdef HIRSCHTWOBIT
+     /*Update the final score in the row*/
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
         twoBitMaxScore(
-          dirRowST,        // Direction matrix
-          settings,        // has direction preference
-          &insScoreL,      // Score for an insertion
-          &nextMatchScoreL,    // Score for an deletion
-          &delScoreL,      // Score for an match/snp
-          scoreOnPtrL        // Score position to update
+          dirRowST,
+          settings,
+          &insScoreL,
+          &nextMatchScoreL,
+          &delScoreL,
+          scoreOnPtrL
+        ); /*Update the score and direction*/
+     #elif !defined NOGAPOPEN
+        charMaxScore(
+          dirRowST,
+          settings,
+          &insScoreL,
+          &nextMatchScoreL,
+          &delScoreL,
+          scoreOnPtrL
         ); /*Update the score and direction*/
      #else
-        charMaxScore(
-          dirRowST,        // Direction matrix
-          settings,        // has direction preference
-          &insScoreL,      // Score for an insertion
-          &nextMatchScoreL,    // Score for an deletion
-          &delScoreL,      // Score for an match/snp
-          scoreOnPtrL        // Score position to update
-        ); /*Update the score and direction*/
+       alnMaxScore(
+          settings,
+          &insScoreL,
+          &nextMatchScoreL,
+          &delScoreL,
+          scoreOnPtrL
+        );
      #endif
 
-     // Move back to the start of row
-     #ifdef HIRSCHTWOBIT
-        moveXElmFromStart(dirRowST, refStartUL);
-     #else
+     /****************************************************\
+     * Fun-03 Sec-03 Sub-06:
+     *  - Move to start of row (direction matrix)
+     \****************************************************/
+
+     /*Move back to the start of row*/
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+        twoBitMvXElmFromStart(dirRowST, refStartUL);
+     #elif !defined NOGAPOPEN
         dirRowST = dirRowStart;
      #endif
 
      scoreOnPtrL = scoreRowPtrL + refStartUL;
 
-     /*I need to refind the insertion and deletion scores*/
-     indelScore(
-        insScoreL,
-        #ifdef HIRSCHTWOBIT
-          getTwoBitAryElm(dirRowST),
-        #else
-          *dirRowST,
-        #endif
-        *scoreOnPtrL,
-        settings
-     ); /*Macro from generalAlnFun.h*/
+     /****************************************************\
+     * Fun-03 Sec-03 Sub-07:
+     *  - Find the scores for the 1st baise pair in the row
+     \****************************************************/
 
-     // Fine the first match/snp score (first ref base)
+     /*I need to refind the insertion and deletion scores*/
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+        indelScore(
+           insScoreL,
+           getTwoBitElm(dirRowST),
+           *scoreOnPtrL,
+           settings
+        ); /*Macro from generalAlnFun.h*/
+     #elif !defined NOGAPOPEN
+        indelScore(
+            insScoreL,
+            *dirRowST, /*For no gap open, is a dummy*/
+            *scoreOnPtrL,
+            settings
+         ); /*Macro from generalAlnFun.h*/
+     #else
+        insScoreL = *scoreOnPtrL + settings->gapExtendI;
+     #endif
+
+     /*Move to the next base/restart reference base*/
+     refStr = refSeqCStr + refStartUL + 1;
+     ++qryStr;
+
+     /*Find the first match/snp score (first ref base)*/
      nextMatchScoreL =
-       getBasePairScore(
-         qryBaseCStr + 1,           // Next query base
-         refSeqCStr + refStartUL,   // first base
-         settings                   // Has score matrix
-     ); // Ge the score for the enxt base
+       getBaseScore(
+         qryStr,                    /*Next query base*/
+         refStr - 1,                /*1st reference base*/
+         settings                   /*Has score matrix*/
+     ); /*Get the score for the next base*/
 
      nextMatchScoreL += indelColL;
-       // This is here so I can overwrite the array with the
-       // new scores
-
      indelColL += settings->gapExtendI;
      delScoreL = indelColL+settings->gapExtendI;
-   } // Loop: score all query bases (rows)
+   } /*Loop: score all query bases (rows)*/
   
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
   ^ Fun-03 Sec-04:
   ^  - Clean up
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+   /*Correct for being on the next row*/
+   indelColL -= settings->gapExtendI;
    return indelColL;
-} // scoreForwardHirsch
+} /*scoreForwardHirsch*/
 
 /*--------------------------------------------------------\
 | Output:
@@ -969,23 +1064,21 @@ long scoreForwardHirsch(
 |      backwards Needleman Wunsch /Smith Waterman alignment
 \--------------------------------------------------------*/
 long scoreReverseHirsch(
-  char *refSeqCStr,          // Reference sequence
-  unsigned long refStartUL,  // index 0 starting ref base
-  unsigned long refLenUL,    // index 1 Length of target
+  char *refSeqCStr,          /*Reference sequence*/
+  unsigned long refStartUL,  /*index 0 starting ref base*/
+  unsigned long refLenUL,    /*index 1 Length of target*/
 
-  char *qrySeqCStr,          // Query sequence
-  unsigned long qryStartUL,// Index 0 Starting query base
-  unsigned long qryLenUL,  // index 1 length of target
+  char *qrySeqCStr,          /*Query sequence*/
+  unsigned long qryStartUL, /*Index 0 Starting query base*/
+  unsigned long qryLenUL,    /*index 1 length of target*/
 
-  long *scoreRowPtrL,       // Array of scores to fill
-     // This needs to be as long as the full length
-     // reference sequence
+  long *scoreRowPtrL,        /*Array of scores to fill*/
   #ifdef HIRSCHTWOBIT
-     struct twoBitAry *dirRowST,//direction row gap extend
+     struct twoBitAry *dirRowST,/*direction row*/
   #else
-     char *dirRowST,//direction row gap extend
+     char *dirRowST,      /*direction row, for gap extend*/
   #endif
-  struct alnSet *settings   // setttings to use
+  struct alnSet *settings    /*setttings to use*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-04 TOC: scoreReverseHirsch
    '  - Does a single round of scoring for a hirschberg
@@ -1005,6 +1098,9 @@ long scoreReverseHirsch(
    ^  - Variable declerations
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+   char *qryStr = 0;
+   char *refStr = 0;
+
    long *scoreOnPtrL = 0;
      /*refLenUL is index 1, so  need -1 to get index 0*/
 
@@ -1014,7 +1110,7 @@ long scoreReverseHirsch(
    long nextMatchScoreL = 0; /*Score for the next base*/
    long indelColL = 0;       /*Holds indel column values*/
 
-   #ifndef HIRSCHTWOBIT
+   #if !defined HIRSCHTWOBIT && !defined NOGAPOPEN
       char *endDirRowStr = 0;
    #endif
 
@@ -1032,24 +1128,25 @@ long scoreReverseHirsch(
    *  - Set up the first two elements (no gat extend)
    \******************************************************/
 
-   #ifdef HIRSCHTWOBIT
-      moveXElmFromStart(dirRowST,refStartUL + refLenUL -1);
-   #else
-      dirRowST += refStartUL + refLenUL - 1;
-      endDirRowStr = dirRowST;
+   #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+     twoBitMvXElmFromStart(dirRowST,refStartUL+refLenUL-1);
+     changeTwoBitElm(dirRowST, defMvDel);
+     twoBitMvBackOneElm(dirRowST);
+   #elif !defined NOGAPOPEN
+     dirRowST += refStartUL + refLenUL - 1;
+     endDirRowStr = dirRowST;
+     *dirRowST = defMvDel;
+     --dirRowST;
    #endif
 
    scoreOnPtrL = scoreRowPtrL + refStartUL + refLenUL - 1;
-     // - 1 to account for refLenUL being index 1
+     /*- 1 to account for refLenUL being index 1*/
    indelColL = 0;
-   *scoreOnPtrL = settings->gapOpenI;
 
-   #ifdef HIRSCHTWOBIT
-      changeTwoBitElm(dirRowST, defMvDel);
-      twoBitAryMoveBackOneElm(dirRowST);
+   #if !defined NOGAPOPEN
+      *scoreOnPtrL = settings->gapOpenI;
    #else
-      *dirRowST = defMvDel;
-      --dirRowST;
+      *scoreOnPtrL = settings->gapExtendI;
    #endif
 
    --scoreOnPtrL;
@@ -1059,28 +1156,27 @@ long scoreReverseHirsch(
    *  - Set up remaing elements (indels) (uses gap extend)
    \******************************************************/
 
-   // Loop from the second to last base till the start,
-   // Starting at second to last, because already did the
-   // first base
-   for(
-     char *refBaseCStr =
-       refSeqCStr + refStartUL + refLenUL - 2;
-     refBaseCStr > refSeqCStr + refStartUL - 1; // index 0
-     --refBaseCStr
-   ){ // Loop:Set the initial blank scores
-     *scoreOnPtrL =
-       *(scoreOnPtrL+1) +settings->gapExtendI;
+   /* Loop from the second to last base till the start,
+   `  Starting at second to last, because already did the
+   `  first base
+   */
+   refStr = refSeqCStr + refStartUL + refLenUL - 2;
 
-     #ifdef HIRSCHTWOBIT
+   while(refStr > refSeqCStr + refStartUL - 1)
+   { /*Loop:Set the initial blank scores*/
+     *scoreOnPtrL = *(scoreOnPtrL+1) +settings->gapExtendI;
+
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
         changeTwoBitElm(dirRowST, defMvDel);
-        twoBitAryMoveBackOneElm(dirRowST);
-     #else
+        twoBitMvBackOneElm(dirRowST);
+     #elif !defined NOGAPOPEN
         *dirRowST = defMvDel;
         --dirRowST;
      #endif
 
      --scoreOnPtrL;
-   } // Loop:Set the initial blank scores
+     --refStr;
+   } /*Loop:Set the initial blank scores*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-04 Sec-03:
@@ -1092,7 +1188,13 @@ long scoreReverseHirsch(
    ^  o fun-04 sec-03 sub-03:
    ^    - Select best score for direction
    ^  o fun-04 sec-03 sub-04:
-   ^    - Set up for scoring next row (handle indel col)
+   ^    - Find the scores for the next indels
+   ^  o fun-04 sec-03 sub-05:
+   ^    - Find the best score for last base pair in row
+   ^  o fun-04 sec-03 sub-06:
+   ^    - Move to start of row (direction matrix)
+   ^  o fun-04 sec-03 sub-07:
+   ^    - Find the scores for the 1st baise pair in the row
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    /******************************************************\
@@ -1100,29 +1202,36 @@ long scoreReverseHirsch(
    *  - Set up the first element (indel, has gap open)
    \******************************************************/
 
-   // Move back to the start of row (refLenUL is index 1)
-   #ifdef HIRSCHTWOBIT
-      moveXElmFromStart(dirRowST,refStartUL + refLenUL -1);
-   #else
-      dirRowST = endDirRowStr;
+   /*Move back to the start of row (refLenUL is index 1)*/
+   #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+     twoBitMvXElmFromStart(dirRowST,refStartUL+refLenUL-1);
+   #elif !defined NOGAPOPEN
+     dirRowST = endDirRowStr;
    #endif
 
    scoreOnPtrL = scoreRowPtrL + refStartUL + refLenUL - 1;
 
-   // Fine the first match/snp score (first ref base)
+   /*Find the first match/snp score (first ref base)*/
    nextMatchScoreL =
-     getBasePairScore(
+     getBaseScore(
        qrySeqCStr + qryStartUL + qryLenUL - 1,
        refSeqCStr + refStartUL + refLenUL - 1,
-       settings                         // Has score matrix
-   ); // Ge the score for the enxt base
+       settings
+   ); /*Get the score for the next base*/
 
    nextMatchScoreL += indelColL;
-     // This is here so I can overwrite the array with the
-     // new scores
+     /* This is here so I can overwrite the array with the
+     `  new scores
+     */
 
-   // Find the first insertion and deletion scores
-   indelColL += settings->gapOpenI;
+   /*Find the first insertion and deletion scores*/
+
+   #if !defined NOGAPOPEN
+      indelColL += settings->gapOpenI;
+   #else
+      indelColL += settings->gapExtendI;
+   #endif
+
    insScoreL = indelColL + settings->gapExtendI;
    delScoreL = indelColL + settings->gapExtendI;
 
@@ -1131,33 +1240,32 @@ long scoreReverseHirsch(
    ^  - Find the scores for the next row
    \******************************************************/
 
-   for(
-     char *qryBaseCStr =
-       qrySeqCStr + qryStartUL + qryLenUL - 1;
-     qryBaseCStr > qrySeqCStr + qryStartUL - 1;
-     --qryBaseCStr
-   ){ // Loop: score all query bases (rows)
+   refStr = refSeqCStr + refStartUL + refLenUL - 2;
+     /*Start one base back to account for the
+     ` pre-calcualted scores for the first base
+     */
+   qryStr = qrySeqCStr + qryStartUL + qryLenUL - 1;
 
-     for(
-       char *refBaseCStr =
-         refSeqCStr + refStartUL + refLenUL - 1;
-       refBaseCStr > refSeqCStr + refStartUL;
-       --refBaseCStr
-     ){ // Loop:score all query bases (columns)
+   while(qryStr > qrySeqCStr + qryStartUL - 1)
+   { /*Loop: score all query bases (rows)*/
 
-       // Get the score for the next match. This allows me
-       // to overwite the last diagnol and thus, use only
-       // one row of scoring
+     while(refStr > refSeqCStr + refStartUL - 1)
+     { /*Loop:score all query bases (columns)*/
+
+       /* Get the score for the next match. This allows me
+       `  to overwite the last diagnol and thus, use only
+       `  one row of scoring
+       */
 
        matchScoreL = nextMatchScoreL;
 
        nextMatchScoreL =
-         getBasePairScore(
-           qryBaseCStr,     // Current query base
-           refBaseCStr - 1, // next reference base
-           settings         // Has score matrix
-       ); // Ge the score for the enxt base
-         // At worst case refBaseCStr will be '\0'
+         getBaseScore(
+           qryStr,     /*Current query base*/
+           refStr,     /*next reference base*/
+           settings    /*Has score matrix*/
+       ); /*Get the score for the enxt base*/
+          /*At worst case refStr will be '\0'*/
 
        nextMatchScoreL += *scoreOnPtrL;
 
@@ -1166,47 +1274,64 @@ long scoreReverseHirsch(
        *  - Select best score for direction
        \**************************************************/
 
-       #ifdef HIRSCHTWOBIT
+       #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
           twoBitMaxScore(
-            dirRowST,        // Direction matrix
-            settings,        // has direction preference
-            &insScoreL,      // Score for an insertion
-            &matchScoreL,    // Score for an deletion
-            &delScoreL,      // Score for an match/snp
-            scoreOnPtrL        // Score position to update
+            dirRowST,
+            settings,
+            &insScoreL,
+            &matchScoreL,
+            &delScoreL,
+            scoreOnPtrL
+          ); /*Update the score and direction*/
+       #elif !defined NOGAPOPEN
+          charMaxScore(
+            dirRowST,        /*Direction matrix*/
+            settings,        /*has direction preference*/
+            &insScoreL,      /*Score for an insertion*/
+            &matchScoreL,    /*Score for an deletion*/
+            &delScoreL,      /*Score for an match/snp*/
+            scoreOnPtrL      /*Score position to update*/
           ); /*Update the score and direction*/
        #else
-          charMaxScore(
-            dirRowST,        // Direction matrix
-            settings,        // has direction preference
-            &insScoreL,      // Score for an insertion
-            &matchScoreL,    // Score for an deletion
-            &delScoreL,      // Score for an match/snp
-            scoreOnPtrL        // Score position to update
-          ); /*Update the score and direction*/
+          alnMaxScore(
+             settings,
+             &insScoreL,
+             &matchScoreL,
+             &delScoreL,
+             scoreOnPtrL
+          );
        #endif
+
+       /**************************************************\
+       * Fun-04 Sec-03 Sub-04:
+       *  - Find the scores for the next indels
+       \**************************************************/
 
        /* The deletion scores are based on the found base,
        `  So I can find the next score before moving
        `  Get the deletion score
        */
-       indelScore(
-          delScoreL,
-          #ifdef HIRSCHTWOBIT
-             getTwoBitAryElm(dirRowST),
-          #else
-             *dirRowST,
-          #endif
-          *scoreOnPtrL,
-          settings
-       ); /*Macro from generalAlnFun.h*/
+       #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+          indelScore(
+             delScoreL,
+             getTwoBitElm(dirRowST),
+             *scoreOnPtrL,
+             settings
+          ); /*Macro from generalAlnFun.h*/
 
-       /*Move to the next element*/
-       #ifdef HIRSCHTWOBIT
-          twoBitAryMoveBackOneElm(dirRowST);
-       #else
+          twoBitMvBackOneElm(dirRowST);
+       #elif !defined NOGAPOPEN
+         indelScore(
+             delScoreL,
+             *dirRowST, /*For no gap open, is a dummy*/
+             *scoreOnPtrL,
+             settings
+          ); /*Macro from generalAlnFun.h*/
+
           --dirRowST;
-       #endif
+       #else
+         delScoreL = *scoreOnPtrL + settings->gapExtendI;
+      #endif
 
        --scoreOnPtrL;
 
@@ -1214,87 +1339,127 @@ long scoreReverseHirsch(
        `  the indel column in a separate variable
        `  Get the insertion score
        */
-       indelScore(
-          insScoreL,
-          #ifdef HIRSCHTWOBIT
-             getTwoBitAryElm(dirRowST),
-          #else
-             *dirRowST,
-          #endif
-          *scoreOnPtrL,
-          settings
-       ); /*Macro from generalAlnFun.h*/
+       #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+          indelScore(
+             insScoreL,
+             getTwoBitElm(dirRowST),
+             *scoreOnPtrL,
+             settings
+          ); /*Macro from generalAlnFun.h*/
+       #elif !defined NOGAPOPEN
+          indelScore(
+              insScoreL,
+              *dirRowST, /*For no gap open, is a dummy*/
+              *scoreOnPtrL,
+              settings
+           ); /*Macro from generalAlnFun.h*/
+       #else
+          insScoreL = *scoreOnPtrL + settings->gapExtendI;
+       #endif
+
+       --refStr;
      } /*Loop:score all query bases (columns)*/
 
      /****************************************************\
-     * Fun-04 Sec-03 Sub-04:
-     *  - Set up for scoring next row (handle indel col)
+     * Fun-04 Sec-03 Sub-05:
+     *  - Find the best score for last base pair in row
      \****************************************************/
 
-     #ifdef HIRSCHTWOBIT
+     /*Update the final score in the row*/
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
         twoBitMaxScore(
-          dirRowST,        // Direction matrix
-          settings,        // has direction preference
-          &insScoreL,      // Score for an insertion
-          &nextMatchScoreL,    // Score for an deletion
-          &delScoreL,      // Score for an match/snp
-          scoreOnPtrL        // Score position to update
+          dirRowST,
+          settings,
+          &insScoreL,
+          &nextMatchScoreL,
+          &delScoreL,
+          scoreOnPtrL
+        ); /*Update the score and direction*/
+     #elif !defined NOGAPOPEN
+        charMaxScore(
+          dirRowST,
+          settings,
+          &insScoreL,
+          &nextMatchScoreL,
+          &delScoreL,
+          scoreOnPtrL
         ); /*Update the score and direction*/
      #else
-        charMaxScore(
-          dirRowST,        // Direction matrix
-          settings,        // has direction preference
-          &insScoreL,      // Score for an insertion
-          &nextMatchScoreL,    // Score for an deletion
-          &delScoreL,      // Score for an match/snp
-          scoreOnPtrL        // Score position to update
-        ); /*Update the score and direction*/
+       alnMaxScore(
+          settings,
+          &insScoreL,
+          &nextMatchScoreL,
+          &delScoreL,
+          scoreOnPtrL
+        );
      #endif
 
-     // Move back to the start of row
-     #ifdef HIRSCHTWOBIT
-        moveXElmFromStart(dirRowST,refStartUL +refLenUL-1);
-     #else
+     /****************************************************\
+     * Fun-04 Sec-03 Sub-06:
+     *  - Move to start of row (direction matrix)
+     \****************************************************/
+
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+       twoBitMvXElmFromStart(
+          dirRowST,
+          refStartUL + refLenUL - 1
+       );
+     #elif !defined NOGAPOPEN
         dirRowST = endDirRowStr;
      #endif
 
      scoreOnPtrL = scoreRowPtrL + refStartUL + refLenUL -1;
 
+     /****************************************************\
+     * Fun-04 Sec-03 Sub-07:
+     *  - Find the scores for the 1st baise pair in the row
+     \****************************************************/
+
      /*I need to refind the insertion and deletion scores*/
-     indelScore(
-        insScoreL,
-        #ifdef HIRSCHTWOBIT
-           getTwoBitAryElm(dirRowST),
-        #else
-           *dirRowST,
-        #endif
-        *scoreOnPtrL,
-        settings
-     ); /*Macro from generalAlnFun.h*/
-        
-     // Fine the first match/snp score (first ref base)
+     #if defined HIRSCHTWOBIT && !defined NOGAPOPEN
+        indelScore(
+           insScoreL,
+           getTwoBitElm(dirRowST),
+           *scoreOnPtrL,
+           settings
+        ); /*Macro from generalAlnFun.h*/
+     #elif !defined NOGAPOPEN
+        indelScore(
+            insScoreL,
+            *dirRowST, /*For no gap open, is a dummy*/
+            *scoreOnPtrL,
+            settings
+         ); /*Macro from generalAlnFun.h*/
+     #else
+        insScoreL = *scoreOnPtrL + settings->gapExtendI;
+     #endif
+
+     /*Reset the base on*/
+     refStr = refSeqCStr + refStartUL + refLenUL - 2;
+     --qryStr;
+
+     /*Find the first match/snp score (first ref base)*/
      nextMatchScoreL =
-       getBasePairScore(
-         qryBaseCStr - 1,           // Next query base
-         refSeqCStr + refStartUL + refLenUL - 1,
-         settings         // Has score matrix
-     ); // Ge the score for the enxt base
+       getBaseScore(
+         qryStr,             /*Next query base*/
+         refStr + 1,
+         settings            /*Has score matrix*/
+     ); /*Get the score for the enxt base*/
 
      nextMatchScoreL += indelColL;
-       // This is here so I can overwrite the array with the
-       // new scores
-
      indelColL += settings->gapExtendI;
      delScoreL = indelColL+settings->gapExtendI;
-   } // Loop: score all query bases (rows)
+   } /*Loop: score all query bases (rows)*/
   
   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
   ^ Fun-04 Sec-04:
   ^  - Clean up
   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
+   /*Correct for being on the next row*/
+   indelColL -= settings->gapExtendI;
    return indelColL;
-} // scoreReverseHirsch
+} /*scoreReverseHirsch*/
 
 /*--------------------------------------------------------\
 | Output:
@@ -1303,25 +1468,27 @@ long scoreReverseHirsch(
 |      base aligned to the sequence
 \--------------------------------------------------------*/
 void positionSingleBase(
-  char baseC,             // Single base to align to a seq
-  unsigned long baseIndexUL, // Index base is at
-  char *seqCStr,            // Sequence to position base on
+  char baseC,             /*Single base to align to a seq*/
+  unsigned long baseIndexUL,/*Index base is at*/
+  char *seqCStr,            /*Sequence position on*/
   unsigned long startOfSeqUL,
-    // Index 0 of first base to align bascC to in seqCStr
+    /*Index 0 of first base to align bascC to in seqCStr*/
   unsigned long lenSeqUL,
-    //index 1; Length of the aligned region in seqCStr
+    /*Index 1; Length of the aligned region in seqCStr*/
   #ifdef HIRSCHTWOBIT
      struct twoBitAry *baseCAlnST,
-       // Two bit alingment array for the sequence having
-       // baseC
+       /* Two bit alingment array for the sequence having
+       `  baseC
+       */
      struct twoBitAry *seqAlnST, 
-       // Two bit alignment array for the sequence aliging
-       // baseC to
+       /* Two bit alignment array for the sequence alinging
+       `  baseC to
+       */
   #else
      char *baseCAlnST,
      char *seqAlnST, 
   #endif
-  struct alnSet *settings        // setttings to use
+  struct alnSet *settings        /*setttings to use*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-05 TOC: positionSingleRefBase
    '  - Align a single base to a sequence
@@ -1338,14 +1505,15 @@ void positionSingleBase(
    ^  - Variable declerations
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   long insScoreL = 0;      // The score of an insertion
-   long delScoreL = 0;      // the score of a deleton
-   long matchScoreL = 0;    // The score of a match
-   long curScoreL = 0;      // The score of the last row
+   long insScoreL = 0;      /*The score of an insertion*/
+   long delScoreL = 0;      /*the score of a deleton*/
+   long matchScoreL = 0;    /*The score of a match*/
+   long curScoreL = 0;      /*The score of the last row*/
 
    char *seqBaseCStr = seqCStr + startOfSeqUL;
    char *endSeqCStr = seqCStr +startOfSeqUL +lenSeqUL-1;
    char *lastMatchCStr = 0;
+   char dirC = 0; /*Removes some #if defined statments*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-05 Sec-02:
@@ -1363,151 +1531,132 @@ void positionSingleBase(
    *  - Find the first scores for the loop
    \******************************************************/
 
-   #ifdef HIRSCHTWOBIT
-      moveXElmFromStart(baseCAlnST, baseIndexUL);
-      moveXElmFromStart(seqAlnST, startOfSeqUL);
+   #if defined HIRSCHTWOBIT
+      twoBitMvXElmFromStart(baseCAlnST, baseIndexUL);
+      twoBitMvXElmFromStart(seqAlnST, startOfSeqUL);
    #else
       baseCAlnST += baseIndexUL;
       seqAlnST += startOfSeqUL;
    #endif
 
-   matchScoreL =
-       getBasePairScore(seqBaseCStr, &baseC, settings);
+   matchScoreL = getBaseScore(seqBaseCStr,&baseC,settings);
 
-   insScoreL = settings->gapOpenI;
+   #if !defined NOGAPOPEN
+      insScoreL = settings->gapOpenI;
+   #else
+      insScoreL = settings->gapExtendI;
+   #endif
+
    delScoreL = insScoreL;
-
    ++seqBaseCStr;
 
    /******************************************************\
    * Fun-05 Sec-02 Sub-02:
    *  - Find the remaing scores
    \******************************************************/
-
  
-   do { // While I have bases to compare
-
-     // Set your score and direction
-     #ifdef HIRSCHTWOBIT
-        twoBitMaxScore(
-          seqAlnST,        // Direction matrix
-          settings,        // has direction preference
-          &insScoreL,      // Score for an insertion
-          &matchScoreL,    // Score for an deletion
-          &delScoreL,      // Score for an match/snp
-          &curScoreL        // Score position to update
-        ); // Update the score using a waterman
-     #else
-        charMaxScore(
-          seqAlnST,        // Direction matrix
-          settings,        // has direction preference
-          &insScoreL,      // Score for an insertion
-          &matchScoreL,    // Score for an deletion
-          &delScoreL,      // Score for an match/snp
-          &curScoreL        // Score position to update
-        ); // Update the score using a waterman
-     #endif
+   do { /*While I have bases to compare*/
+     charMaxScore(
+       &dirC,
+       settings,        /*has direction preference*/
+       &insScoreL,      /*Score for an insertion*/
+       &matchScoreL,    /*Score for an deletion*/
+       &delScoreL,      /*Score for an match/snp*/
+       &curScoreL       /*Score position to update*/
+     ); /*Update the score*/
+     /*Directionalty determines which direction to select
+     ` when one or more directions are equal (ins, snp,del)
+     */
 
      matchScoreL =
          insScoreL
-       + getBasePairScore(seqBaseCStr,&baseC,settings);
+       + getBaseScore(seqBaseCStr,&baseC,settings);
 
      insScoreL += settings->gapExtendI;
 
-     #ifdef HIRSCHTWOBIT
-        switch(getTwoBitAryElm(seqAlnST))
-     #else
-        switch(*seqAlnST)
-     #endif
-     { // Switch: Check if keeping the score
+     switch(dirC)
+     { /*Switch: Check if keeping the score*/
        case defMvSnp:
          lastMatchCStr = seqBaseCStr - 1;
-         delScoreL = curScoreL+settings->gapOpenI;
+         #if !defined NOGAPOPEN
+            delScoreL = curScoreL + settings->gapOpenI;
+         #else
+            delScoreL = curScoreL + settings->gapExtendI;
+         #endif
          break;
 
        case defMvDel:
        case defMvIns:
-         delScoreL = curScoreL+settings->gapExtendI;
+         delScoreL = curScoreL + settings->gapExtendI;
          break;
-       case defMvStop: break; // Never fires
-     } // Switch: Check if keeping the score
+       case defMvStop: break; /*Never fires*/
+     } /*Switch: Check if keeping the score*/
 
      ++seqBaseCStr;
    } while(seqBaseCStr <= endSeqCStr);
-   // While I have bases to compare
+   /*While I have bases to compare*/
 
    /******************************************************\
    * Fun-05 Sec-02 Sub-03:
-   *  - Figure out which of hte final scores to keep
+   *  - Figure out which of the final scores to keep
    \******************************************************/
 
-   // Set your score and direction
-   #ifdef HIRSCHTWOBIT
-      twoBitMaxScore(
-        seqAlnST,        // Direction matrix
-        settings,        // has direction preference
-        &insScoreL,      // Score for an insertion
-        &matchScoreL,    // Score for an deletion
-        &delScoreL,      // Score for an match/snp
-        &curScoreL        // Score position to update
-      ); // Update the score using a waterman
-   #else
-      charMaxScore(
-        seqAlnST,        // Direction matrix
-        settings,        // has direction preference
-        &insScoreL,      // Score for an insertion
-        &matchScoreL,    // Score for an deletion
-        &delScoreL,      // Score for an match/snp
-        &curScoreL        // Score position to update
-      ); // Update the score using a waterman
-   #endif
+   charMaxScore(
+     &dirC,
+     settings,        /*has direction preference*/
+     &insScoreL,      /*Score for an insertion*/
+     &matchScoreL,    /*Score for an deletion*/
+     &delScoreL,      /*Score for an match/snp*/
+     &curScoreL       /*Score position to update*/
+   ); /*Update the final score*/
+   /*Directionalty determines which direction to select
+   ` when one or more directions are equal (ins, snp,del)
+   */
 
-   #ifdef HIRSCHTWOBIT
-      switch(getTwoBitAryElm(seqAlnST))
-   #else
-      switch(*seqAlnST)
-   #endif
-   { // Switch: Check if keeping the score
-       case defMvSnp:
-         lastMatchCStr = seqBaseCStr - 1;
-         break;
+   switch(dirC)
+   { /*Switch: Check if keeping the score*/
+     case defMvSnp:
+       lastMatchCStr = seqBaseCStr - 1;
+       break;
 
-       case defMvDel: break;
-       case defMvIns: break;
-       case defMvStop: break; // Never fires
-   } // Switch: Check if keeping the score
+     case defMvDel: break;
+     case defMvIns: break;
+     case defMvStop: break; // Never fires
+   } /*Switch: Check if keeping the score*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-05 Sec-03:
    ^  - Fill in the insertions and reference base position
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
    
-   // A series of deletions and insertions are prefered
-   // over matches and smps. In this case put the base
-   // at the first base. There is no good position
+   /* A series of deletions and insertions are prefered
+   `  over matches and smps. In this case put the base
+   `  at the first base. There is no good position
+   */
    if(lastMatchCStr == 0)
      lastMatchCStr = seqCStr + startOfSeqUL;
 
    seqBaseCStr = seqCStr + startOfSeqUL;
-   // No need to change query position since previouis
-   // loop only usedo one direction position
+   /* No need to change query position since previouis
+   `  loop only usedo one direction position
+   */
 
-   // Add in the insertions at the start
+   /*Add in the insertions at the start*/
    while(seqBaseCStr < lastMatchCStr)
-   { // While I have insertions to fill
+   { /*While I have insertions to fill*/
      #ifdef HIRSCHTWOBIT
         changeTwoBitElm(seqAlnST, defGapFlag);
-        twoBitAryMoveToNextElm(seqAlnST);
+        twoBitMvToNextElm(seqAlnST);
      #else
         *seqAlnST = defGapFlag;
         ++seqAlnST;
      #endif
      ++seqBaseCStr;
-   } // While I have insertions to fill
+   } /*While I have insertions to fill*/
    
-   // Add in the positoin of the base
+   /*Add in the position of the base*/
    if(checkIfBasesMatch(seqBaseCStr, &baseC))
-   { // IF the bases matched
+   { /*IF the bases matched*/
      #ifdef HIRSCHTWOBIT
         changeTwoBitElm(baseCAlnST, defMatchFlag);
         changeTwoBitElm(seqAlnST, defMatchFlag);
@@ -1515,10 +1664,10 @@ void positionSingleBase(
         *baseCAlnST = defMatchFlag;
         *seqAlnST = defMatchFlag;
      #endif
-   } // IF the bases matched
+   } /*IF the bases matched*/
 
     else
-    { // Else this was a SNP
+    { /* Else this was a SNP*/
      #ifdef HIRSCHTWOBIT
         changeTwoBitElm(baseCAlnST, defSnpFlag);
         changeTwoBitElm(seqAlnST, defSnpFlag);
@@ -1526,31 +1675,31 @@ void positionSingleBase(
         *baseCAlnST = defSnpFlag;
         *seqAlnST = defSnpFlag;
      #endif
-    } // Else this was a SNP
+    } /*Else this was a SNPS*/
 
    #ifdef HIRSCHTWOBIT
-      twoBitAryMoveToNextElm(seqAlnST);
+      twoBitMvToNextElm(seqAlnST);
    #else
       ++seqAlnST;
    #endif
 
    ++seqBaseCStr;
 
-   // Finish adding in the insertions at the end
+   /*Finish adding in the insertions at the end*/
    while(seqBaseCStr <= endSeqCStr)
-   { // While I have insertions to fill
+   { /*While I have insertions to fill*/
      #ifdef HIRSCHTWOBIT
         changeTwoBitElm(seqAlnST, defGapFlag);
-        twoBitAryMoveToNextElm(seqAlnST);
+        twoBitMvToNextElm(seqAlnST);
      #else
         *seqAlnST = defGapFlag;
         ++seqAlnST;
      #endif
      ++seqBaseCStr;
-   } // While I have insertions to fill
+   } /*While I have insertions to fill*/
 
    return;
-} // positionSingleRefBase
+} /*positionSingleRefBase*/
 
 /*--------------------------------------------------------\
 | Output:
@@ -1644,7 +1793,7 @@ struct alnStruct * twoBitAlnToAlnST(
    \******************************************************/
 
    #ifdef HIRSCHTWOBIT
-      moveXElmFromStart(refAlignment, 0);
+      twoBitMvXElmFromStart(refAlignment, 0);
    #endif
 
    /*the refAlignment array starts at refST->offsetUL*/
@@ -1652,7 +1801,7 @@ struct alnStruct * twoBitAlnToAlnST(
    refAlnStr += refIndexUL;
 
    #ifdef HIRSCHTWOBIT
-      bitUC = getTwoBitAryElm(refAlignment);
+      bitUC = getTwoBitElm(refAlignment);
    #else
       bitUC = (uint8_t) *refAlignment;
    #endif
@@ -1695,8 +1844,8 @@ struct alnStruct * twoBitAlnToAlnST(
       *refAlnStr = bitUC;
 
       #ifdef HIRSCHTWOBIT
-         twoBitAryMoveToNextElm(refAlignment);
-         bitUC = getTwoBitAryElm(refAlignment);
+         twoBitMvToNextElm(refAlignment);
+         bitUC = getTwoBitElm(refAlignment);
       #else
          ++refAlignment;
          bitUC = (uint8_t) *refAlignment;
@@ -1722,7 +1871,7 @@ struct alnStruct * twoBitAlnToAlnST(
    \******************************************************/
 
    #ifdef HIRSCHTWOBIT
-      moveXElmFromStart(qryAlignment, 0);
+      twoBitMvXElmFromStart(qryAlignment, 0);
    #endif
       
    /*The qryAlignment array starts at qryST->offset*/
@@ -1730,7 +1879,7 @@ struct alnStruct * twoBitAlnToAlnST(
    qryAlnStr += qryIndexUL;
 
    #ifdef HIRSCHTWOBIT
-      bitUC = getTwoBitAryElm(qryAlignment);
+      bitUC = getTwoBitElm(qryAlignment);
    #else
       bitUC = (uint8_t) *qryAlignment;
    #endif
@@ -1769,8 +1918,8 @@ struct alnStruct * twoBitAlnToAlnST(
       *qryAlnStr = bitUC;
 
       #ifdef HIRSCHTWOBIT
-         twoBitAryMoveToNextElm(qryAlignment);
-         bitUC = getTwoBitAryElm(qryAlignment);
+         twoBitMvToNextElm(qryAlignment);
+         bitUC = getTwoBitElm(qryAlignment);
       #else
          ++qryAlignment;
          bitUC = (uint8_t) *qryAlignment;

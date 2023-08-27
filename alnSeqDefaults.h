@@ -10,13 +10,13 @@
 #ifndef ALNSEQDEFAULTS_H
 #define ALNSEQDEFAULTS_H
 
-/*Gereral find co-infections settings (version this ports with)*/
-#define defVersion 20230812  // Version number for alnSeq
+/*Gereral find co-infections settings*/
+#define defVersion 20230827  /*Version number for alnSeq*/
 
 // Aligment method being used
-#define defUseNeedle 1     // do Needleman-Wunsch alignment
-#define defUseWater 0     // Do a waterman smith alignment
-#define defUseHirsch 0     // Use a Hirschberg alignment
+#define defUseNeedle 1  /*do Needleman-Wunsch alignment*/
+#define defUseWater 0   /*Do a waterman smith alignment*/
+#define defUseHirsch 0  /*Use a Hirschberg alignment*/
 
 /*Output file formating (only change defFormat)*/
 #define defExpandCig 0 /*Expanded cigar format flag*/
@@ -28,31 +28,30 @@
    ` The current default format is expand cigar
    */
 
-// Doing printing out more than one aligment
-#define defMultiBaseWater 0
-   // 1: Flage if outputing more than one alignment
+/*Doing printing out more than one aligment*/
 #define defQueryRefScan 0
-   // 0: Only recored the best score for each reference and
-   // query base in in a Waterman Smith alnigment
-#define defMatrixScan 0 // Do not do a matrix scan
+   /* 1: Recored the best score for each reference and
+   `     query base in in a Waterman Smith alnigment
+   */
+#define defMinScore 1000
+    /*Min score to keep an non-best alignment when doing
+    ` an mutli-entry Waterman Smith alignment
+    */
 
-// Output settings
+
+/*Output settings*/
 #define defPAln 1     /*1: Print out the entire alignment*/
 #define defPPos 0     /*1: Print base positions*/
-#define defLineWrap 59         // Max chars per line in 
-                               // output file (min 40)
-// Alignment matrix movements
-#define defMvStop 0    // Do not move
-#define defMvDel 1    // Move left (deletion)
-#define defMvIns 2      // Move up (insertion)
-#define defMvSnp 3 // Move on a diagnol (snp/match)
+#define defLineWrap 59 /*Max chars per line in out file*/
+   /*Minimun is 40 characters*/
 
-// Matrix filling settings
-#define defMinScore 1000
-    // Min score to keep an non-best alignment when doing
-    // an mutli-entry Waterman Smith alignment
+/*Alignment matrix movements*/
+#define defMvStop 0    /*Stop*/
+#define defMvDel 1     /*Move left (deletion)*/
+#define defMvIns 2     /*Move up (insertion)*/
+#define defMvSnp 3     /*Move on a diagnol (snp/match)*/
 
-//#define defMinBasesUI 100 // NO LONGER USED
+/*Matrix filling settings*/
 
 /* Settings for which direction to keep when their are
 `  multiple equal directions.
@@ -67,13 +66,20 @@
 
 #define defBestDir defInsSnpDel
 
-// Scoring variables
+/*Scoring variables*/
 #define defGapOpen -10  /*Penalty for starting indel*/
-#define defGapExtend -1 /*penalty for extending indel*/
 
-// Scoring matrix is EDNAFULL or something close to it. I
-//  think I have the anonymous bases with the correct
-// scores.
+#if !defined NOGAPOPEN
+   #define defGapExtend -1 /*penalty for extending indel*/
+#else
+   /*Need a harsher score when I have no gap open penalty*/
+   #define defGapExtend -6 /*penalty for extending indel*/
+#endif
+
+/* Scoring matrix is EDNAFULL or something close to it. I
+`   think I have the anonymous bases with the correct
+`  scores.
+*/
 
 /*Chage this value in alnSeqDefaults.c*/
 extern char defMatrixNameStr[]; /*Name of default matrix*/

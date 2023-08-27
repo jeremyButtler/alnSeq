@@ -19,14 +19,13 @@
 '      shell short.  Order is greatest to least.
 '  o fun-02 swapScoreSTs:
 '    - Swaps values in two score structures
+'    - Macro (in scoresST.h)
 '  o fun-03 initScoresST:
 '    - Sets scores in a scores struture to 0
+'    - Macro (in scoresST.h)
 '  o fun-04 freeScoresST:
 '    - Frees score structure if on heap, else does nothing
-'  o fun-05 changeScoreSTIndex:
-'    - Changes the index value in a scores structure
-'  o fun-06 changeScoreSTScore:
-'    - Changes the score value in a scores structure
+'    - Macro (in scoresST.h)
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #ifndef SCORESST_H
@@ -39,9 +38,13 @@
 |  - Holds the score for a single direction matrix positon
 \--------------------------------------------------------*/
 typedef struct scoresStruct
-{ // scoresStruct
-  unsigned long indexUL;// Index in dirtion matrix of score
-  long scoreL;          // Score of positoin
+{ /*scoresStruct*/
+  unsigned long refStartUL;/*1st ref base in alignment*/
+  unsigned long refEndUL;  /*last ref base in alignment*/
+  unsigned long qryStartUL;/*1st query base in alignment*/
+  unsigned long qryEndUL;  /*last query base in alingment*/
+
+  long scoreL;             /*Score of alignment*/
 }scoresStruct;
 
 /*--------------------------------------------------------\
@@ -51,9 +54,9 @@ typedef struct scoresStruct
 |      first element to the index of the last element
 \--------------------------------------------------------*/
 void sortScores(
-   struct scoresStruct **scoresST,//array of socres to sort
-   unsigned long firstElmUL,//Index of 1st element to sort
-   unsigned long lastElmUL  //Index of last element to sort
+   struct scoresStruct **scoresST, /*scores to sort*/
+   unsigned long firstElmUL,       /*1st element to sort*/
+   unsigned long lastElmUL         /*last element to sort*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: sortScores
    '  - Sorts an array of scores structs by score using
@@ -68,68 +71,89 @@ void sortScores(
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\
+| Name: swapScoreSTs
+| Call: swapScoreSTs(firstScore, secondScore)
+| Fun-02 TOC:
+| Use:
+|  - Swap values in firstScore and secondScore
+| Input:
+|  - firstScore
+|    o A pointer to a scoresStruct to swap values in
+|  - secondScore
+|    o A pointer to a scoresStruct to swap values in
 | Output:
-|  - Modifies
-|    o firstScoreST to hold the values from secScoreST and
-|      secScoreST to hold values from firstScoreST
+|  - Modifies:
+|    o firstScore to have the values in secondScore
+|    o secondScore to have the values in firstScore
 \--------------------------------------------------------*/
-void swapScoreSTs(
-  struct scoresStruct *firstScoreST, // Has values to swap
-  struct scoresStruct *secScoreST    // Has values to swap
-);  /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-    ' Fun-02 TOC: Sec-01 Sub-01: swapScoreSTs
-    '  - Swaps values in two score structures
-    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+#define swapScoreSTs(firstScore, secondScore){ \
+  unsigned long swapUL = 0; \
+  \
+  swapUL = (firstScore)->refStartUL; \
+  (firstScore)->refStartUL = (secondScore)->refStartUL; \
+  (secondScore)->refStartUL = swapUL; \
+  \
+  swapUL = (firstScore)->refEndUL; \
+  (firstScore)->refEndUL = (secondScore)->refEndUL; \
+  (secondScore)->refEndUL = swapUL; \
+  \
+  swapUL = (firstScore)->qryStartUL; \
+  (firstScore)->qryStartUL = (secondScore)->qryStartUL; \
+  (secondScore)->qryStartUL = swapUL; \
+  \
+  swapUL = (firstScore)->qryEndUL; \
+  (firstScore)->qryEndUL = (secondScore)->qryEndUL; \
+  (secondScore)->qryEndUL = swapUL; \
+  \
+  swapUL = (unsigned long) (firstScore)->scoreL; \
+  (firstScore)->scoreL = (secondScore)->scoreL; \
+  (secondScore)->scoreL = (long) swapUL; \
+} /*swapScoreSTs*/
 
 /*--------------------------------------------------------\
+| Name: initScoresST
+| Call: initScoresST(scoreST)
+| Fun-03 TOC:
+| Use:
+|  - Initializes (sets to 0) all values in a scoresStruct
+| Input:
+|  - scoreST:
+|    o A scoresStruct to initialize
 | Output:
 |  - Modifies:
 |    o scoreST to have values set to 0
 \--------------------------------------------------------*/
-void initScoresST(
-  struct scoresStruct *scoreST
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: Sec-0 Sub-0: initScoresST
-   '  - Sets scores in a scores struture to 0
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+#define initScoresST(scoreST){\
+   (scoreST)->refStartUL = 0; \
+   (scoreST)->refEndUL = 0; \
+   (scoreST)->qryStartUL = 0; \
+   (scoreST)->qryEndUL = 0; \
+   (scoreST)->scoreL = 0; \
+   return; \
+} /*initScoresST*/
 
 /*--------------------------------------------------------\
+| Name: freeScoresST
+| Fun-04 TOC:
+| Call: freeScoresST(scoresPtrST, stackBl)
+| Use:
+|  - Frees score structure and any variables insdie the
+|    structure
+| Input:
+|  - scoresPtrST:
+|    o Pointer to scoresST structer to free
+|  - stackBl:
+|    o Tells if freeing a heap or stack allocated variable
+|    o 1: Freeing a heap variable
+|    o 0: Freeing a stack variable (do nothing)
 | Output:
 |  - Frees
-|    o Frees the score struct if requested
+|    o 1: frees the score structure
+|    o 0: Does nothing currently
 \--------------------------------------------------------*/
-void freeScoresST(
-  struct scoresStruct *scoreST, // struct to free
-  char stackBl  // 1: structure is on the stack
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-04 TOC: Sec-0 Sub-0: freeScoresST
-   '  - Frees score structure if on heap, else does nothing
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*--------------------------------------------------------\
-| Output:
-|  - Modifies
-|    o scoreST to have the new index
-\--------------------------------------------------------*/
-void changeScoreSTIndex(
-  struct scoresStruct *scoreST, // has index to change
-  unsigned long newIndexUL      // index to swap to
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-05 TOC: Sec-0 Sub-0: changeScoreSTIndex
-   '  - Changes the index value in a scores structure
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-/*--------------------------------------------------------\
-| Output:
-|  - Modifies
-|    o scoreST to have the new score
-\--------------------------------------------------------*/
-void changeScoreSTScore(
-  struct scoresStruct *scoreST, // has index to change
-  long newScoreL               // score to swap to
-); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-06 TOC: Sec-0 Sub-0: changeScoreSTScore
-   '  - Changes the score value in a scores structure
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+#define freeScoresST(scoresPtrST, heapBl){ \
+  if((heapBl)) free((scoreST)); \
+  return; \
+} /*freeScoresST*/
 
 #endif

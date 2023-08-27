@@ -29,7 +29,7 @@
 '       Q-score entries)
 '  o fun-07 freeSeqST:
 '     - Frees the seqST strucuter
-'  o fun-08 TOC: Sec-01: initSeqST
+'  o fun-08 initSeqST:
 '    - Sets vlues in seqST to zero
 '  o fun-10 initSeqST:
 '     - Sets values in seqST to blank values
