@@ -277,10 +277,11 @@ Despite this, ssw still uses less memory than alnSeq's
 For time usage we found that emboss, alnSeq scan, or
   alnSeqs two bit Hirschberg (not shown) were the slowest
   algorithms.
-The fastest programs were ssw (30x faster then alnSeq),
-  followed by the Needleman and Hirschberg from
-  alnSeq-fast, which uses a byte matrix and like
-  bio-alignment, ignores gap opening penalties.
+The fastest programs were ssw (30x faster then alnSeq and
+  10x faster than alnSeqFast Waterman), followed by the
+  Needleman and Hirschberg from alnSeq-fast, which uses a
+  byte matrix and like bio-alignment, ignores gap opening
+  penalties.
 Some of the extra time needed for Emboss could be due to
   its calculating both a gap opening and gap ending
   penalty.
