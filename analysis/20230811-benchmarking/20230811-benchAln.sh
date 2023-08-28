@@ -1,17 +1,18 @@
-smallTestQueryStr="genomes/Small-query.fasta";
-smallTestRefStr="genomes/Small-ref.fasta";
+scriptDirStr="$(dirname "$0")";
+smallTestQueryStr="$scriptDirStr/../genomes/Small-query.fasta";
+smallTestRefStr="$scriptDirStr/../genomes/Small-ref.fasta";
 
-midTestQueryStr="genomes/Mid-query.fasta";
-midTestRefStr="genomes/Mid-reference.fasta";
+midTestQueryStr="$scriptDirStr/../genomes/Mid-query.fasta";
+midTestRefStr="$scriptDirStr/../genomes/Mid-reference.fasta";
 
-largeTestQueryStr="genomes/Large-query.fasta";
-largeTestRefStr="genomes/Large-reference.fasta";
+largeTestQueryStr="$scriptDirStr/../genomes/Large-query.fasta";
+largeTestRefStr="$scriptDirStr/../genomes/Large-reference.fasta";
 
-ramKillerTestQueryStr="genomes/RamKiller-query.fasta";
-ramKillerTestRefStr="genomes/RamKiller-ref.fasta";
+ramKillerTestQueryStr="$scriptDirStr/../genomes/RamKiller-query.fasta";
+ramKillerTestRefStr="$scriptDirStr/../genomes/RamKiller-ref.fasta";
 
 numRepI=4;
-statsFileStr="alnSeq-bench-stats.tsv"
+statsFileStr="$scriptDirStr/20230811-alnSeq-bench-stats.tsv";
 iCnt=0;
 
 # seq-align
@@ -71,7 +72,7 @@ for strRef in "$ramKillerTestRefStr"; do
            -f "alnSeq\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqHirschTwoBit \
+           "$scriptDirStr/../alnSeqHirschTwoBit" \
               -query "$strQuery" \
               -ref "$strRef" \
               -out "tmp.aln";
@@ -80,7 +81,7 @@ for strRef in "$ramKillerTestRefStr"; do
            -f "alnSeq\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqHirschTwoBit \
+           "$scriptDirStr/../alnSeqHirschTwoBit" \
               -use-water \
               -query "$strQuery" \
               -ref "$strRef" \
@@ -90,7 +91,7 @@ for strRef in "$ramKillerTestRefStr"; do
            -f "alnSeq\t$refInStr\t$queryInStr\thb-2bit\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqHirschTwoBit \
+           "$scriptDirStr/../alnSeqHirschTwoBit" \
               -use-hirschberg \
               -query "$strQuery" \
               -ref "$strRef" \
@@ -99,7 +100,7 @@ for strRef in "$ramKillerTestRefStr"; do
            -f "alnSeq\t$refInStr\t$queryInStr\thb-btye\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./alnSeqHirschByte \
+           "$scriptDirStr/../alnSeqHirschByte" \
 	      -use-hirschberg \
               -query "$strQuery" \
               -ref "$strRef" \
@@ -110,7 +111,7 @@ for strRef in "$ramKillerTestRefStr"; do
            -f "bio-align\t$refInStr\t$queryInStr\thb\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./bio-alignment/bin/bio-alignment \
+           "$scriptDirStr/../bio-alignment/bin/bio-alignment" \
               --in "$strQuery,$strRef" \
           --algo hb \
               > tmp.aln;
@@ -119,7 +120,7 @@ for strRef in "$ramKillerTestRefStr"; do
            -f "ssw_test\t$refInStr\t$queryInStr\twater\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./fastSW/ssw_test -c \
+           "$scriptDirStr/../Complete-Striped-Smith-Waterman-Library/src/ssw_test" -c \
              "$strQuery" \
              "$strRef" \
            > "tmp.aln";
@@ -141,7 +142,7 @@ for strRef in "$ramKillerTestRefStr"; do
            -f "bio-align\t$refInStr\t$queryInStr\tneedle\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
-           ./bio-alignment/bin/bio-alignment \
+           "$scriptDirStr/../bio-alignment/bin/bio-alignment" \
               --in "$strQuery,$strRef" \
               --algo nw \
               --out tmp.aln;

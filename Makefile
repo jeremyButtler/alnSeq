@@ -59,6 +59,12 @@ mid:
 	$(CC) $(COREFLAGS) -DBYTEMATRIX -DINSSNPDEL $(CFLAGS) $(SOURCE) -o alnSeqMid
 
 benchmark:
+	$(CC) $(COREFLAGS) -DHIRSCHTWOBIT $(SOURCE) -o alnSeqTwoBit
+	$(CC) $(COREFLAGS) -DBYTEMATRIX $(SOURCE) -o alnSeqByte
+	$(CC) $(COREFLAGS) -DBYTEMATRIX -DINSSNPDEL $(SOURCE) -o alnSeqMid
+	$(CC) $(COREFLAGS) -DBYTEMATRIX -DNOGAPOPEN -DINSSNPDEL $(SOURCE) -o alnSeqFast
+
+20230812benchmark:
 	$(CC) $(COREFLAGS) $(SOURCE) -o alnSeqHirschByte
 	$(CC) $(COREFLAGS) -DHIRSCHTWOBIT $(SOURCE) -o alnSeqHirschTwoBit
 
@@ -77,8 +83,12 @@ clean:
 	rm alnSeqO2 || printf "";
 	rm alnSeqO0 || printf "";
 	rm alnSeq*.core || printf "";
+	rm alnSeqByte || printf "";
+	rm alnSeqTwoBit || printf "";
+	rm alnSeqFast || printf "";
+	rm alnSeqMid || printf "";
 	# || printf ""; is so it does not error out
 
 install:
-	mv alnSeq $(PREFIX) || printf "Unable to install alnSeq at %s\n Change this with make PREFIX=/path/to/install install\n" $(PREFIX) && exit;
-	chmod a+x $(PREFIX)/alnSeq;
+	mv alnSeq $(PREFIX) || mv alnSeqFast $(PREFIX) || mv alnSeqMid $(PREFIX) || printf "Unable to install alnSeq at %s\n Change this with make PREFIX=/path/to/install install\n" $(PREFIX) && exit;
+	chmod a+x $(PREFIX)/alnSeq*;

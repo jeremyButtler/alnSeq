@@ -50,7 +50,7 @@ saveGraph = function(
 dataDT =
   setDT(                        # convert to a data table
     read.csv(
-      "alnSeq-bench-stats.tsv", # File with data
+      "20230827-alnSeq-bench-stats.tsv", # File with data
       sep = "\t",               # for tsv files
       header = TRUE             # Has header
 )); # Read in my data
@@ -119,19 +119,22 @@ dataDT$key =
   paste(
     dataDT$Program,
     dataDT$algorithm,
+    dataDT$flag,
     sep = "-"
 ); # Comibine program name and aligorithm
 
 # Remove waterman and needleman labels from key
+dataDT$key = gsub("-NA", "", dataDT$key);
 dataDT$key = gsub("-water", "", dataDT$key);
 dataDT$key = gsub("-needle", "", dataDT$key);
+dataDT$key = gsub("-hirschberg", "", dataDT$key);
 dataDT$key = sub("ssw_test$", "bio-align_or_ssw", dataDT$key);
 dataDT$key = sub("bio-align$", "bio-align_or_ssw", dataDT$key);
 
 # Replacne hb with needle, so is kept same in graphs
-dataDT$catagory = gsub("hb.*", "global", dataDT$algorithm);
-dataDT$catagory =gsub("needle.*","global",dataDT$catagory);
-dataDT$catagory =gsub("water.*", "local", dataDT$catagory);
+dataDT$catagory = gsub("scan", "water", dataDT$algorithm);
+dataDT$catagory =gsub("needle.*","needle",dataDT$catagory);
+dataDT$catagory =gsub("water.*", "water", dataDT$catagory);
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
 # Sec-04:
@@ -140,9 +143,28 @@ dataDT$catagory =gsub("water.*", "local", dataDT$catagory);
 
 #dev.new();
 
+# NO flags compile
+noFlagsData =
+   dataDT[
+      (
+         dataDT$flags == "two-bit" &
+         dataDT$flags != "hirschberg"
+      ) |
+      (
+         dataDT$flags == "byte" &
+         dataDT$flags == "hirschberg"
+      ) |
+      dataDT$flags == "fast" |
+      is.na(dataDT$flags)
+      ,
+];
+
+noFlagsData$key = gsub("-byte", "", noFlagsData$key);
+noFlagsData$key = gsub("-two-bit", "", noFlagsData$key);
+
 graphObj = 
   ggplot(
-    data = dataDT,
+    data = noFlagsData,
     aes(
       x = test,
       y = elapsedTime, # time in seconds
@@ -186,7 +208,7 @@ graphObj =
   theme(axis.text.x = element_text(angle = 90)
 ); # Rotate x-axis text 90 degrees
 
-saveGraph("alnSeq-time");
+saveGraph("20230827-alnSeq-time");
 
 #dev.off(); # remove all plots
 
@@ -199,7 +221,7 @@ saveGraph("alnSeq-time");
 
 graphObj = 
   ggplot(
-    data = dataDT,
+    data = noFlagsData,
     aes(
       x = test,
       y = maxResidentMemory / 1000, # convert from kb to mb
@@ -243,6 +265,6 @@ graphObj =
   theme(axis.text.x = element_text(angle = 90)
 ); # Rotate x-axis text 90 degrees
 
-saveGraph("alnSeq-memory");
+saveGraph("20230827-alnSeq-default-memory");
 
 #dev.off(); # remove all plots

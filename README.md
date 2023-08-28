@@ -1,5 +1,4 @@
 # Use
-
 AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
   that, depending on flags used when compiling can run
   with memory usage of O(n \* m / 4) Bytes to O(n \* m)
@@ -208,16 +207,25 @@ I picked out three programs to compare alnSeq to. The first
   nor does it include the best programs. It is just a
   simple and quick list.
 
-I split the facets into if it was a global alignment
-  (Needleman/Hirschberg) or a local alignment (Waterman).
-  Bio-alignment is only present on the global facet, while
-  ssw is only present on the local facet.
+Also my figures show two different runs of alnSeq. One
+  run is the default compile, with the Hirschberg using
+  byte arrays and the Waterman and Needleman using two
+  bit arrays.
+The other run (alnSeqFast) is `make fast` and has the
+  gap opening penalty disabled, uses byte arrays, and 
+  is hardcoded to prefer insertions, then snps, then
+  deletions when scores are equal.
+This is the closest you can get to have a similar
+  comparison to bio-alignment.
 
 ![Memory usage of alnSeq compared to the Waterman Smith,
-  Needleman Wunsch, and Hirschberg (hb) aligners from
+  Needleman Wunsch, and Hirschberg aligners from
   bio-alignment (bio-align), emobss, and
-  Complete-Striped-Smith-Waterman-Library.
-](analysis/20230811-alnSeq-memory.svg)
+  the Complete-Striped-Smith-Waterman-Library.
+  alnSeq-scan is printing alternative bases.
+](
+  analysis/20230827-benchmarking/20230827-alnSeq-memory.svg
+)
 
 As expected the memory usage was much lower for the
   Hirschberg aligners and striped Smith Waterman
@@ -225,23 +233,19 @@ As expected the memory usage was much lower for the
   aligners for alnSeq, emboss, and bio-alginment needed
   large amounts of memory.
 For the non-Hirschberg's and striped smith waterman
-  alignments, AlnSeq needed less memory than emboss or
+  alignments, alnSeq needed less memory than emboss or
   bio-alignment.
+With alnSeq using two bit arrays taking the least amount
+  of memory.
 When compared to bio-alignments Hirschberg, alnSeq's
   Hirschberg used less memory than bio-alignments
-  Hirschberg, however, the difference was so small that
-  this this memory saving is of no of real value.
-The one byte (chars instead of two bit arrays) version 
-  of alnSeq's Hirschberg used a bit more memory than the
-  two bit array version, but still used less memory than
-  bio-alignment's Hirschberg.
+  Hirschberg, however, the memory usage for both
+  Hirschbers is small and so the memory saving has no real
+  impact.
 
-Bio-alignment's Hirschberg did have one odd event for the
-  large-huge alignment (this only happened when huge
-  was the reference (not shown in graph)).
-In this case Bio-alignment's Hirschberg used a very small
-  amount of extra memory (~5mb) over all its other
-  alignments.
+Bio-alignment's Hirschberg used more memory when two
+  different alignments (small-huge, mid-huge, large-huge,
+  small-large) were aligned.
 From a glance at the code I suspect this was due to 
   bio-alignment allocating memory for its returned scoring
   arrays at each recursion call.
@@ -253,55 +257,33 @@ Since, bio-alignment is not freeing these arrays right
   away, it is possible that these arrays would continue to
   build up at each call, which results in increased memory
   usage.
-However, you should use a Waterman, not Hirschberg or
-  Needleman in these cases, so the point is mute.
-Also, this is just a guess.
+However, a local alignment should be used instead of an
+  global alignment (Needleman/Hirschberg) in these cases.
 
-We found that though ssw had low memory usage when aligning
-  similar genomes.
-However, it had a much higher memory usage when the genomes
-  were very different.
+We found that ssw had lower memory usage when aligning
+  similar genomes and a higher memory usage when the
+  genomes were very different.
 I am not sure why this is happening, but it may be due to
   how much of the matrix it has to construct.
-Despite this ssw still uses less memory than alnSeq's
-  Waterman alignment.
+Despite this, ssw still uses less memory than alnSeq's
+  Waterman alignment and so, is a better option.
 
 ![Time usage of alnSeq compared to the Waterman Smith,
-    Needleman Wunsch, and Hirschberg (hb) aligners from
+    Needleman Wunsch, and Hirschberg aligners from
     , emobss, and
   Complete-Striped-Smith-Waterman-Library.
-    The alnSeqO3 means alnSeq was complied with the O3
-    option.
-  The Waterman Smith Bio-alignment (bio-align) tests were
-    discarded due to Bio-alignments Waterman Smith
-    algorithm printing out the scoring matrix.
-](analysis/20230811-alnSeq-time.svg)
+](analysis/20230827-benchmarking/20230827-alnSeq-time.svg)
 
-For time usage we found that emboss or alnSeqs two bit
-  Hirschberg were often the slowest algorithms, while
-  ssw was the fastest algorithm, followed by
-  bio-alignment's Hirschberg and Needleman.
-AlnSeq's byte Hirschberg, Waterman, and Needleman often
-  took twice the time as bio-alignment.
-
-The time difference for Emboss could be due to its
-  calculating both a gap opening and gap
-  ending penalty.
-Bio-alignment does not calculate any of these penalties and
-  alnSeq only calculates the gap opening penalty.
-We also saw that the two bit arrays used in alnSeq's 
-  Hirschberg resulted in twice the time usage.
-So, it is possible that alnSeq's Needleman and Waterman
-  would be comparable to bio-alignments Needleman once the
-  two bit arrays are replaced with character arrays
-  (bytes) (I have done some light testing and it looks like
-  this might be case. I need to re-benchmark with make
-  fast).
-However, it will likely still be slower.
-
-One note I should add. I choose emboss because it was an
-  tool kit and bio-alignment because it had an Hirschberg.
-  It is likely that their are faster algorithms out their.
+For time usage we found that emboss, alnSeq scan, or
+  alnSeqs two bit Hirschberg (not shown) were the slowest
+  algorithms.
+The fastest programs were ssw (30x faster then alnSeq),
+  followed by the Needleman and Hirschberg from
+  alnSeq-fast, which uses a byte matrix and like
+  bio-alignment, ignores gap opening penalties.
+Some of the extra time needed for Emboss could be due to
+  its calculating both a gap opening and gap ending
+  penalty.
 
 ## Final notes
 

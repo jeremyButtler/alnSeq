@@ -684,9 +684,9 @@ struct alnMatrixStruct * WatermanAltAln(
    #if !defined BYTEMATRIX && !defined NOGAPOPEN
       struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
       struct twoBitAry insDir;     /*Direction above cell*/
-   #elif !defined NOGAPOPEN 
+   #else
       char *dirMatrix = 0;/*Direction matrix*/
-      char *insDir;       /*Direction above cell*/
+      char *insDir = 0;   /*Direction above cell*/
    #endif
 
    /*This is for recording the starting positions. It

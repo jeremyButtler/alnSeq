@@ -331,6 +331,34 @@ static inline void waterByteMaxScore(
    qryBaseStr, /*Base on in the query sequence*/ \
    qryStr      /*First base in the query sequence*/ \
 ){\
+   /* Branchless (Probably not faster, but will find out
+      unsigned long delBl = -(((dir) == defMvDel); \
+      unsigned long insBl = -(((dir) == defMvIns); \
+      unsigned long snpBl = -(((dir) == defMvSnp); \
+      \
+      unsigned long newStartBl = \
+           (delBl & -(lastInsDir != defMvStop)) \
+         + (insBl & -(lastDelDir != defMvStop)) \
+         + (snpBl & -(lastSnpDir != defMvStop)); \
+      \
+      unsigned long refSwapUL = *(refStartPtr):; \
+      unsigned long qrySwapUL = *(qryStartPtr):; \
+      \
+      *(refStartPtr) = 
+           (((unsigned long) ((refBaseStr) - (refStr))) & newStartBl) \
+         + (*((refStartPtr) - 1) & delBl) \
+         + (*(refStartPtr) & insBl) \
+         + ((lastRefStart) & snpBl); \
+      \
+      *(qryStartPtr) = 
+           (((unsigned long) ((qryBaseStr) - (qryStr))) & newStartBl) \
+         + (*((qryStartPtr) - 1) & delBl) \
+         + (*(qryStartPtr) & insBl) \
+         + ((lastQryStart) & snpBl); \
+      \
+      (lastRefStart) = refSwapUL;
+      (lastQryStart) = qrySwapUL;
+   */\
    unsigned long swapUL = 0; \
    switch(dir) \
    { /*Switch: Find the starting index*/ \
@@ -404,6 +432,55 @@ static inline void waterByteMaxScore(
          break; \
       /*Case: Added an snp/match*/ \
    } /*Switch: Find the starting index*/ \
+   /*ALTERNATIVE 2*/\
+//   unsigned long swapUL = 0; \
+//   unsigned long dirUL = \
+//     (((lastInsDir) != defMvStop) & -((dir) == defMvIns));\
+//   dirUL += \
+//     (((lastDelDir) != defMvStop) & -((dir) == defMvDel));\
+//   dirUL += \
+//     (((lastSnpDir) != defMvStop) & -((dir) == defMvSnp));\
+//   dirUL = (-dirUL) & dir; \
+//   \
+//   switch(dirUL) \
+//   { /*Switch: Find the starting index*/ \
+//      case 0: \
+//      /*Case: Last alignment ends (reset start)*/ \
+//         (lastRefStart) = *(refStartPtr); \
+//         (lastQryStart) = *(qryStartPtr); \
+//         *(qryStartPtr) = \
+//               (unsigned long) ((qryBaseStr) - (qryStr)); \
+//         *(refStartPtr) = \
+//               (unsigned long) ((refBaseStr) - (refStr)); \
+//         break; \
+//      /*Case: Last alignment ends (reset start)*/ \
+//      case defMvDel: \
+//      /*Case: Added an deletion*/ \
+//         (lastRefStart) = *(refStartPtr); \
+//         (lastQryStart) = *(qryStartPtr); \
+//         \
+//         *(refStartPtr) = *((refStartPtr) - 1); \
+//         *(qryStartPtr) = *((qryStartPtr) - 1); \
+//         break; \
+//      /*Case: Added an deletion*/ \
+//      case defMvIns: \
+//      /*Case: Added an insertion*/ \
+//         (lastQryStart) = *(qryStartPtr); \
+//         (lastRefStart) = *(refStartPtr); \
+//         break;  /*Already have starting bases*/ \
+//      /*Case: Added an insertion*/ \
+//      case defMvSnp: \
+//      /*Case: Added an snp/match*/ \
+//         swapUL = (lastRefStart); \
+//         (lastRefStart) = *(refStartPtr); \
+//         *(refStartPtr) = swapUL; \
+//         \
+//         swapUL = (lastQryStart); \
+//         (lastQryStart) = *(qryStartPtr); \
+//         *(qryStartPtr) = swapUL; \
+//         break; \
+//      /*Case: Added an snp/match*/ \
+//   } /*Switch: Find the starting index*/ \
 } /*updateStartPos*/
 
 /*--------------------------------------------------------\
@@ -444,6 +521,7 @@ static inline void waterByteMaxScore(
 \--------------------------------------------------------*/
 #define keepAltScore( \
    score, \
+   /*minScore, \*/\
    qryAlt, \
    refAlt, \
    refStart, \
@@ -452,6 +530,7 @@ static inline void waterByteMaxScore(
    qryEnd \
 ){\
    if(qryAlt->scoreL < score) \
+   /*if(qryAlt->scoreL < score & score >= minScore) \*/\
    { /*If I am keeping score as a best query score*/ \
       qryAlt->scoreL = score; \
       qryAlt->refStartUL = refStart; \
@@ -461,6 +540,7 @@ static inline void waterByteMaxScore(
    } /*If I am keeping score as a best query score*/ \
    \
    if(refAlt->scoreL < score) \
+   /*if(refAlt->scoreL < score & score >= minScore) \*/\
    { /*If I am keeping score as a best reference score*/ \
       refAlt->scoreL = score; \
       refAlt->refStartUL = refStart; \
