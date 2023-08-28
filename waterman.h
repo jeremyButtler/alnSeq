@@ -433,54 +433,47 @@ static inline void waterByteMaxScore(
       /*Case: Added an snp/match*/ \
    } /*Switch: Find the starting index*/ \
    /*ALTERNATIVE 2*/\
-//   unsigned long swapUL = 0; \
-//   unsigned long dirUL = \
-//     (((lastInsDir) != defMvStop) & -((dir) == defMvIns));\
-//   dirUL += \
-//     (((lastDelDir) != defMvStop) & -((dir) == defMvDel));\
-//   dirUL += \
-//     (((lastSnpDir) != defMvStop) & -((dir) == defMvSnp));\
-//   dirUL = (-dirUL) & dir; \
-//   \
-//   switch(dirUL) \
-//   { /*Switch: Find the starting index*/ \
-//      case 0: \
-//      /*Case: Last alignment ends (reset start)*/ \
-//         (lastRefStart) = *(refStartPtr); \
-//         (lastQryStart) = *(qryStartPtr); \
-//         *(qryStartPtr) = \
-//               (unsigned long) ((qryBaseStr) - (qryStr)); \
-//         *(refStartPtr) = \
-//               (unsigned long) ((refBaseStr) - (refStr)); \
-//         break; \
-//      /*Case: Last alignment ends (reset start)*/ \
-//      case defMvDel: \
-//      /*Case: Added an deletion*/ \
-//         (lastRefStart) = *(refStartPtr); \
-//         (lastQryStart) = *(qryStartPtr); \
-//         \
-//         *(refStartPtr) = *((refStartPtr) - 1); \
-//         *(qryStartPtr) = *((qryStartPtr) - 1); \
-//         break; \
-//      /*Case: Added an deletion*/ \
-//      case defMvIns: \
-//      /*Case: Added an insertion*/ \
-//         (lastQryStart) = *(qryStartPtr); \
-//         (lastRefStart) = *(refStartPtr); \
-//         break;  /*Already have starting bases*/ \
-//      /*Case: Added an insertion*/ \
-//      case defMvSnp: \
-//      /*Case: Added an snp/match*/ \
-//         swapUL = (lastRefStart); \
-//         (lastRefStart) = *(refStartPtr); \
-//         *(refStartPtr) = swapUL; \
-//         \
-//         swapUL = (lastQryStart); \
-//         (lastQryStart) = *(qryStartPtr); \
-//         *(qryStartPtr) = swapUL; \
-//         break; \
-//      /*Case: Added an snp/match*/ \
-//   } /*Switch: Find the starting index*/ \
+   /*
+   unsigned long swapUL = 0; \
+   unsigned long dirUL = \
+     (((lastInsDir) != defMvStop) & -((dir) == defMvIns));\
+   dirUL += \
+     (((lastDelDir) != defMvStop) & -((dir) == defMvDel));\
+   dirUL += \
+     (((lastSnpDir) != defMvStop) & -((dir) == defMvSnp));\
+   dirUL = (-dirUL) & dir; \
+   \
+   switch(dirUL) \
+   {
+      case 0: \
+         (lastRefStart) = *(refStartPtr); \
+         (lastQryStart) = *(qryStartPtr); \
+         *(qryStartPtr) = \
+               (unsigned long) ((qryBaseStr) - (qryStr)); \
+         *(refStartPtr) = \
+               (unsigned long) ((refBaseStr) - (refStr)); \
+         break; \
+      case defMvDel: \
+         (lastRefStart) = *(refStartPtr); \
+         (lastQryStart) = *(qryStartPtr); \
+         \
+         *(refStartPtr) = *((refStartPtr) - 1); \
+         *(qryStartPtr) = *((qryStartPtr) - 1); \
+         break; \
+      case defMvIns: \
+         (lastQryStart) = *(qryStartPtr); \
+         (lastRefStart) = *(refStartPtr); \
+         break; 
+      case defMvSnp: \
+         swapUL = (lastRefStart); \
+         (lastRefStart) = *(refStartPtr); \
+         *(refStartPtr) = swapUL; \
+         \
+         swapUL = (lastQryStart); \
+         (lastQryStart) = *(qryStartPtr); \
+         *(qryStartPtr) = swapUL; \
+         break; \
+   }*/\
 } /*updateStartPos*/
 
 /*--------------------------------------------------------\
