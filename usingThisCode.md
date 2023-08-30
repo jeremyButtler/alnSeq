@@ -195,6 +195,16 @@ The Hirschberg returns an alnStruct datatype, which has the
   alnSTToSeq (Fun-01 alnStruct.c/h) (I have not tested this
   function yet).
 
+The memory efficient Waterman returns a scoresStruct with
+  the best score (fun-01 memWater.c/h). However, the
+  alternative alignment version returns an alnMatrixStruct
+  without a direction matrix (fun-02 memWater.c/h), but
+  with the best score and alternative alignments. You will
+  have to call another aligner to convert the best score to
+  an alignment. Make sure to modify the offset and endAlnUL
+  variables in your seqStructs (reference and query) to the
+  start and end positions in the best score.
+
 Once you are finished with the matrix you can free it with
   the freeAlnMatrixST() function (fun-02 in
   alnMatrixStruct.h). Just remember to set it to null after
@@ -206,6 +216,8 @@ struct seqStruct refSeq;
 struct alnSet settings;
 
 struct alnMatrixStruct *matrix = 0;
+struct alnStruct *alignmentST = 0;
+struct scoresStruct *bestScoreST = 0;
 
 FILE *faFILE = 0;
 
@@ -247,19 +259,49 @@ queryST.offsetUI = 0;
 refST.endAlnUI = refST.lenSeqUI;
 refST.offsetUI = 0;
 
-matrix = WatermanAln(querySeq, refSeq, settings, "");
-/* or matrix = NeedlemanAln(querySeq, refSeq, settings);
-`  or matrix = Hirschberg(querySeq, refSeq, settings);
-`    For Hirschberg do nothing else except freeing the
-`    other variables. I will change the printing methods
-`    for this later.
+matrix = WatermanAln(&querySeq, &refSeq, &settings);
+/* or matrix = NeedlemanAln(&querySeq,&refSeq,&settings);
+` or alignmentST = Hirschberg(&querySeq,&refSeq,&settings);
+*/
+
+/* Memory efficent waterman
+`  bestScoreST = memWaterAln(&queryST, &refST, &settings);
+`  if(bestScoreST == 0) 
+`  {
+`   // Handle Errors
+`  }
+`
+`  refSeq.offsetUL = bestScoreST->refStartUL;
+`  qrySeq.offsetUL = bestScoreST->qryStartUL;
+
+`  refSeq.endAlnUL = bestScoreST->refEndUL;
+`  qrySeq.endAlnUL = bestScoreST->qryEndUL;
+`  alignmentST = Hirschberg(&refST, &queryST, &settings);
+*/
+
+/* Memory efficent waterman with alternative alignments
+`  matrix = memWaterAltAln(&queryST, &refST, &settings);
+`
+`  if(matrix == 0) 
+`  {
+`   // Handle Errors
+`  }
+`
+`  refSeq.offsetUL = matrix->bestScoreST.refStartUL;
+`  qrySeq.offsetUL = matrix->bestScoreST.qryStartUL;
+`
+`  refSeq.endAlnUL = matrix->bestScoreST.refEndUL;
+`  qrySeq.endAlnUL = matrix->bestScoreST.qryEndUL;
+`  alignmentST = Hirschberg(&refST, &queryST, &settings);
 */
 
 /*Do something with matrix here*/
 
+if(bestScoreST != 0) freeScoresST(bestScoreST, 0);
+if(matrix != 0) freeAlnMatrixST(matrix);
+if(alignmentST != 0) freeAlnST(alignmentST, 1);
 freeSeqST(&refSeq, 0);
 freeSeqST(&qrySeq, 0);
-freeAlnMatrixST(alignmentMatrix);
 freeAlnSet(settings, 0);
 ```
   
@@ -270,8 +312,9 @@ freeAlnSet(settings, 0);
 Alternative alignments can be printed with the
   printAltWaterAlns function (fun-04 waterman.c/h). This
   functions takes the alnMatrixStruct returned by
-  WatermanAltAln (not WatermanAln), a min score to keep an
-  alternative alignment, and an output file.
+  WatermanAltAln (not WatermanAln) and memWaterAltAln
+  (not memWaterAln), a min score to keep an alternative
+  alignment, and an output file.
 
 ### Printing primary alignments
 

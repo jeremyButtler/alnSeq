@@ -11,12 +11,15 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings*/
-#define defVersion 20230827  /*Version number for alnSeq*/
+#define defVersion 20230830  /*Version number for alnSeq*/
 
 // Aligment method being used
 #define defUseNeedle 1  /*do Needleman-Wunsch alignment*/
 #define defUseWater 0   /*Do a waterman smith alignment*/
 #define defUseHirsch 0  /*Use a Hirschberg alignment*/
+#define defUseMemWater 0 /*Use a memory efficent water*/
+#define defJustScoresBl 0 /*memory efficent water only*/
+   /*Only print out coordiantes and scores for memWater*/
 
 /*Output file formating (only change defFormat)*/
 #define defExpandCig 0 /*Expanded cigar format flag*/

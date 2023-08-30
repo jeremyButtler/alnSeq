@@ -58,11 +58,13 @@ void initAlnSet(
    alnSetST->pBasePosBl = defPPos;
    alnSetST->pFullAlnBl = defPAln;
    alnSetST->formatFlag = defFormat;
+   alnSetST->justScoresBl = defJustScoresBl;
 
    /*Choose the aligment style*/
    alnSetST->useNeedleBl = defUseNeedle;
    alnSetST->useWaterBl = defUseWater;
    alnSetST->useHirschBl = defUseHirsch;
+   alnSetST->memWaterBl = defUseMemWater;
 
    /*Select direction to keep if everything is equal*/
    alnSetST->bestDirC = defBestDir;

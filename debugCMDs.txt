@@ -1,12 +1,12 @@
 set confirm off
 set confirm off
 #break alnSeq.c:400
-break alnStruct.c:353
+#break alnStruct.c:353
 #break hirschberg.c:112
 
 define runcmd
   #run -use-hirschberg -query test-query.fasta -ref test-ref.fasta
-  run -use-needle -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Large-reference.fasta > del.aln
+  run -query-ref-scan -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Small-ref.fasta
 end
 
 runcmd

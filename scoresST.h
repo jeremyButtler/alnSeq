@@ -129,7 +129,6 @@ void sortScores(
    (scoreST)->qryStartUL = 0; \
    (scoreST)->qryEndUL = 0; \
    (scoreST)->scoreL = 0; \
-   return; \
 } /*initScoresST*/
 
 /*--------------------------------------------------------\
@@ -152,8 +151,7 @@ void sortScores(
 |    o 0: Does nothing currently
 \--------------------------------------------------------*/
 #define freeScoresST(scoresPtrST, heapBl){ \
-  if((heapBl)) free((scoreST)); \
-  return; \
+  if((heapBl)) free((scoresPtrST)); \
 } /*freeScoresST*/
 
 #endif

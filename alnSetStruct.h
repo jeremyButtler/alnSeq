@@ -75,11 +75,16 @@ typedef struct alnSet
      ` defEMBOSS: is EMBOSS format (| space)
      ` defClustal: is clustal format (* space)
      */
+   char justScoresBl;
+     /*1: print coordiantes and scores only
+     ` 0: Print the alignment
+     */
 
    /*Preference for alignment algorithim used*/
    char useNeedleBl;
    char useWaterBl;
    char useHirschBl;
+   char memWaterBl;
 
    /*Directional priorities (see alnSeqDefualts.h for
    ` options)

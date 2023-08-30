@@ -32,6 +32,7 @@ SOURCE=\
   waterman.c\
   needleman.c\
   hirschberg.c\
+  memWater.c\
   alnSeq.c
  
 # Build findCoInfct

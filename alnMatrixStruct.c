@@ -45,7 +45,7 @@ void freeAlnMatrixST(
 
    struct scoresStruct *scoreST = 0;
 
-   freeScoresST(matrixST->bestScoreST, 0)
+   freeScoresST(&matrixST->bestScoreST, 0)
 
    if(matrixST->dirMatrixST != 0)
    { /*If freeing the matrix*/

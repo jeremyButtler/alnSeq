@@ -5,8 +5,9 @@
 #    a pair of fasta files
 # Includes:
 #  - "hirschberg.h"
-#  - "waterman.h"
 #  - "needleman.h"
+#  - "memWater.h"
+#  o "waterman.h"
 #  o "generalAlnFun.h"
 #  o "alnStruct.h"
 #  o "alnMatrixStruct.h"
@@ -25,7 +26,7 @@
 
 #include "hirschberg.h"
 #include "needleman.h"
-#include "waterman.h"
+#include "memWater.h"
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
 ' SOP: Start Of Program
@@ -69,11 +70,11 @@ void printHelpMesg(
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-03 TOC: printHelpMesg
    '  - Prints out the help message to outFILE
-   '  o fun-03 Sec-01:
+   '  o fun-03 sec-01:
    '    - Usage block
-   '  o fun-03 Sec-02:
+   '  o fun-03 sec-02:
    '    - Input block
-   '  o fun-03 Sec-03:
+   '  o fun-03 sec-03:
    '    - Output block
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -146,10 +147,6 @@ int main(
    struct seqStruct refST;
    struct seqStruct queryST;
 
-   // Output aligned sequences
-   char *queryAlnCStr = 0;
-   char *refAlnCStr = 0;
-
    // Caputures error type from functions
    unsigned char errUC = 0;
    long bestScoreL = 0;  // Allows me to free score matrix
@@ -160,6 +157,7 @@ int main(
    // For holding alignment output
    struct alnMatrixStruct *alnMtrxST = 0;
    struct alnStruct *alnST = 0;
+   struct scoresStruct *bestScoreST = 0; /*For memWater*/
 
    FILE *faFILE = 0;
    FILE *outFILE = 0; /*Print alternative aligments to*/
@@ -368,12 +366,35 @@ int main(
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Main Sec-05:
    ^  - Do the alingment
+   ^  o main sec-05 sub-01:
+   ^    - Set up for the alignment
+   ^  o main sec-05 sub-02:
+   ^    - Check if doing a Needleman alignment
+   ^  o main sec-05 sub-02:
+   ^    - Check if doing an Waterman alignment
+   ^  o main sec-05 sub-04:
+   ^    - Check if doing an memory efficent Waterman
+   ^      alignment that prints out alternative alignment
+   ^      positions (Gets combined with a Hirschberg)
+   ^  o main sec-05 sub-05:
+   ^    - Check if doing an memory efficent Waterman
+   ^      alignment that prints out a single alignment
+   ^      (uses a Hirschberg to get the alignment)
+   ^  o main sec-05 sub-06:
+   ^    - Check if doing an Hirschberg alignment
+   ^  o main sec-05 sub-07:
+   ^    - Let user know this was an invalid alignment
+   ^  o main sec-05 sub-08:
+   ^    - Check if the alignment failed
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   /******************************************************\
+   * Main Sec-05 Sub-01:
+   *  - Set up for the alignment
+   \******************************************************/
 
    /*Right know these are hardoced in, but at some piont
    `  it might be nice to allow the user the manipulate.
-   `  I would need to set up the Waterman and Needleman
-   `  alignments to handle this
    */
 
    if(outFileCStr == 0) outFILE = stdout;
@@ -388,14 +409,26 @@ int main(
    refST.endAlnUL = refST.lenSeqUL - 1;
    refST.offsetUL = 0;
 
+   /******************************************************\
+   * Main Sec-05 Sub-02:
+   *  - Check if doing an Needleman alignment
+   \******************************************************/
+
    if(settings.useNeedleBl != 0)
      alnMtrxST = NeedlemanAln(&queryST, &refST, &settings);
+
+   /******************************************************\
+   * Main Sec-05 Sub-03:
+   *  - Check if doing an Waterman alignment
+   \******************************************************/
 
    else if(settings.useWaterBl != 0)
    { /*else if doing a waterman alignment*/
      if(settings.refQueryScanBl)
      { /*IF keeping some alternative alignments*/
        alnMtrxST=WatermanAltAln(&queryST,&refST,&settings);
+
+       if(alnMtrxST == 0) goto alignmentFailed;
 
        printAltWaterAlns(
           alnMtrxST,
@@ -406,6 +439,109 @@ int main(
 
      else alnMtrxST=WatermanAln(&queryST,&refST,&settings);
    } /*else if doing a waterman alignment*/
+
+   /******************************************************\
+   * Main Sec-05 Sub-04:
+   *  - Check if doing an memory efficent Waterman
+   *    alignment that prints out alternative alignment
+   *    positions (Gets combined with a Hirschberg)
+   \******************************************************/
+
+   else if(settings.memWaterBl != 0)
+   { /*Else if; doing a memory waterman alignment*/
+      if(settings.refQueryScanBl)
+      { /*If doing an query-ref scan*/
+         alnMtrxST =
+            memWaterAltAln(&queryST, &refST, &settings);
+
+         if(alnMtrxST == 0) goto alignmentFailed;
+
+         if(settings.justScoresBl) goto printAlts;
+
+         refST.offsetUL =
+            alnMtrxST->bestScoreST.refStartUL;
+         queryST.offsetUL =
+            alnMtrxST->bestScoreST.qryStartUL;
+
+         refST.endAlnUL = alnMtrxST->bestScoreST.refEndUL;
+         queryST.endAlnUL =alnMtrxST->bestScoreST.qryEndUL;
+
+         alnST = Hirschberg(&refST, &queryST, &settings);
+
+         if(alnST == 0)
+         { /*If the hirschberg alignment failed*/
+            freeAlnMatrixST(alnMtrxST);
+            alnMtrxST = 0;
+            goto alignmentFailed;
+         } /*If the hirschberg alignment failed*/
+
+         printAlts:
+
+         printAltWaterAlns(
+            alnMtrxST,
+            settings.minScoreL,
+            outFILE /*Prefix to name files*/
+         ); /*Print out alternative alignment positions*/
+
+         if(settings.justScoresBl) goto noAlnOutFree;
+
+         bestScoreL = alnMtrxST->bestScoreST.scoreL;
+         freeAlnMatrixST(alnMtrxST); /*No longer need*/
+         alnMtrxST = 0;
+
+         goto noDirMatrix;
+      } /*If doing an query-ref scan*/
+
+      /***************************************************\
+      * Main Sec-05 Sub-05:
+      *  - Check if doing an memory efficent Waterman
+      *    alignment that prints out a single alignment
+      *    (uses a Hirschberg to get the alignment)
+      \***************************************************/
+
+      else
+      { /*Else I am just finding the best alignment*/
+         bestScoreST =
+            memWaterAln(&queryST,&refST,&settings);
+
+         if(bestScoreST == 0) goto alignmentFailed;
+
+         if(settings.justScoresBl)
+         { /*If I am just printing out coordinates*/
+            fprintf(
+               outFILE,
+               "%li\t%lu\t%lu\t%lu\t%lu\n",
+               bestScoreST->scoreL,
+               bestScoreST->refStartUL,
+               bestScoreST->qryStartUL,
+               bestScoreST->refEndUL,
+               bestScoreST->qryEndUL
+            );
+
+            goto noAlnOutFree;
+         } /*If I am just printing out coordinates*/
+
+         refST.offsetUL = bestScoreST->refStartUL;
+         queryST.offsetUL = bestScoreST->qryStartUL;
+         refST.endAlnUL = bestScoreST->refEndUL;
+         queryST.endAlnUL = bestScoreST->qryEndUL;
+
+         alnST = Hirschberg(&refST, &queryST, &settings);
+
+         /*Free the current uneeded variables*/
+         bestScoreL = bestScoreST->scoreL;
+         freeScoresST(bestScoreST, 0);
+         bestScoreST = 0;
+
+         if(alnST == 0) goto alignmentFailed;
+         else goto noDirMatrix;
+      } /*Else I am just finding the best alignment*/
+   } /*Else if; doing a memory waterman alignment*/
+
+   /******************************************************\
+   * Main Sec-05 Sub-06:
+   *  - Check if doing an Hirschberg alignment
+   \******************************************************/
 
    else if(settings.useHirschBl != 0)
    { /*Else if doing an Hirschberg alignment*/
@@ -418,8 +554,32 @@ int main(
      */
    } /*Else if doing an Hirschberg alignment*/
 
+   /******************************************************\
+   * Main Sec-05 Sub-07:
+   *  - Let user know this was an invalid alignment
+   \******************************************************/
+
+   else
+   { /*If no aignment was requested*/
+      freeSeqST(&refST, 0);   /*0 to mark on the stack*/
+      freeSeqST(&queryST, 0); /*0 to mark on the stack*/
+
+      printHelpMesg(stderr, 1); /*short help*/
+      fprintf(
+         stderr,
+         "Invalid or no aligment method input\n"
+      ); /*Let user know the error*/
+
+      exit(-1);
+   } /*If no aignment was requested*/
+
+   /******************************************************\
+   * Main Sec-05 Sub-08:
+   *  - Check if the alignment failed
+   \******************************************************/
+
    if(alnMtrxST == 0)
-   { // If did not have enough memory
+   { /*If did not have enough memory*/
       alignmentFailed:
 
       freeSeqST(&refST, 0); // 0 to makr on the stack
@@ -430,7 +590,7 @@ int main(
          "Memory allocation error in aligment step\n"
        );
        exit(-1);
-   } // If did not have enough memory
+   } /*If did not have enough memory*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Main Sec-06:
@@ -495,8 +655,6 @@ int main(
       fprintf(stderr, "Failed to print alignment\n");
 
       fclose(outFILE);
-      free(queryAlnCStr);
-      free(refAlnCStr);
       freeAlnST(alnST, 1); /*NEED TO SET UP*/
 
       freeSeqST(&refST, 0);   /*0 to specify on stack*/
@@ -505,11 +663,11 @@ int main(
       exit(1);
    } /*If could not print out the alignmnet*/
 
-   fclose(outFILE);
-   free(queryAlnCStr);
-   free(refAlnCStr);
    freeAlnST(alnST, 1);
 
+   noAlnOutFree: /*When memWater just printing positions*/
+
+   fclose(outFILE);
    freeSeqST(&refST, 0);   /*0 to specify on stack*/
    freeSeqST(&queryST, 0); /* 0 to do a stack free*/
 
@@ -612,6 +770,7 @@ char * checkInput(
             settings->useNeedleBl = 1;
             settings->useWaterBl = 0;
             settings->useHirschBl = 0;
+            settings->memWaterBl = 0;
             --intArg;
         } /*Else if using a needleman alignment*/
 
@@ -620,6 +779,7 @@ char * checkInput(
             settings->useNeedleBl = 0;
             settings->useWaterBl = 1;
             settings->useHirschBl = 0;
+            settings->memWaterBl = 0;
             --intArg;
         } /*Else if doing a waterman smith alignment*/
 
@@ -628,8 +788,30 @@ char * checkInput(
             settings->useNeedleBl = 0;
             settings->useWaterBl = 0;
             settings->useHirschBl = 1;
+            settings->memWaterBl = 0;
             --intArg;
         } /*Else if doing a Hirshberg alignment*/
+
+        else if(strcmp(tmpCStr, "-use-mem-water") == 0)
+        { /*Else if I am doing a memory effecient water*/
+            settings->useNeedleBl = 0;
+            settings->useWaterBl = 0;
+            settings->useHirschBl = 0;
+            settings->memWaterBl = 1;
+            --intArg;
+        } /*Else if I am doing a memory effecient water*/
+
+        else if(strcmp(tmpCStr, "-only-scores") == 0)
+        { /*Else if only printing scores for memWater*/
+           settings->justScoresBl = 1;
+           --intArg;
+        } /*Else if only printing scores for memWater*/
+
+        else if(strcmp(tmpCStr, "-scores-and-aln") == 0)
+        { /*Else if only printing alignments for memWater*/
+           settings->justScoresBl = 0;
+           --intArg;
+        } /*Else if only printing alignments for memWater*/
 
         else if(strcmp(tmpCStr, "-format-expand-cig") == 0)
         { /*Else if using the expanded cigar format*/
@@ -656,14 +838,15 @@ char * checkInput(
         } /*Else if outputing fasta format*/
 
         else if(
-          strcmp(tmpCStr, "-query-ref-scan-water") == 0
+          strcmp(tmpCStr, "-query-ref-scan") == 0
         )
         { /*Else if doing more than the best alignment*/
           settings->refQueryScanBl = 1;
-
           settings->useNeedleBl = 0;
-          settings->useWaterBl = 1;
           settings->useHirschBl = 0;
+
+          if(!(settings->useWaterBl))
+             settings->memWaterBl = 1;
 
           --intArg;
         } /*Else if doing more than the best alignment*/
@@ -772,7 +955,7 @@ void printHelpMesg(
    '    - Usage block
    '  o fun-03 Sec-02:
    '    - Input block
-   '  o fun-03 Sec-03:
+   '  o fun-03 sec-03:
    '    - Output block
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -864,6 +1047,30 @@ void printHelpMesg(
 
    fprintf(outFILE, "    o Do a Hirschberg alignment.\n");
 
+   if(defUseMemWater)
+       fprintf(outFILE, "  -use-mem-water: [Yes]\n");
+   else fprintf(outFILE, "  -use-mem-water: [No]\n");
+
+   fprintf(
+      outFILE,
+      "    o Do a memory efficent Waterman alignment.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "    o Slower than Waterman, but uses O(N) memory.\n"
+   );
+
+   fprintf(
+     outFILE,
+     "    o Uses a Waterman to find the starting and"
+   );
+   fprintf(outFILE, " ending\n      ");
+   fprintf(
+      outFILE,
+     "positions and a Hirschberg to find the alignment.\n"
+   );
+
    /******************************************************\
    * Fun-03 Sec-02 Sub-03:
    *  - Alignment paramaters block
@@ -913,9 +1120,28 @@ void printHelpMesg(
    *  - File output settings (non-format)
    \******************************************************/
 
-   if(defPAln)
-      fprintf(outFILE,"  -print-aligned: [Yes]\n");
-   else fprintf(outFILE,"  -print-aligned: [No]\n");
+   if(defJustScoresBl)
+      fprintf(outFILE,"  -only-scores: [Yes]\n");
+   else
+      fprintf(outFILE,"  -only-scores: [No]\n");
+
+   fprintf(
+      outFILE,
+      "    o Only print out the score, starting, and"
+   );
+   fprintf(outFILE, " ending\n");
+   fprintf(
+      outFILE,
+      "      coordinates of an alingnment (mem-water only)"
+   );
+   fprintf(outFILE, "\n");
+   fprintf(
+      outFILE,
+      "    o Disable this setting with -scores-and-aln\n"
+   );
+
+   if(defPAln) fprintf(outFILE,"  -print-aligned: [No]\n");
+   else fprintf(outFILE,"  -print-aligned: [Yes]\n");
 
    fprintf(
       outFILE,
@@ -1090,18 +1316,28 @@ void printHelpMesg(
    \******************************************************/
 
    if(defQueryRefScan)
-       fprintf(outFILE,"  -query-ref-scan-water: [Yes]\n");
-   else fprintf(outFILE,"  -query-ref-scan-water: [No]\n");
+       fprintf(outFILE,"  -query-ref-scan: [Yes]\n");
+   else fprintf(outFILE,"  -query-ref-scan: [No]\n");
 
-   fprintf(outFILE, "    o Waterman alignment only.\n");
+   fprintf(
+      outFILE,
+      "    o Waterman alignments only.\n"
+   );
    fprintf(
       outFILE,
       "    o prints out the best score for each"
    );
-   fprintf(outFILE, " reference and\n      query base.\n");
+   fprintf(
+      outFILE,
+      " reference and\n      query base.\n"
+   );
+   fprintf(
+      outFILE,
+      "    o Uses -use-mem-water if -use-water not used.\n"
+   );
 
    fprintf(outFILE, "  -min-score: [%i]\n", defMinScore);
-   fprintf(outFILE, "    o Waterman alignment only.\n");
+   fprintf(outFILE, "    o Waterman alignments only.\n");
    fprintf(
       outFILE,
       "    o Minimum score needed to keep an alternative\n"
@@ -1279,6 +1515,10 @@ void printCompileSettings(
       fprintf(outFILE, "   -DHIRSCHTWOBIT\n");
    #endif
 
+   #if defined TWOBITMSW
+      fprintf(outFILE, "   -DTWOBITMSW\n");
+   #endif
+
    #if defined NOGAPOPEN
       fprintf(outFILE, "   -DNOGAPOPEN\n");
    #endif
@@ -1309,18 +1549,20 @@ void printCompileSettings(
    ^  o fun-04 sec-02 sub-03:
    ^    - Print out what the -DHIRSCHTWOBIT flag does
    ^  o fun-04 sec-02 sub-04:
-   ^    - Print out what the -DNOGAPOPEN flag does
+   ^    - Print out what the -DTWOBITMSW flag does
    ^  o fun-04 sec-02 sub-05:
-   ^    - Print out what the -DSNPINSDEL flag does
+   ^    - Print out what the -DNOGAPOPEN flag does
    ^  o fun-04 sec-02 sub-06:
-   ^    - Print out what the -DSNPDELINS flag does
+   ^    - Print out what the -DSNPINSDEL flag does
    ^  o fun-04 sec-02 sub-07:
-   ^    - Print out what the -DINSSNPDEL flag does
+   ^    - Print out what the -DSNPDELINS flag does
    ^  o fun-04 sec-02 sub-08:
-   ^    - Print out what the -DINSDELSNP flag does
+   ^    - Print out what the -DINSSNPDEL flag does
    ^  o fun-04 sec-02 sub-09:
-   ^    - Print out what the -DDELSNPINS flag does
+   ^    - Print out what the -DINSDELSNP flag does
    ^  o fun-04 sec-02 sub-10:
+   ^    - Print out what the -DDELSNPINS flag does
+   ^  o fun-04 sec-02 sub-11:
    ^    - Print out what the -DDELINSSNP flag does
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
@@ -1401,6 +1643,32 @@ void printCompileSettings(
 
    /******************************************************\
    * Fun-04 Sec-02 Sub-04:
+   *  - Print out what the -DTWOBITMSW flag does
+   \******************************************************/
+
+   fprintf(outFILE, "   -DTWOBITMSW\n");
+   fprintf(
+     outFILE,
+     "     - Memory Waterman alignment uses two-bit arrays"
+   );
+
+   fprintf(outFILE, "\n");
+   fprintf(
+      outFILE,
+      "       instead of byte arrays.\n"
+   );
+
+   fprintf(
+      outFILE,
+      "     - This gives a small reduction in memory, but"
+   );
+   fprintf(
+      outFILE,
+      " also\n       makes alignments take 2x more time.\n"
+   );
+
+   /******************************************************\
+   * Fun-04 Sec-02 Sub-05:
    *  - Print out what the -DNOGAPOPEN flag does
    \******************************************************/
 
@@ -1419,7 +1687,7 @@ void printCompileSettings(
    );
 
    /******************************************************\
-   * Fun-04 Sec-02 Sub-05:
+   * Fun-04 Sec-02 Sub-06:
    *  - Print out what the -DSNPINSDEL flag does
    \******************************************************/
 
@@ -1444,7 +1712,7 @@ void printCompileSettings(
    fprintf(outFILE, "\n       deletions.\n");
 
    /******************************************************\
-   * Fun-04 Sec-02 Sub-06:
+   * Fun-04 Sec-02 Sub-07:
    *  - Print out what the -DNSNPDELINS flag does
    \******************************************************/
 
@@ -1469,7 +1737,7 @@ void printCompileSettings(
    fprintf(outFILE, "\n       insertions.\n");
 
    /******************************************************\
-   * Fun-04 Sec-02 Sub-07:
+   * Fun-04 Sec-02 Sub-08:
    *  - Print out what the -DINSSNPDEL flag does
    \******************************************************/
 
@@ -1494,7 +1762,7 @@ void printCompileSettings(
    fprintf(outFILE, "\n       deletions.\n");
 
    /******************************************************\
-   * Fun-04 Sec-02 Sub-08:
+   * Fun-04 Sec-02 Sub-09:
    *  - Print out what the -DINSDELSNP flag does
    \******************************************************/
 
@@ -1519,7 +1787,7 @@ void printCompileSettings(
    fprintf(outFILE, "\n       SNPs/Matches.\n");
 
    /******************************************************\
-   * Fun-04 Sec-02 Sub-09:
+   * Fun-04 Sec-02 Sub-10:
    *  - Print out what the -DDELSNPINS flag does
    \******************************************************/
 
@@ -1544,7 +1812,7 @@ void printCompileSettings(
    fprintf(outFILE, "\n       deletions.\n");
 
    /******************************************************\
-   * Fun-04 Sec-02 Sub-10:
+   * Fun-04 Sec-02 Sub-11:
    *  - Print out what the -DDELINSSNP flag does
    \******************************************************/
 

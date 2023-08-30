@@ -7,10 +7,9 @@ This log records how alnSeq has changed between versions.
 
 # TODO or to fix list
 
-- Set up Smith Waterman Hirschberg combination
-  - At this point I am close, since the 20230827 updates
-    made my alternative waterman very close to what this
-    waterman would be.
+- Do final debugging of memory efficient Waterman.
+- Vector support for memory efficient Waterman and
+  Hirschberg.
 - Add in a match matrix. Currently I am using a switch
   table set up for nucleotides to identify matches/snps.
   - This is used for printing the alignment eqx line, not
@@ -20,7 +19,7 @@ This log records how alnSeq has changed between versions.
 
 # Ideas that would be cool, but not worth working on
 
-These ideas are a future vision that is not worth the
+These ideas are a future visions that are not worth the
   time unless this algorithm becomes useful to others.
 
 - Multithreading & gpu support with openCL
@@ -32,6 +31,17 @@ These ideas are a future vision that is not worth the
 - Add a filter for alternative alignments.
 
 # Log
+
+## 20230830
+
+- Added in the memory efficient Waterman.
+- Changed -query-ref-scan-water to -query-ref-scan.
+  - The memory efficient Waterman is now the default option
+    when -query-ref-scan is used. This can be changed by
+    using -use-water.
+- Fixed a minor error in my if not defines in waterman.c,
+  which resulted in a byte matrix being used in the
+  alternative alignment function with -DNOGAPOPEN.
 
 ## 20230827
 

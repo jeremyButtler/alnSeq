@@ -21,23 +21,22 @@ This program is dual licensed for MIT and CC0. Pick the
 
 # Current work
 
-I know I said I was finished, but I just thought I would
-  try reducing the Waterman directional matrix down to two
-  rows and just record the score, start position, and end
-  position of the best alignment. My plan would then be to
-  use an Hirschberg to find the actual alignment. My logic
-  is that a local aligmnent turns into a global alignment
-  once you know the start and end. This would reduce memory
-  usage down, but would also require running both a
-  Waterman and Hirschberg alignment, which takes more time.
+I am currently working on my more memory efficient
+  Waterman. It is like the alternative alignment step,
+  except it is designed to work on a single directional
+  row. It returns the best score, start of the alignment,
+  and the end of the alignment. I then use the Hirschberg
+  to find the alignment.
 
-I then could also allow recording of the best score for
-  each query and reference base or printing of each score
-  that passes the min score value to add in additional
-  searching. However, I will only print out the score, 
-  starting reference base, starting query base, ending
-  reference base, and ending query base for alternative
-  alignments.
+Status: it is working, but has a minor bug for the first
+  base that I need to debug (treats first base as
+  insertion). It takes 11 to 12 minutes to align both the
+  huge (ram killer) sequences. For alternative base
+  printing it takes a little under 22 Mb. For the single
+  best alignment it takes a little over 6 Mb. The memory
+  usage is constant, so this is the most memory it will
+  ever take for this size of alignment. However, this is
+  pretty slow.
 
 # Building and running alnSeq
 
@@ -133,6 +132,9 @@ alnSeq -use-hirschberg -query query.fasta -ref ref.fasta > alignment.aln
 ## For a single local alignment (Waterman Smith)
 alnSeq -use-water -query query.fasta -ref ref.fasta > out.aln
 
+## For a very slow, but more memory efficent Waterman
+alnSeq -use-mem-water -query query.fasta -ref ref.fasta > out.aln
+
 # File formatting
 
 ## Output an EMBOSS like file
@@ -185,7 +187,7 @@ AlnSeq also reduces the scoring matrix down to one row,
   matrix.
 
 AlnSeq also supports alternative alignments with
-  -query-ref-scan-water by storing the best score for each
+  -query-ref-scan by storing the best score for each
   reference base and each query base (Starting positions,
   ending positions, score). The score, starting reference
   position, starting query position, ending reference
@@ -194,6 +196,20 @@ AlnSeq also supports alternative alignments with
   There is no filter, so this will print out everything
   that is at or above -min-score. This includes duplicate
   scores.
+
+## My memory efficient Waterman
+
+The more memory efficient Waterman is slow, but it also
+  uses memory in linear time. It is like the alternative
+  alignment step (-query-ref-scan), except that it is
+  designed to work on a single directional row. It returns
+  the best score, start of the alignment, and the end of
+  the alignment. I then use the Hirschberg to find the
+  best alignment. This means for time you have to pay the
+  time cost of the alternative alignment step and the
+  Hirschberg.
+
+This still needs some debugging.
 
 ## Some light benchmarking
 
@@ -287,6 +303,16 @@ Some of the extra time needed for Emboss could be due to
   penalty.
 
 ## Final notes
+
+Overall alnSeq is not the best alignment program and other
+  then the Striped Smith Waterman, it has not been compared
+  to the more efficient programs that utilize vectors, 
+  GPUS, or multiple threads. It does ok on memory usage,
+  but this often comes at a steep time cost.
+
+Overall this was a good learning project that I will use
+  in the future just because I coded it. That being said,
+  I am glad that this is almost over.
 
 AlnSeq does not use decimals, so if you want decimals for
   the gap extension penalty, so you will have to multiply
