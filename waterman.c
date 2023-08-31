@@ -689,15 +689,6 @@ struct alnMatrixStruct * WatermanAltAln(
       char *insDir = 0;   /*Direction above cell*/
    #endif
 
-   /*This is for recording the starting positions. It
-   `  stores the last direction for each possible
-   `  movement
-   */
-   char lastSnpDirC = 0;
-   char lastDelDirC = 0;
-   char curDelDirC = 0;
-   char lastInsDirC = 0;
-
    /*The structure to return (has results)*/
    struct alnMatrixStruct *retMtxST = 0;
 
@@ -920,11 +911,6 @@ struct alnMatrixStruct * WatermanAltAln(
    insScoreL = 0;
    ++scoreOnLP;
 
-   lastDelDirC = defMvStop;
-   curDelDirC = defMvStop;
-   lastInsDirC = defMvStop;
-   lastSnpDirC = defMvStop;
-
    /******************************************************\
    * Fun-02 Sec-04 Sub-01:
    *  - Do the first move
@@ -1006,10 +992,7 @@ struct alnMatrixStruct * WatermanAltAln(
        /*Need to move the direction here, so I have
        ` the previous bases direction.
        */
-       lastDelDirC = curDelDirC;
        #if !defined BYTEMATRIX && !defined NOGAPOPEN
-          curDelDirC = getTwoBitElm(dirMatrix);
-
           indelScore(
              delScoreL,
              getTwoBitElm(dirMatrix),
@@ -1017,19 +1000,13 @@ struct alnMatrixStruct * WatermanAltAln(
              settings
           );
        #elif !defined NOGAPOPEN
-          curDelDirC = *dirMatrix;
-
           indelScore(
              delScoreL,
              *dirMatrix,
              *scoreOnLP,
              settings
           );
-       #elif !defined BYTEMATRIX
-          curDelDirC = getTwoBitElm(dirMatrix);
-          delScoreL = *scoreOnLP + settings->gapExtendI;
        #else
-          curDelDirC = *dirMatrix;
           delScoreL = *scoreOnLP + settings->gapExtendI;
        #endif
 
@@ -1046,9 +1023,6 @@ struct alnMatrixStruct * WatermanAltAln(
           #endif
           lastRefStartUL,
           lastQryStartUL,
-          lastInsDirC,
-          lastDelDirC,
-          lastSnpDirC,
           refStartUL,
           qryStartUL,
           refIterStr,
@@ -1082,13 +1056,10 @@ struct alnMatrixStruct * WatermanAltAln(
        */
 
        ++scoreOnLP;
-       lastSnpDirC = lastInsDirC;
          /*Last insertion is now the last snp direction*/
 
        /*Get the new last insertion direction*/
        #if !defined BYTEMATRIX && !defined NOGAPOPEN
-          lastInsDirC = getTwoBitElm(&insDir);
-
           indelScore(
              insScoreL,
              getTwoBitElm(&insDir),
@@ -1096,19 +1067,13 @@ struct alnMatrixStruct * WatermanAltAln(
              settings
           );
        #elif !defined NOGAPOPEN
-          lastInsDirC = *insDir;
-
           indelScore(
              insScoreL,
              *insDir,
              *scoreOnLP,
              settings
           );
-       #elif !defined BYTEMATRIX
-          lastInsDirC = getTwoBitElm(&insDir);
-          insScoreL = *scoreOnLP + settings->gapExtendI;
        #else
-          lastInsDirC = *insDir;
           insScoreL = *scoreOnLP + settings->gapExtendI;
        #endif
 
@@ -1172,9 +1137,6 @@ struct alnMatrixStruct * WatermanAltAln(
         #endif
         lastRefStartUL,
         lastQryStartUL,
-        lastInsDirC,
-        curDelDirC,
-        lastSnpDirC,
         refStartUL,
         qryStartUL,
         refIterStr - 1,
@@ -1238,10 +1200,6 @@ struct alnMatrixStruct * WatermanAltAln(
            getBaseScore(qryIterStr,refStartStr,settings)
          + *scoreOnLP;
 
-      /*These always point to the indel column*/
-      lastSnpDirC = defMvStop;
-      curDelDirC = defMvStop;
-
       /*Update the indel column and find next deletion*/
       *scoreOnLP += settings->gapExtendI;
       delScoreL = *scoreOnLP + settings->gapExtendI;
@@ -1250,7 +1208,6 @@ struct alnMatrixStruct * WatermanAltAln(
 
      /*At this point insDir is on the first base*/
      #if !defined BYTEMATRIX && !defined NOGAPOPEN
-        lastInsDirC = getTwoBitElm(&insDir);
         indelScore(
            insScoreL,
            getTwoBitElm(&insDir),
@@ -1260,7 +1217,6 @@ struct alnMatrixStruct * WatermanAltAln(
 
         twoBitMvToNextElm(&insDir);
      #elif !defined NOGAPOPEN
-        lastInsDirC = *insDir;
         indelScore(
            insScoreL,
            *insDir,
@@ -1270,11 +1226,9 @@ struct alnMatrixStruct * WatermanAltAln(
 
         ++insDir;
      #elif !defined BYTEMATRIX
-        lastInsDirC = getTwoBitElm(&insDir);
         insScoreL = *scoreOnLP + settings->gapExtendI;
         twoBitMvToNextElm(&insDir);
      #else
-        lastInsDirC = *insDir;
         insScoreL = *scoreOnLP + settings->gapExtendI;
         ++insDir;
      #endif
@@ -1352,7 +1306,6 @@ struct alnMatrixStruct * WatermanAltAln(
 
    return retMtxST;
 } /*WatermanAltAln*/
-
 
 /*--------------------------------------------------------\
 | Output:

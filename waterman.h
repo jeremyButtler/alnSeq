@@ -321,9 +321,6 @@ static inline void waterByteMaxScore(
    dir, \
    lastRefStart, \
    lastQryStart, \
-   lastInsDir, \
-   lastDelDir, \
-   lastSnpDir, \
    refStartPtr, \
    qryStartPtr, \
    refBaseStr, /*Base on in the reference sequence*/ \
@@ -338,27 +335,12 @@ static inline void waterByteMaxScore(
       /*Case: Last alignment ends (reset start)*/ \
          (lastRefStart) = *(refStartPtr); \
          (lastQryStart) = *(qryStartPtr); \
-         \
-         /*Add in the new reference and query start*/ \
-         *(qryStartPtr) = \
-            (unsigned long) ((qryBaseStr) - (qryStr)); \
-         *(refStartPtr) = \
-            (unsigned long) ((refBaseStr) - (refStr)); \
          break; \
       /*Case: Last alignment ends (reset start)*/ \
       case defMvDel: \
       /*Case: Added an deletion*/ \
          (lastRefStart) = *(refStartPtr); \
          (lastQryStart) = *(qryStartPtr); \
-         \
-         if(lastDelDir == defMvStop) \
-         { \
-            *(qryStartPtr) = \
-               (unsigned long) ((qryBaseStr) - (qryStr)); \
-            *(refStartPtr) = \
-               (unsigned long) ((refBaseStr) - (refStr)); \
-            break; \
-         } \
          \
          *(refStartPtr) = *((refStartPtr) - 1); \
          *(qryStartPtr) = *((qryStartPtr) - 1); \
@@ -368,32 +350,10 @@ static inline void waterByteMaxScore(
       /*Case: Added an insertion*/ \
          (lastQryStart) = *(qryStartPtr); \
          (lastRefStart) = *(refStartPtr); \
-         \
-         if(lastInsDir == defMvStop) \
-         { \
-            *(qryStartPtr) = \
-               (unsigned long) ((qryBaseStr) - (qryStr)); \
-            *(refStartPtr) = \
-               (unsigned long) ((refBaseStr) - (refStr)); \
-            break; \
-         } \
-         \
          break;  /*Already have starting bases*/ \
       /*Case: Added an insertion*/ \
       case defMvSnp: \
       /*Case: Added an snp/match*/ \
-         if(lastSnpDir == defMvStop) \
-         { \
-            (lastRefStart) = *(refStartPtr); \
-            (lastQryStart) = *(qryStartPtr); \
-            \
-            *(qryStartPtr) = \
-               (unsigned long) ((qryBaseStr) - (qryStr)); \
-            *(refStartPtr) = \
-               (unsigned long) ((refBaseStr) - (refStr)); \
-            break; \
-         } \
-         \
          swapUL = (lastRefStart); \
          (lastRefStart) = *(refStartPtr); \
          *(refStartPtr) = swapUL; \

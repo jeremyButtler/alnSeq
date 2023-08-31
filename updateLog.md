@@ -7,7 +7,6 @@ This log records how alnSeq has changed between versions.
 
 # TODO or to fix list
 
-- Do final debugging of memory efficient Waterman.
 - Vector support for memory efficient Waterman and
   Hirschberg.
 - Add in a match matrix. Currently I am using a switch
@@ -31,6 +30,10 @@ These ideas are a future visions that are not worth the
 - Add a filter for alternative alignments.
 
 # Log
+
+## 20230831
+
+- Fixed insertion error for memory efficient Waterman.
 
 ## 20230830
 

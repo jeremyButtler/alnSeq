@@ -141,15 +141,6 @@ struct scoresStruct * memWaterAln(
       char *firstDir = 0; /*Holds directions*/
    #endif
 
-   /*This is for recording the starting positions. It
-   `  stores the last direction for each possible
-   `  movement
-   */
-   char lastSnpDirC = 0;
-   char lastDelDirC = 0;
-   char curDelDirC = 0;
-   char lastInsDirC = 0;
-
    struct scoresStruct *bestScoreST = 0;
 
    /*For recording the start position*/
@@ -318,11 +309,6 @@ struct scoresStruct * memWaterAln(
    insScoreL = 0;
    ++scoreOnLP;
 
-   lastDelDirC = defMvStop;
-   curDelDirC = defMvStop;
-   lastInsDirC = defMvStop;
-   lastSnpDirC = defMvStop;
-
    /******************************************************\
    * Fun-01 Sec-04 Sub-01:
    *  - Do the first move
@@ -401,10 +387,7 @@ struct scoresStruct * memWaterAln(
        /*Need to move the direction here, so I have
        ` the previous bases direction.
        */
-       lastDelDirC = curDelDirC;
        #if defined TWOBITMSW && !defined NOGAPOPEN
-          curDelDirC = getTwoBitElm(dirRow);
-
           indelScore(
              delScoreL,
              getTwoBitElm(dirRow),
@@ -412,19 +395,13 @@ struct scoresStruct * memWaterAln(
              settings
           );
        #elif !defined NOGAPOPEN
-          curDelDirC = *dirRow;
-
           indelScore(
              delScoreL,
              *dirRow,
              *scoreOnLP,
              settings
           );
-       #elif defined TWOBITMSW
-          curDelDirC = getTwoBitElm(dirRow);
-          delScoreL = *scoreOnLP + settings->gapExtendI;
        #else
-          curDelDirC = *dirRow;
           delScoreL = *scoreOnLP + settings->gapExtendI;
        #endif
 
@@ -434,12 +411,13 @@ struct scoresStruct * memWaterAln(
        \**************************************************/
 
        updateStartPos(
-          curDelDirC,
+          #if defined TWOBITMSW
+             getTwoBitElm(dirRow),
+          #else
+             *dirRow,
+          #endif
           lastRefStartUL,
           lastQryStartUL,
-          lastInsDirC,
-          lastDelDirC,
-          lastSnpDirC,
           refStartUL,
           qryStartUL,
           refIterStr,
@@ -484,13 +462,8 @@ struct scoresStruct * memWaterAln(
        ` ahead of the just filled score).
        */
 
-       lastSnpDirC = lastInsDirC;
-         /*Last insertion is now the last snp direction*/
-
        /*Get the new last insertion direction*/
        #if defined TWOBITMSW && !defined NOGAPOPEN
-          lastInsDirC = getTwoBitElm(dirRow);
-
           indelScore(
              insScoreL,
              getTwoBitElm(dirRow),
@@ -498,19 +471,13 @@ struct scoresStruct * memWaterAln(
              settings
           );
        #elif !defined NOGAPOPEN
-          lastInsDirC = *dirRow;
-
           indelScore(
              insScoreL,
              *dirRow,
              *scoreOnLP,
              settings
           );
-       #elif defined TWOBITMSW
-          lastInsDirC = getTwoBitElm(dirRow);
-          insScoreL = *scoreOnLP + settings->gapExtendI;
        #else
-          lastInsDirC = *dirRow;
           insScoreL = *scoreOnLP + settings->gapExtendI;
        #endif
      } /*loop; compare one query to one reference base*/
@@ -549,20 +516,15 @@ struct scoresStruct * memWaterAln(
      *  - Is the last base in row an alternative alignment?
      \****************************************************/
 
-     lastDelDirC = curDelDirC;
-     #if defined TWOBITMSW
-        curDelDirC = getTwoBitElm(dirRow);
-     #else
-        curDelDirC = *dirRow;
-     #endif
 
      updateStartPos(
-        curDelDirC,
+        #if defined TWOBITMSW
+           getTwoBitElm(dirRow),
+        #else
+           *dirRow,
+        #endif
         lastRefStartUL,
         lastQryStartUL,
-        lastInsDirC,
-        lastDelDirC,
-        lastSnpDirC,
         refStartUL,
         qryStartUL,
         refIterStr - 1,
@@ -620,17 +582,12 @@ struct scoresStruct * memWaterAln(
            getBaseScore(qryIterStr,refStartStr,settings)
          + *scoreOnLP;
 
-      /*These always point to the indel column*/
-      lastSnpDirC = defMvStop;
-      curDelDirC = defMvStop;
-
       /*Update the indel column and find next deletion*/
       *scoreOnLP += settings->gapExtendI;
       delScoreL = *scoreOnLP + settings->gapExtendI;
       ++scoreOnLP; /*Move to the first base pair*/
 
      #if defined TWOBITMSW && !defined NOGAPOPEN
-        lastInsDirC = getTwoBitElm(dirRow);
         indelScore(
            insScoreL,
            getTwoBitElm(dirRow),
@@ -638,18 +595,13 @@ struct scoresStruct * memWaterAln(
            settings
         );
      #elif !defined NOGAPOPEN
-        lastInsDirC = *dirRow;
         indelScore(
            insScoreL,
            *dirRow,
            *scoreOnLP,
            settings
         );
-     #elif defined TWOBITMSW
-        lastInsDirC = getTwoBitElm(dirRow);
-        insScoreL = *scoreOnLP + settings->gapExtendI;
      #else
-        lastInsDirC = *dirRow;
         insScoreL = *scoreOnLP + settings->gapExtendI;
      #endif
    } /*loop; compare query base against all ref bases*/
@@ -801,15 +753,6 @@ struct alnMatrixStruct * memWaterAltAln(
       char *dirRow = 0;  /*Holds directions*/
       char *firstDir = 0; /*Holds directions*/
    #endif
-
-   /*This is for recording the starting positions. It
-   `  stores the last direction for each possible
-   `  movement
-   */
-   char lastSnpDirC = 0;
-   char lastDelDirC = 0;
-   char curDelDirC = 0;
-   char lastInsDirC = 0;
 
    /*The structure to return (has results)*/
    struct alnMatrixStruct *retMtxST = 0;
@@ -1029,11 +972,6 @@ struct alnMatrixStruct * memWaterAltAln(
    insScoreL = 0;
    ++scoreOnLP;
 
-   lastDelDirC = defMvStop;
-   curDelDirC = defMvStop;
-   lastInsDirC = defMvStop;
-   lastSnpDirC = defMvStop;
-
    /******************************************************\
    * Fun-02 Sec-04 Sub-01:
    *  - Do the first move
@@ -1112,10 +1050,7 @@ struct alnMatrixStruct * memWaterAltAln(
        /*Need to move the direction here, so I have
        ` the previous bases direction.
        */
-       lastDelDirC = curDelDirC;
        #if defined TWOBITMSW && !defined NOGAPOPEN
-          curDelDirC = getTwoBitElm(dirRow);
-
           indelScore(
              delScoreL,
              getTwoBitElm(dirRow),
@@ -1123,19 +1058,13 @@ struct alnMatrixStruct * memWaterAltAln(
              settings
           );
        #elif !defined NOGAPOPEN
-          curDelDirC = *dirRow;
-
           indelScore(
              delScoreL,
              *dirRow,
              *scoreOnLP,
              settings
           );
-       #elif defined TWOBITMSW
-          curDelDirC = getTwoBitElm(dirRow);
-          delScoreL = *scoreOnLP + settings->gapExtendI;
        #else
-          curDelDirC = *dirRow;
           delScoreL = *scoreOnLP + settings->gapExtendI;
        #endif
 
@@ -1145,12 +1074,13 @@ struct alnMatrixStruct * memWaterAltAln(
        \**************************************************/
 
        updateStartPos(
-          curDelDirC,
+          #if defined TWOBITMSW
+             getTwoBitElm(dirRow),
+          #else
+             *dirRow,
+          #endif
           lastRefStartUL,
           lastQryStartUL,
-          lastInsDirC,
-          lastDelDirC,
-          lastSnpDirC,
           refStartUL,
           qryStartUL,
           refIterStr,
@@ -1196,13 +1126,8 @@ struct alnMatrixStruct * memWaterAltAln(
        ` ahead of the just filled score).
        */
 
-       lastSnpDirC = lastInsDirC;
-         /*Last insertion is now the last snp direction*/
-
        /*Get the new last insertion direction*/
        #if defined TWOBITMSW && !defined NOGAPOPEN
-          lastInsDirC = getTwoBitElm(dirRow);
-
           indelScore(
              insScoreL,
              getTwoBitElm(dirRow),
@@ -1210,19 +1135,13 @@ struct alnMatrixStruct * memWaterAltAln(
              settings
           );
        #elif !defined NOGAPOPEN
-          lastInsDirC = *dirRow;
-
           indelScore(
              insScoreL,
              *dirRow,
              *scoreOnLP,
              settings
           );
-       #elif defined TWOBITMSW
-          lastInsDirC = getTwoBitElm(dirRow);
-          insScoreL = *scoreOnLP + settings->gapExtendI;
        #else
-          lastInsDirC = *dirRow;
           insScoreL = *scoreOnLP + settings->gapExtendI;
        #endif
      } /*loop; compare one query to one reference base*/
@@ -1261,20 +1180,14 @@ struct alnMatrixStruct * memWaterAltAln(
      *  - Is the last base in row an alternative alignment?
      \****************************************************/
 
-     lastDelDirC = curDelDirC;
-     #if defined TWOBITMSW
-        curDelDirC = getTwoBitElm(dirRow);
-     #else
-        curDelDirC = *dirRow;
-     #endif
-
      updateStartPos(
-        curDelDirC,
+        #if defined TWOBITMSW
+           getTwoBitElm(dirRow),
+        #else
+           *dirRow,
+        #endif
         lastRefStartUL,
         lastQryStartUL,
-        lastInsDirC,
-        lastDelDirC,
-        lastSnpDirC,
         refStartUL,
         qryStartUL,
         refIterStr - 1,
@@ -1335,17 +1248,12 @@ struct alnMatrixStruct * memWaterAltAln(
            getBaseScore(qryIterStr,refStartStr,settings)
          + *scoreOnLP;
 
-      /*These always point to the indel column*/
-      lastSnpDirC = defMvStop;
-      curDelDirC = defMvStop;
-
       /*Update the indel column and find next deletion*/
       *scoreOnLP += settings->gapExtendI;
       delScoreL = *scoreOnLP + settings->gapExtendI;
       ++scoreOnLP; /*Move to the first base pair*/
 
      #if defined TWOBITMSW && !defined NOGAPOPEN
-        lastInsDirC = getTwoBitElm(dirRow);
         indelScore(
            insScoreL,
            getTwoBitElm(dirRow),
@@ -1353,18 +1261,13 @@ struct alnMatrixStruct * memWaterAltAln(
            settings
         );
      #elif !defined NOGAPOPEN
-        lastInsDirC = *dirRow;
         indelScore(
            insScoreL,
            *dirRow,
            *scoreOnLP,
            settings
         );
-     #elif defined TWOBITMSW
-        lastInsDirC = getTwoBitElm(dirRow);
-        insScoreL = *scoreOnLP + settings->gapExtendI;
      #else
-        lastInsDirC = *dirRow;
         insScoreL = *scoreOnLP + settings->gapExtendI;
      #endif
    } /*loop; compare query base against all ref bases*/

@@ -21,23 +21,6 @@ This program is dual licensed for MIT and CC0. Pick the
 
 # Current work
 
-I am currently working on my more memory efficient
-  Waterman. It is like the alternative alignment step,
-  except it is designed to work on a single directional
-  row. It returns the best score, start of the alignment,
-  and the end of the alignment. I then use the Hirschberg
-  to find the alignment.
-
-Status: it is working, but has a minor bug for the first
-  base that I need to debug (treats first base as
-  insertion). It takes 11 to 12 minutes to align both the
-  huge (ram killer) sequences. For alternative base
-  printing it takes a little under 22 Mb. For the single
-  best alignment it takes a little over 6 Mb. The memory
-  usage is constant, so this is the most memory it will
-  ever take for this size of alignment. However, this is
-  pretty slow.
-
 # Building and running alnSeq
 
 ## How to build alnSeq
@@ -93,6 +76,10 @@ The flags alnSeq can be compiled with are:
   - This option slows down the alignment slightly. The only
     reason to use this option would be if the input case
     of a sequence matters.
+- -DTWOBITMSW
+  - Compiles the more memory efficient smith waterman with
+    two bit arrays. This will have little effect on memory,
+    but will slow it down.
 - These options force alnSeq to prefer only one direction
   and disables all other options. This does speed up alnSeq
   slightly.
@@ -205,11 +192,8 @@ The more memory efficient Waterman is slow, but it also
   designed to work on a single directional row. It returns
   the best score, start of the alignment, and the end of
   the alignment. I then use the Hirschberg to find the
-  best alignment. This means for time you have to pay the
-  time cost of the alternative alignment step and the
-  Hirschberg.
-
-This still needs some debugging.
+  best alignment. This means for you have to pay the time
+  cost of the alternative alignment and Hirschberg steps.
 
 ## Some light benchmarking
 
