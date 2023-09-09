@@ -17,6 +17,8 @@ This log records how alnSeq has changed between versions.
   alignments. It currently prints everything in one file.
 - Fix non-memory efficent Watermans start printing
   locations. I think I am one position off with lastDirC.
+- Fix scores ouput by memWater. They seem to be a bit to
+  high at times.
 
 # Ideas that would be cool, but not worth working on
 
