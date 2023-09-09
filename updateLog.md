@@ -15,6 +15,8 @@ This log records how alnSeq has changed between versions.
     for finding an optimal alignment (scoring matrix).
 - Need to add a separate file for printing out alternative
   alignments. It currently prints everything in one file.
+- Fix non-memory efficent Watermans start printing
+  locations. I think I am one position off with lastDirC.
 
 # Ideas that would be cool, but not worth working on
 
@@ -30,6 +32,14 @@ These ideas are a future visions that are not worth the
 - Add a filter for alternative alignments.
 
 # Log
+
+## 20230908
+
+- Fixed an issue in the memory efficent Watermans were the
+  alternative alignments were not printing out the starting
+  alignments.
+  - This is still a bit broken for the non-memory efficent
+    Waterman
 
 ## 20230831
 

@@ -21,6 +21,11 @@ This program is dual licensed for MIT and CC0. Pick the
 
 # Current work
 
+Right now I am working on seeing how the choice of
+  reference used with the artic pipeline affects the output
+  consensuses results. I am hoping to get to this project
+  after I finish this current project up.
+
 # Building and running alnSeq
 
 ## How to build alnSeq

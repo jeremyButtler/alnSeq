@@ -1,65 +1,71 @@
-/*#########################################################
-# Name waterman
+/*########################################################
+# Name memWater
 # Use:
-#  o Holds functions doing a Waterman-Smith pairwise
-#    alignments. This version outputs a single alignment
-# Libraries:
-#   - "generalAlnFun.h"
-#   - "alnStruct.h"
-#   - "alnMatrixStruct.h"
+#  o Holds functions doing a memory efficent Smith Waterman
+#    pairwise alignments. These aligners return positions,
+#    which can be then run through a global/local aligner
+#    used to find the actual alignment.
+# Includes:
+#   - "waterman.h"
+#   o "generalAlnFun.h"
+#   o "alnStruct.h"
+#   o "alnMatrixStruct.h"
 #   o "twoBitArrays.h"
 #   o "scoresST.h"
 #   o "seqStruct.h"
 #   o "alnSetStruct.h"
 #   o "alnSeqDefaults.h"
-# C Standard libraries Used:
+# C Standard libraries:
 #   o <stdlib.h>
 #   o <stdint.h>
-#   o <stdio.h>  // by alnSetStructure.h
-#   - <string.h>
-#########################################################*/
+#   o <stdio.h>
+#   0 <string.h>
+########################################################*/
 
-#include "waterman.h"
+#include "memWaterVect.h"
 
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-' SOF: Start Of Functions
-'  - fun-01 WatermanSmithAln:
-'     o Perform a Waterman Smith alignment on input
-'       sequences
-'  o fun-02 addBestBaseScore:
-'    - Adds a score and index to the kept scores list
-'  o fun-03 printMatrixCig:
-'    - Prints out a cigar for an single path in a
-'      direction matrix
-'  o fun-04 printAltWaterAlns:
-'    - Prints out the best aligment and the saved
-'       alterantive alignments  (best alignment for each
-'       base) to a file
-'  - fun-05 updateDirScoreWaterSingle:
-'     o Picks the best score and direction for the current
-'       base pairs being compared in a Waterman-Smith
-'       alignment
-'    - Inlined function is in header at bottom
+' memWater SOF: Start Of Functions
+' o fun-01 memWaterAln:
+'   - Run a memory efficent Waterman Smith alignment on
+'     input sequences
+' o fun-02 mamWaterAltAln:
+'   - Run a memory efficent Waterman Smith alignment that
+'     returns alternative alignmetns
 \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\
+| Name: memWaterAln
+| Call: memWaterAln(qryST, refST, settings);
+| Use:
+|   - Performs a memory efficent Smith Waterman alignment
+|     on a pair of sequences
+| Input;
+|   - qryST:
+|     o SeqStruct with the query sequence and index 0
+|       coordinates to start (offsetUL)/end (endAlnUL) the
+|       alignment.
+|   - refST:
+|     o SeqStruct with the reference sequence and index 0
+|       coordinates to start (offsetUL)/end (endAlnUL) the
+|       alignment
+|   - settings:
+|     o alnSet structure with the setttings, such as
+|       gap open, gap extend, scoring matrix, and preffered
+|       direction.
 | Output:
 |  - Returns:
-|    o alnMatrixStruct with the direction matrix and scores
+|    o scoresStruct with the best score
 |    o 0 for memory allocation errors
 \--------------------------------------------------------*/
-struct alnMatrixStruct * WatermanAln(
-    struct seqStruct *qryST, /*query sequence and data*/
-    struct seqStruct *refST,   /*ref sequence and data*/
-      /* both qryST and refST have the sequence,
-      `  they also have the point to start the alignment
-      `  seqST->offsetUL (index 0) and the point to end
-      `  the alignment seqST->endAlnUL (index 0).
-      */
-    struct alnSet *settings /*Settings for the alignment*/
+struct scoresStruct * memWaterVect16(
+    struct seqStruct *qryST, /*query sequence*/
+    struct seqStruct *refST, /*ref sequence*/
+    struct alnSet *settings  /*Settings for alignment*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-01 TOC: WatermanAln
-   '  - Run a Waterman Smith alignment on input sequences
+   ' Fun-01 TOC: memWaterAln
+   '  - Run a memory efficent Waterman Smith alignment on
+   '    input sequences
    '  o fun-01 sec-01:
    '    - Variable declerations
    '  o fun-01 sec-02:
@@ -101,11 +107,6 @@ struct alnMatrixStruct * WatermanAln(
    char *qryIterStr = 0;
    char *refIterStr = 0;
 
-   /*Find the length of the reference and query*/
-   unsigned long lenQryUL =
-       qryST->endAlnUL - qryST->offsetUL + 1;
-     /*The + 1 is to account for index 0 of endAlnUL*/
-
    unsigned long lenRefUL =
        refST->endAlnUL - refST->offsetUL + 1;
      /*The + 1 is to account for index 0 of endAlnUL*/
@@ -118,94 +119,125 @@ struct alnMatrixStruct * WatermanAln(
    *  - Variables holding the scores (only two rows)
    \******************************************************/
 
-   long insScoreL = 0;   /*Score for doing an insertion*/
-   long snpScoreL = 0;   /*Score for doing an match/snp*/
-   long delScoreL = 0;   /*Score for doing an deletion*/
-   long nextSnpSL = 0;   /*Score for the next match/snp*/
-
-   // Marks when to reset score buffer (every second row)
    long *scoreRowLP = 0; /*matrix to use in alignment*/
    long *scoreOnLP = 0;  /*Score I am working on*/
+
+   /*Vectors*/
+   vectI16 scoresVect16;
+   vectI16 insVect16;
+   vectI16 delVect16;
+   vectI16 snpVect16;
 
    /******************************************************\
    * Fun-01 Sec-01 Sub-03:
    *  - Directinol matrix variables
    \******************************************************/
 
-   /*Direction matrix (one cell holds a single direction)*/
-   #if !defined BYTEMATRIX && !defined NOGAPOPEN
-      struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
-      struct twoBitAry insDir;     /*Direction above cell*/
-   #elif !defined BYTEMATRIX
-      struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
-   #elif !defined NOGAPOPEN 
-      char *dirMatrix = 0;/*Direction matrix*/
-      char *insDir;       /*Direction above cell*/
-   #else
-      char *dirMatrix = 0;    /*Direction matrix*/
-   #endif
+   char *dirRow = 0;  /*Holds directions*/
+   char *firstDir = 0; /*Holds directions*/
 
-   /*The structure to return (has results)*/
-   struct alnMatrixStruct *retMtxST = 0;
+   struct scoresStruct *bestScoreST = 0;
+
+   /*For recording the start position*/
+   unsigned long *refStartUL = 0;
+   unsigned long *qryStartUL = 0;
+   unsigned long *refStartFirstIndexUL = 0;
+   unsigned long *qryStartFirstIndexUL = 0;
+   unsigned long lastRefStartUL = refST->offsetUL;
+   unsigned long lastQryStartUL = qryST->offsetUL;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-02:
    ^  - Allocate memory for alignment
+   ^  o fun-01 sec-02 sub-01:
+   ^    - Allocate memory for the alignment
+   ^  o fun-01 sec-02 sub-02:
+   ^    - Allocate memory for alternative alignments
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   retMtxST = calloc(1, sizeof(struct alnMatrixStruct));
-   if(retMtxST == 0) return 0;
-   initAlnMatrixST(retMtxST);
-   /*+ 1 is for the indel column*/
+   /******************************************************\
+   * Fun-01 Sec-02 Sub-01:
+   *  - Allocate memory for the alignment
+   \******************************************************/
+
+   /*Make struct array for every base in reference*/
+   bestScoreST = calloc(1, sizeof(struct scoresStruct));
+   if(bestScoreST == 0) return 0;
+   initScoresST(bestScoreST);
 
    scoreRowLP = calloc((lenRefUL + 1), sizeof(long));
+   /*+ 1 is for the indel column*/
    if(scoreRowLP == 0)
-   { // If I had a memory error
-     freeAlnMatrixST(retMtxST);
+   { /*If I had a memory error*/
+     freeScoresST(bestScoreST, 0);
      return 0;
-   } // If I had a memory error
+   } /*If I had a memory error*/
 
-   #if !defined BYTEMATRIX
-      dirMatrix= makeTwoBit((lenRefUL+1) * (lenQryUL+1),0);
+   #if defined TWOBITMSW
+      dirRow = makeTwoBit(lenRefUL+1 , 0);
      /* Calls calloc and adds an extra element at end
      `  - lenRefUL + 1 accounts for insertion reference row
-     `  - lenQeurI + 1 accounts for insertion query column
      */
    #else
-      dirMatrix =
-         calloc((lenRefUL+1) *(lenQryUL+1)+2,sizeof(char));
+      dirRow = calloc(lenRefUL + 1 ,sizeof(char));
+      firstDir = dirRow;
    #endif
 
-   if(dirMatrix == 0)
+   if(dirRow == 0)
    { /*If I do not have a direction matrix for each cell*/
-     freeAlnMatrixST(retMtxST);
+     freeScoresST(bestScoreST, 0);
      free(scoreRowLP);
      return 0;
    } /*If I do not have a direction matrix for each cell*/
 
-   retMtxST->dirMatrixST = dirMatrix;
+   /******************************************************\
+   * Fun-01 Sec-02 Sub-02:
+   *  - Allocate memory for alternative alignments
+   \******************************************************/
+
+   refStartUL = calloc(lenRefUL,sizeof(unsigned long));
+   refStartFirstIndexUL = refStartUL;
+   if(refStartUL == 0)
+   { /*If had a memory error*/
+     freeScoresST(bestScoreST, 0);
+      free(scoreRowLP);
+      return 0;
+   } /*If had a memory error*/
+
+   /*One query position recoreded per refference position*/
+   qryStartUL = calloc(lenRefUL, sizeof(unsigned long));
+   qryStartFirstIndexUL = qryStartUL;
+   if(qryStartUL == 0)
+   { /*If had a memory error*/
+      freeScoresST(bestScoreST, 0);
+      free(scoreRowLP);
+      free(refStartUL);
+      return 0;
+   } /*If had a memory error*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-03:
    ^  - Fill in initial negatives for reference
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   /*Get the first indel position*/
-   #if !defined BYTEMATRIX && !defined NOGAPOPEN
-      cpTwoBitPos(dirMatrix, &insDir);
-   #elif !defined NOGAPOPEN
-      insDir = dirMatrix;
+   /*Fill in the indel column in the indel row*/
+   #if defined TWOBITMSW
+      changeTwoBitElm(dirRow, defMvStop);
+      twoBitMvToNextElm(dirRow);
+   #else
+      *dirRow = defMvStop;
+      ++dirRow;
    #endif
 
-   refIterStr = refStartStr - 1;
+   refIterStr = refStartStr;
    while(refIterStr <= refEndStr)
    { /*loop; till have initalized the first row*/
-     #if !defined BYTEMATRIX
-        changeTwoBitElm(dirMatrix, defMvStop);
-        twoBitMvToNextElm(dirMatrix);
+     #if defined TWOBITMSW
+        changeTwoBitElm(dirRow, defMvStop);
+        twoBitMvToNextElm(dirRow);
      #else
-        *dirMatrix = defMvStop;
-        ++dirMatrix;
+        *dirRow = defMvStop;
+        ++dirRow;
      #endif
 
      ++scoreOnLP; /*Already set to 0 by calloc*/
@@ -230,11 +262,11 @@ struct alnMatrixStruct * WatermanAln(
    ^  o fun-01 sec-04 sub-07:
    ^    - Check if is an alternative base best score
    *  o fun-01 sec-04 sub-08:
-   *    - Does not exist, but exists in WatermanAltAln
-   ^  o fun-01 sec-04 sub-09:
-   ^    - Find the scores for the next insertion
-   ^  o fun-01 sec-4 sub-10:
+   *    - Check if is an alternative base best score
+   ^  o fun-01 sec-4 sub-09:
    ^    - Move to the next reference base
+   ^  o fun-01 sec-04 sub-10:
+   ^    - Find the scores for the next insertion
    ^  o fun-01 sec-04 sub-11:
    ^    - Find the best score for the last base
    ^  o fun-01 sec-04 sub-12:
@@ -250,9 +282,17 @@ struct alnMatrixStruct * WatermanAln(
    *  - Get the initial scores
    \******************************************************/
 
+   #if defined TWOBITMSW
+      twoBitMvXElmFromStart(dirRow, 0);
+   #else
+      dirRow = firstDir;
+   #endif
+
    qryIterStr = qryStartStr;
    refIterStr = refStartStr;
    scoreOnLP = scoreRowLP;
+   refStartUL = refStartFirstIndexUL;
+   qryStartUL = qryStartFirstIndexUL;
 
    nextSnpSL =
         getBaseScore(qryIterStr, refIterStr, settings)
@@ -269,21 +309,12 @@ struct alnMatrixStruct * WatermanAln(
    *  - Do the first move
    \******************************************************/
 
-   #if !defined BYTEMATRIX && !defined NOGAPOPEN
-      changeTwoBitElm(dirMatrix, defMvStop);
-      twoBitMvToNextElm(dirMatrix);
-      twoBitMvToNextElm(&insDir);
-      twoBitMvToNextElm(&insDir);
-   #elif !defined BYTEMATRIX
-      changeTwoBitElm(dirMatrix, defMvStop);
-      twoBitMvToNextElm(dirMatrix);
-   #elif !defined NOGAPOPEN
-     *dirMatrix = defMvStop;
-     ++dirMatrix;
-     insDir += 2;
+   #if defined TWOBITMSW
+      changeTwoBitElm(dirRow, defMvStop);
+      twoBitMvToNextElm(dirRow);
    #else
-     *dirMatrix = defMvStop;
-     ++dirMatrix;
+     *dirRow = defMvStop;
+     ++dirRow;
    #endif
 
    /******************************************************\
@@ -322,9 +353,9 @@ struct alnMatrixStruct * WatermanAln(
        *  - Find the best score for the last round
        \**************************************************/
 
-       #if !defined BYTEMATRIX
+       #if defined TWOBITMSW
           waterTwoBitMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &snpScoreL,
@@ -334,7 +365,7 @@ struct alnMatrixStruct * WatermanAln(
 
        #else
           waterByteMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &snpScoreL,
@@ -351,17 +382,17 @@ struct alnMatrixStruct * WatermanAln(
        /*Need to move the direction here, so I have
        ` the previous bases direction.
        */
-       #if !defined BYTEMATRIX && !defined NOGAPOPEN
+       #if defined TWOBITMSW && !defined NOGAPOPEN
           indelScore(
              delScoreL,
-             getTwoBitElm(dirMatrix),
+             getTwoBitElm(dirRow),
              *scoreOnLP,
              settings
           );
        #elif !defined NOGAPOPEN
           indelScore(
              delScoreL,
-             *dirMatrix,
+             *dirRow,
              *scoreOnLP,
              settings
           );
@@ -374,26 +405,51 @@ struct alnMatrixStruct * WatermanAln(
        *  - Determine if is a best score (keep as primary)
        \**************************************************/
 
-        /*This is faster than the branchless option.
-        ` I am guessing to much is done in the if and 
-        ` that the if if fired rarely.
-        */
-        if(retMtxST->bestScoreST.scoreL < *scoreOnLP)
-        { /*if have a new best score*/
-           retMtxST->bestScoreST.scoreL = *scoreOnLP;
+       updateStartPos(
+          #if defined TWOBITMSW
+             getTwoBitElm(dirRow),
+          #else
+             *dirRow,
+          #endif
+          lastRefStartUL,
+          lastQryStartUL,
+          refStartUL,
+          qryStartUL,
+          refIterStr,
+          refST->seqCStr,
+          qryIterStr,
+          qryST->seqCStr
+       ); /*macro in water.h*/
+          
+       if(*scoreOnLP > bestScoreST->scoreL)
+       { /*If this is the current best score*/
+          bestScoreST->scoreL = *scoreOnLP;
 
-           /*This will slow me down a bit, but makes life
-           ` easier
-           */
-           retMtxST->bestScoreST.refEndUL =
-              refIterStr - refST->seqCStr - 1;
+          bestScoreST->refStartUL = *refStartUL;
+          bestScoreST->qryStartUL = *qryStartUL;
 
-           retMtxST->bestScoreST.qryEndUL =
-              qryIterStr - qryST->seqCStr;
-        } /*if have a new best score*/
+          bestScoreST->refEndUL= refIterStr-refST->seqCStr;
+          bestScoreST->qryEndUL= qryIterStr-qryST->seqCStr;
+       } /*If this is the current best score*/
+
+       /***********************************************\
+       * Fun-01 Sec-04 Sub-09:
+       *  - Move to next reference base
+       \***********************************************/
+          
+       ++refStartUL;
+       ++qryStartUL;
+       ++refIterStr; /*Move to next reference base*/
+       ++scoreOnLP;  /*Move to the next score*/
+
+       #if defined TWOBITMSW
+          twoBitMvToNextElm(dirRow);
+       #else
+          ++dirRow;
+       #endif
 
        /**************************************************\
-       * Fun-01 Sec-04 Sub-09:
+       * Fun-01 Sec-04 Sub-10:
        *  - Find the the next insertion score
        \**************************************************/
 
@@ -401,45 +457,23 @@ struct alnMatrixStruct * WatermanAln(
        ` ahead of the just filled score).
        */
 
-       ++scoreOnLP;
-
-       #if !defined BYTEMATRIX && !defined NOGAPOPEN
+       /*Get the new last insertion direction*/
+       #if defined TWOBITMSW && !defined NOGAPOPEN
           indelScore(
              insScoreL,
-             getTwoBitElm(&insDir),
+             getTwoBitElm(dirRow),
              *scoreOnLP,
              settings
           );
        #elif !defined NOGAPOPEN
           indelScore(
              insScoreL,
-             *insDir,
+             *dirRow,
              *scoreOnLP,
              settings
           );
        #else
           insScoreL = *scoreOnLP + settings->gapExtendI;
-       #endif
-
-       /***********************************************\
-       * Fun-01 Sec-04 Sub-10:
-       *  - Move to next reference base
-       \***********************************************/
-     
-       /*Move to the next cell to score*/
-       ++refIterStr; /*Move to next reference base*/
-
-       /*Move to the next direction*/
-       #if !defined BYTEMATRIX && !defined NOGAPOPEN
-          twoBitMvToNextElm(dirMatrix);
-          twoBitMvToNextElm(&insDir);
-       #elif !defined BYTEMATRIX
-          twoBitMvToNextElm(dirMatrix);
-       #elif !defined NOGAPOPEN
-          ++dirMatrix;
-          ++insDir;
-       #else
-          ++dirMatrix;
        #endif
      } /*loop; compare one query to one reference base*/
 
@@ -452,9 +486,9 @@ struct alnMatrixStruct * WatermanAln(
        ` case, this score can only apply to indels. So,
        ` I need to move off it to avoid overwirting it
        */
-       #if !defined BYTEMATRIX
+       #if defined TWOBITMSW
           waterTwoBitMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &nextSnpSL,
@@ -463,7 +497,7 @@ struct alnMatrixStruct * WatermanAln(
           ); /*Update the score and direction*/
        #else
           waterByteMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &nextSnpSL,
@@ -477,51 +511,56 @@ struct alnMatrixStruct * WatermanAln(
      *  - Is the last base in row an alternative alignment?
      \****************************************************/
 
-     /*This is faster than the branchless option.
-     ` I am guessing to much is done in the if and 
-     ` that the if if fired rarely.
-     */
-     if(retMtxST->bestScoreST.scoreL < *scoreOnLP)
-     { /*if have a new best score*/
-        retMtxST->bestScoreST.scoreL = *scoreOnLP;
 
-        retMtxST->bestScoreST.refEndUL =
-           refIterStr - refST->seqCStr - 1;
+     updateStartPos(
+        #if defined TWOBITMSW
+           getTwoBitElm(dirRow),
+        #else
+           *dirRow,
+        #endif
+        lastRefStartUL,
+        lastQryStartUL,
+        refStartUL,
+        qryStartUL,
+        refIterStr - 1,
+        refST->seqCStr,
+        qryIterStr,
+        qryST->seqCStr
+     );
 
-        retMtxST->bestScoreST.qryEndUL =
-           qryIterStr - qryST->seqCStr;
-     } /*if have a new best score*/
+     if(*scoreOnLP > bestScoreST->scoreL)
+     { /*If this is the current best score*/
+        bestScoreST->scoreL = *scoreOnLP;
 
-      /**************************************************\
-      *  Fun-01 Sec-04 Sub-13:
-      *   - Move to the indel column
-      \**************************************************/
+        bestScoreST->refStartUL = *refStartUL;
+        bestScoreST->qryStartUL = *qryStartUL;
 
-      /*I need to move dirMatrix and insDir to the first
+        bestScoreST->refEndUL= refIterStr-refST->seqCStr-1;
+        bestScoreST->qryEndUL= qryIterStr-qryST->seqCStr;
+     } /*If this is the current best score*/
+
+     refStartUL = refStartFirstIndexUL;
+     qryStartUL = qryStartFirstIndexUL;
+
+     /**************************************************\
+     *  Fun-01 Sec-04 Sub-13:
+     *   - Move to the indel column
+     \**************************************************/
+
+      /*I need to move dirRow and insDir to the first
       ` first base in the next row (skip indel column).
       ` The score for the indel column is updated in the
       ` next subsection. I need to find the score for a
       ` deletion before the update.
       */
-      #if !defined BYTEMATRIX && !defined NOGAPOPEN
-         twoBitMvToNextElm(dirMatrix);
-         changeTwoBitElm(dirMatrix, defMvIns);
-         twoBitMvToNextElm(dirMatrix);
-
-         twoBitMvToNextElm(&insDir);
-      #elif !defined BYTEMATRIX
-         twoBitMvToNextElm(dirMatrix);
-         changeTwoBitElm(dirMatrix, defMvIns);
-         twoBitMvToNextElm(dirMatrix);
-      #elif !defined NOGAPOPEN
-         ++dirMatrix;
-         *dirMatrix = defMvIns;
-         ++dirMatrix;
-         ++insDir;
+      #if defined TWOBITMSW
+         twoBitMvXElmFromStart(dirRow, 0);
+         changeTwoBitElm(dirRow, defMvIns);
+         twoBitMvToNextElm(dirRow);
       #else
-         ++dirMatrix;
-         *dirMatrix = defMvIns;
-         ++dirMatrix;
+         dirRow = firstDir;
+         *dirRow = defMvIns;
+         ++dirRow;
       #endif
 
       /**************************************************\
@@ -543,29 +582,23 @@ struct alnMatrixStruct * WatermanAln(
       delScoreL = *scoreOnLP + settings->gapExtendI;
       ++scoreOnLP; /*Move to the first base pair*/
 
-     /*At this point insDir is on the first base*/
-     #if !defined BYTEMATRIX && !defined NOGAPOPEN
+     #if defined TWOBITMSW && !defined NOGAPOPEN
         indelScore(
            insScoreL,
-           getTwoBitElm(&insDir),
+           getTwoBitElm(dirRow),
            *scoreOnLP,
            settings
         );
-
-        twoBitMvToNextElm(&insDir);
      #elif !defined NOGAPOPEN
         indelScore(
            insScoreL,
-           *insDir,
+           *dirRow,
            *scoreOnLP,
            settings
         );
-
-        ++insDir;
      #else
         insScoreL = *scoreOnLP + settings->gapExtendI;
      #endif
-     /*At this piont insDir is on the second base*/
    } /*loop; compare query base against all ref bases*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -576,28 +609,55 @@ struct alnMatrixStruct * WatermanAln(
    /*Move back to the lower right conor cell
    ` This is not needed, but is nice.
    */
-   #if !defined BYTEMATRIX
-      twoBitMvBackOneElm(dirMatrix);
-      changeTwoBitElm(dirMatrix, defMvStop);
-      twoBitMvBackOneElm(dirMatrix);
+   #if defined TWOBITMSW
+      twoBitMvBackOneElm(dirRow);
+      changeTwoBitElm(dirRow, defMvStop);
+      twoBitMvBackOneElm(dirRow);
+      freeTwoBit(dirRow, 0, 0); /*0 frees everything*/
    #else
-      *(dirMatrix - 1) = defMvStop;
+      *(dirRow - 1) = defMvStop;
+      free(firstDir);
    #endif
 
    free(scoreRowLP);
-   return retMtxST;
-} /*WatermanAln*/
+   free(qryStartUL);
+   free(refStartUL);
+   
+   scoreRowLP = 0;
+   qryStartUL = 0;
+   refStartUL = 0;
+
+   return bestScoreST;
+} /*memWaterAln*/
 
 /*--------------------------------------------------------\
+| Name: memWaterAltAln
+| Call: memWaterAltAln(qryST, refST, settings);
+| Use:
+|   - Performs a memory efficent Smith Waterman alignment
+|     on a pair of sequences
+| Input;
+|   - qryST:
+|     o SeqStruct with the query sequence and index 0
+|       coordinates to start (offsetUL)/end (endAlnUL) the
+|       alignment
+|   - refST:
+|     o SeqStruct with the reference sequence and
+|       coordinates to start (offsetUL)/end (endAlnUL) the
+|       alignment
+|   - settings:
+|     o alnSet structure with the setttings, such as
+|       gap open, gap extend, min score, scoring matrix,
+|       and preffered direction.
 | Output:
 |  - Returns:
-|    o alnMatrixStruct with the direction matrix, best
-|      score, and alternative alignments (includes best
-|      score)
+|    o alnMatrixStruct with the best score and alternative
+|      alignments (includes best score)
+|      - This does not return a direction matrix
 |    o 0 for memory allocation errors
 \--------------------------------------------------------*/
-struct alnMatrixStruct * WatermanAltAln(
-    struct seqStruct *qryST, /*query sequence and data*/
+struct alnMatrixStruct * memWaterAltAln(
+    struct seqStruct *qryST,   /*query sequence and data*/
     struct seqStruct *refST,   /*ref sequence and data*/
       /* both qryST and refST have the sequence,
       `  they also have the point to start the alignment
@@ -606,8 +666,9 @@ struct alnMatrixStruct * WatermanAltAln(
       */
     struct alnSet *settings /*Settings for the alignment*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-02 TOC: WatermanAltAln
-   '  - Run a Waterman Smith alignment on input sequences
+   ' Fun-02 TOC: memWaterAltAln
+   '  - Run a memory efficent Waterman Smith alignment that
+   '    returns alternative alignmetns
    '  o fun-02 sec-01:
    '    - Variable declerations
    '  o fun-02 sec-02:
@@ -681,16 +742,11 @@ struct alnMatrixStruct * WatermanAltAln(
    \******************************************************/
 
    /*Direction matrix (one cell holds a single direction)*/
-   #if !defined BYTEMATRIX
-      struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
-      struct twoBitAry insDir;     /*Direction above cell*/
-      unsigned char lastDirC = 0;
-      unsigned char lastLastDirC = 0;
+   #if defined TWOBITMSW
+      struct twoBitAry *dirRow = 0;/*Holds directions*/
    #else
-      char *dirMatrix = 0;/*Direction matrix*/
-      char *insDir = 0;   /*Direction above cell*/
-      char lastDirC = 0;
-      char lastLastDirC = 0;
+      char *dirRow = 0;  /*Holds directions*/
+      char *firstDir = 0; /*Holds directions*/
    #endif
 
    /*The structure to return (has results)*/
@@ -734,25 +790,22 @@ struct alnMatrixStruct * WatermanAltAln(
      return 0;
    } // If I had a memory error
 
-   #if !defined BYTEMATRIX
-      dirMatrix= makeTwoBit((lenRefUL+1) * (lenQryUL+1),0);
+   #if defined TWOBITMSW
+      dirRow = makeTwoBit(lenRefUL+1 , 0);
      /* Calls calloc and adds an extra element at end
      `  - lenRefUL + 1 accounts for insertion reference row
-     `  - lenQeurI + 1 accounts for insertion query column
      */
    #else
-      dirMatrix =
-         calloc((lenRefUL+1) *(lenQryUL+1)+2,sizeof(char));
+      dirRow = calloc(lenRefUL + 1 ,sizeof(char));
+      firstDir = dirRow;
    #endif
 
-   if(dirMatrix == 0)
+   if(dirRow == 0)
    { /*If I do not have a direction matrix for each cell*/
      freeAlnMatrixST(retMtxST);
      free(scoreRowLP);
      return 0;
    } /*If I do not have a direction matrix for each cell*/
-
-   retMtxST->dirMatrixST = dirMatrix;
 
    /******************************************************\
    * Fun-02 Sec-02 Sub-02:
@@ -813,31 +866,24 @@ struct alnMatrixStruct * WatermanAltAln(
    ^  - Fill in initial negatives for reference
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   /*Get the first indel position*/
-   #if !defined BYTEMATRIX
-      cpTwoBitPos(dirMatrix, &insDir);
-   #else
-      insDir = dirMatrix;
-   #endif
-
    /*Fill in the indel column in the indel row*/
-   #if !defined BYTEMATRIX
-      changeTwoBitElm(dirMatrix, defMvStop);
-      twoBitMvToNextElm(dirMatrix);
+   #if defined TWOBITMSW
+      changeTwoBitElm(dirRow, defMvStop);
+      twoBitMvToNextElm(dirRow);
    #else
-      *dirMatrix = defMvStop;
-      ++dirMatrix;
+      *dirRow = defMvStop;
+      ++dirRow;
    #endif
 
    refIterStr = refStartStr;
    while(refIterStr <= refEndStr)
    { /*loop; till have initalized the first row*/
-     #if !defined BYTEMATRIX
-        changeTwoBitElm(dirMatrix, defMvStop);
-        twoBitMvToNextElm(dirMatrix);
+     #if defined TWOBITMSW
+        changeTwoBitElm(dirRow, defMvStop);
+        twoBitMvToNextElm(dirRow);
      #else
-        *dirMatrix = defMvStop;
-        ++dirMatrix;
+        *dirRow = defMvStop;
+        ++dirRow;
      #endif
 
      refBasesST->refStartUL = refIterStr - refST->seqCStr;
@@ -877,10 +923,10 @@ struct alnMatrixStruct * WatermanAltAln(
    ^    - Check if is an alternative base best score
    *  o fun-02 sec-04 sub-08:
    *    - Check if is an alternative base best score
-   ^  o fun-02 sec-04 sub-09:
-   ^    - Find the scores for the next insertion
-   ^  o fun-02 sec-4 sub-10:
+   ^  o fun-02 sec-4 sub-09:
    ^    - Move to the next reference base
+   ^  o fun-02 sec-04 sub-10:
+   ^    - Find the scores for the next insertion
    ^  o fun-02 sec-04 sub-11:
    ^    - Find the best score for the last base
    ^  o fun-02 sec-04 sub-12:
@@ -895,6 +941,12 @@ struct alnMatrixStruct * WatermanAltAln(
    * Fun-02 Sec-04 Sub-01:
    *  - Get the initial scores
    \******************************************************/
+
+   #if defined TWOBITMSW
+      twoBitMvXElmFromStart(dirRow, 0);
+   #else
+      dirRow = firstDir;
+   #endif
 
    qryIterStr = qryStartStr;
    refIterStr = refStartStr;
@@ -913,7 +965,6 @@ struct alnMatrixStruct * WatermanAltAln(
    *scoreOnLP = 0;
    delScoreL = 0;
    insScoreL = 0;
-   lastLastDirC = 0;
    ++scoreOnLP;
 
    /******************************************************\
@@ -921,15 +972,12 @@ struct alnMatrixStruct * WatermanAltAln(
    *  - Do the first move
    \******************************************************/
 
-   #if !defined BYTEMATRIX
-      changeTwoBitElm(dirMatrix, defMvStop);
-      twoBitMvToNextElm(dirMatrix);
-      twoBitMvToNextElm(&insDir);
-      twoBitMvToNextElm(&insDir);
+   #if defined TWOBITMSW
+      changeTwoBitElm(dirRow, defMvStop);
+      twoBitMvToNextElm(dirRow);
    #else
-     *dirMatrix = defMvStop;
-     ++dirMatrix;
-     insDir += 2;
+     *dirRow = defMvStop;
+     ++dirRow;
    #endif
 
    /******************************************************\
@@ -968,11 +1016,9 @@ struct alnMatrixStruct * WatermanAltAln(
        *  - Find the best score for the last round
        \**************************************************/
 
-       lastDirC = lastLastDirC;
-       #if !defined BYTEMATRIX
-          lastLastDirC = getTwoBitElm(&insDir);
+       #if defined TWOBITMSW
           waterTwoBitMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &snpScoreL,
@@ -981,9 +1027,8 @@ struct alnMatrixStruct * WatermanAltAln(
           ); /*Update the scores*/
 
        #else
-          lastLastDirC = *insDir;
           waterByteMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &snpScoreL,
@@ -1000,17 +1045,17 @@ struct alnMatrixStruct * WatermanAltAln(
        /*Need to move the direction here, so I have
        ` the previous bases direction.
        */
-       #if !defined BYTEMATRIX && !defined NOGAPOPEN
+       #if defined TWOBITMSW && !defined NOGAPOPEN
           indelScore(
              delScoreL,
-             getTwoBitElm(dirMatrix),
+             getTwoBitElm(dirRow),
              *scoreOnLP,
              settings
           );
        #elif !defined NOGAPOPEN
           indelScore(
              delScoreL,
-             *dirMatrix,
+             *dirRow,
              *scoreOnLP,
              settings
           );
@@ -1024,17 +1069,16 @@ struct alnMatrixStruct * WatermanAltAln(
        \**************************************************/
 
        updateStartPos(
-          #if !defined BYTEMATRIX
-             getTwoBitElm(dirMatrix),
+          #if defined TWOBITMSW
+             getTwoBitElm(dirRow),
           #else
-             *dirMatrix,
+             *dirRow,
           #endif
-          lastDirC,
           lastRefStartUL,
           lastQryStartUL,
           refStartUL,
           qryStartUL,
-          refIterStr - 1,
+          refIterStr,
           refST->seqCStr,
           qryIterStr,
           qryST->seqCStr
@@ -1046,17 +1090,30 @@ struct alnMatrixStruct * WatermanAltAln(
           qryBasesST,
           refBasesST,
           *refStartUL, /*Is in index 0*/
-          refIterStr - refST->seqCStr - 1, 
+          refIterStr - refST->seqCStr, 
           *qryStartUL,
           qryIterStr - qryST->seqCStr
        ); /*Macro in waterman.h*/
+
+       /***********************************************\
+       * Fun-02 Sec-04 Sub-09:
+       *  - Move to next reference base
+       \***********************************************/
           
        ++refBasesST;
        ++refStartUL;
        ++qryStartUL;
+       ++refIterStr; /*Move to next reference base*/
+       ++scoreOnLP;  /*Move to the next score*/
+
+       #if defined TWOBITMSW
+          twoBitMvToNextElm(dirRow);
+       #else
+          ++dirRow;
+       #endif
 
        /**************************************************\
-       * Fun-02 Sec-04 Sub-09:
+       * Fun-02 Sec-04 Sub-10:
        *  - Find the the next insertion score
        \**************************************************/
 
@@ -1064,43 +1121,23 @@ struct alnMatrixStruct * WatermanAltAln(
        ` ahead of the just filled score).
        */
 
-       ++scoreOnLP;
-         /*Last insertion is now the last snp direction*/
-
        /*Get the new last insertion direction*/
-       #if !defined BYTEMATRIX && !defined NOGAPOPEN
+       #if defined TWOBITMSW && !defined NOGAPOPEN
           indelScore(
              insScoreL,
-             getTwoBitElm(&insDir),
+             getTwoBitElm(dirRow),
              *scoreOnLP,
              settings
           );
        #elif !defined NOGAPOPEN
           indelScore(
              insScoreL,
-             *insDir,
+             *dirRow,
              *scoreOnLP,
              settings
           );
        #else
           insScoreL = *scoreOnLP + settings->gapExtendI;
-       #endif
-
-       /***********************************************\
-       * Fun-02 Sec-04 Sub-10:
-       *  - Move to next reference base
-       \***********************************************/
-     
-       /*Move to the next cell to score*/
-       ++refIterStr; /*Move to next reference base*/
-
-       /*Move to the next direction*/
-       #if !defined BYTEMATRIX
-          twoBitMvToNextElm(dirMatrix);
-          twoBitMvToNextElm(&insDir);
-       #else
-          ++dirMatrix;
-          ++insDir;
        #endif
      } /*loop; compare one query to one reference base*/
 
@@ -1113,10 +1150,9 @@ struct alnMatrixStruct * WatermanAltAln(
        ` case, this score can only apply to indels. So,
        ` I need to move off it to avoid overwirting it
        */
-       lastDirC = lastLastDirC;
-       #if !defined BYTEMATRIX
+       #if defined TWOBITMSW
           waterTwoBitMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &nextSnpSL,
@@ -1125,7 +1161,7 @@ struct alnMatrixStruct * WatermanAltAln(
           ); /*Update the score and direction*/
        #else
           waterByteMaxScore(
-            dirMatrix,
+            dirRow,
             settings,
             &insScoreL,
             &nextSnpSL,
@@ -1140,12 +1176,11 @@ struct alnMatrixStruct * WatermanAltAln(
      \****************************************************/
 
      updateStartPos(
-        #if !defined BYTEMATRIX
-           getTwoBitElm(dirMatrix),
+        #if defined TWOBITMSW
+           getTwoBitElm(dirRow),
         #else
-           *dirMatrix,
+           *dirRow,
         #endif
-        lastDirC,
         lastRefStartUL,
         lastQryStartUL,
         refStartUL,
@@ -1178,23 +1213,20 @@ struct alnMatrixStruct * WatermanAltAln(
      *   - Move to the indel column
      \**************************************************/
 
-      /*I need to move dirMatrix and insDir to the first
+      /*I need to move dirRow and insDir to the first
       ` first base in the next row (skip indel column).
       ` The score for the indel column is updated in the
       ` next subsection. I need to find the score for a
       ` deletion before the update.
       */
-      #if !defined BYTEMATRIX
-         twoBitMvToNextElm(dirMatrix);
-         changeTwoBitElm(dirMatrix, defMvIns);
-         twoBitMvToNextElm(dirMatrix);
-
-         twoBitMvToNextElm(&insDir);
+      #if defined TWOBITMSW
+         twoBitMvXElmFromStart(dirRow, 0);
+         changeTwoBitElm(dirRow, defMvIns);
+         twoBitMvToNextElm(dirRow);
       #else
-         ++dirMatrix;
-         *dirMatrix = defMvIns;
-         ++dirMatrix;
-         ++insDir;
+         dirRow = firstDir;
+         *dirRow = defMvIns;
+         ++dirRow;
       #endif
 
       /**************************************************\
@@ -1214,37 +1246,25 @@ struct alnMatrixStruct * WatermanAltAln(
       /*Update the indel column and find next deletion*/
       *scoreOnLP += settings->gapExtendI;
       delScoreL = *scoreOnLP + settings->gapExtendI;
-      lastLastDirC = 0;
       ++scoreOnLP; /*Move to the first base pair*/
 
-
-     /*At this point insDir is on the first base*/
-     #if !defined BYTEMATRIX && !defined NOGAPOPEN
+     #if defined TWOBITMSW && !defined NOGAPOPEN
         indelScore(
            insScoreL,
-           getTwoBitElm(&insDir),
+           getTwoBitElm(dirRow),
            *scoreOnLP,
            settings
         );
-
-        twoBitMvToNextElm(&insDir);
      #elif !defined NOGAPOPEN
         indelScore(
            insScoreL,
-           *insDir,
+           *dirRow,
            *scoreOnLP,
            settings
         );
-
-        ++insDir;
-     #elif !defined BYTEMATRIX
-        insScoreL = *scoreOnLP + settings->gapExtendI;
-        twoBitMvToNextElm(&insDir);
      #else
         insScoreL = *scoreOnLP + settings->gapExtendI;
-        ++insDir;
      #endif
-     /*At this piont insDir is on the second base*/
    } /*loop; compare query base against all ref bases*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -1264,24 +1284,26 @@ struct alnMatrixStruct * WatermanAltAln(
    /*Move back to the lower right conor cell
    ` This is not needed, but is nice.
    */
-   #if !defined BYTEMATRIX
-      twoBitMvBackOneElm(dirMatrix);
-      changeTwoBitElm(dirMatrix, defMvStop);
-      twoBitMvBackOneElm(dirMatrix);
+   #if defined TWOBITMSW
+      twoBitMvBackOneElm(dirRow);
+      changeTwoBitElm(dirRow, defMvStop);
+      twoBitMvBackOneElm(dirRow);
+      freeTwoBit(dirRow, 0, 0); /*0 frees everything*/
    #else
-      *(dirMatrix - 1) = defMvStop;
+      *(dirRow - 1) = defMvStop;
+      free(firstDir);
    #endif
 
    free(scoreRowLP);
    free(qryStartUL);
    free(refStartUL);
-
+   
    scoreRowLP = 0;
    qryStartUL = 0;
    refStartUL = 0;
 
    /******************************************************\
-   * Fun-02 Sec-05 Sub-01:
+   * Fun-02 Sec-05 Sub-02:
    *  - Find the best score
    \******************************************************/
 
@@ -1317,226 +1339,5 @@ struct alnMatrixStruct * WatermanAltAln(
    } /*Loop: Find the highest reference score*/
 
    return retMtxST;
-} /*WatermanAltAln*/
+} /*memWaterAltAln*/
 
-/*--------------------------------------------------------\
-| Output:
-|  - Prints
-|    o Prints the path of the input index in dirST
-\*-------------------------------------------------------*/
-void printMatrixCig(
-  FILE *outFILE,            // File to print to
-  struct twoBitAry *dirST,  // Has index to print
-  unsigned long lenRefUL,   // Length of the reference
-  long scoreL               // Score of the path
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: printMatrixCig
-   '  - Prints out a cigar for an single path in a
-   '    direction matrix
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-   uint8_t lastDirUC = defMvStop;
-   char lastDirCigC = 0;
-   uint32_t numDirUI = 0;
-   uint8_t curDirUC = 0;
-
-   struct twoBitAry matrixST;
-
-   // As index 1
-   unsigned long qryEndUL =
-     (twoBitGetIndex(dirST) / (lenRefUL + 1));
-
-   unsigned long refEndUL =
-     (twoBitGetIndex(dirST) % (lenRefUL + 1));
-
-   cpTwoBitPos(dirST, &matrixST);
-   curDirUC = getTwoBitElm(&matrixST);
-
-   // Print out the score, position of ending query base,
-   // & position of ending reference base
-   fprintf(
-     outFILE,
-     "%ld\t%lu\t%lu\t",
-     scoreL,
-     qryEndUL,
-     refEndUL
-   );
-   
-   goto initializePrint;
-   
-   while(curDirUC != defMvStop)
-   { // While I have a cigar to build
-     if(curDirUC != lastDirUC && lastDirUC != defMvStop)
-     { // If I need to print out the last direction
-       if(numDirUI > 1)
-         fprintf(outFILE, "%u%c", numDirUI, lastDirCigC);
-
-       else fprintf(outFILE, "%c", lastDirCigC);
-
-       initializePrint:
-
-       lastDirUC = defMvStop;
-       numDirUI = 0;
-       lastDirUC = curDirUC;
-
-       switch(curDirUC)
-       { // Switch: find the cigar symbol
-         case defMvIns:
-           lastDirCigC = 'I';
-           break;
-
-         case defMvSnp:
-           lastDirCigC = 'X';
-           break;
-
-         case defMvDel:
-           lastDirCigC = 'D';
-           break;
-       } // Switch: find the cigar symbol
-     } // If I need to print out the last direction
-
-     switch(curDirUC)
-     { // Switch: Check which way to move
-       case defMvIns:
-         twoBitMvBackXElm(&matrixST, lenRefUL + 1);
-         break;
-
-       case defMvSnp:
-         twoBitMvBackXElm(&matrixST, lenRefUL + 2);
-         break;
-
-       case defMvDel:
-         twoBitMvBackOneElm(&matrixST);
-         break;
-     } // Switch: Check which way to move
-
-     ++numDirUI;
-     curDirUC = getTwoBitElm(&matrixST);
-   } // While I have a cigar to build
-
-   // Print out the last score
-   if(numDirUI > 1)
-     fprintf(outFILE, "%u%c", numDirUI, lastDirCigC);
-
-   else fprintf(outFILE, "%c", lastDirCigC);
-
-   qryEndUL = (twoBitGetIndex(&matrixST) /(lenRefUL+1));
-   refEndUL = (twoBitGetIndex(&matrixST) %(lenRefUL+1));
-
-   // Print the starting position of query and reference
-   fprintf(outFILE, "\t%lu\t%lu\n", qryEndUL, refEndUL);
-
-   return;
-} // printMatrixCig
-
-/*--------------------------------------------------------\
-| Output:
-|  - Prints
-|    o Prints out the score and the position of the first
-~      refence base, first query base, last reference base
-|      and last query base to outFILE.
-\--------------------------------------------------------*/
-void printAltWaterAlns(
-  struct alnMatrixStruct *alnMtxST,
-     /*Has alternative alignments*/
-  long minScoreL, /*Min score to keep an alternative*/
-  FILE *outFILE   /*File to write alignments to*/
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-04 TOC: printAltWaterAlns
-   '  - Prints out all saved alternatives alignments
-   '  o fun-04 sec-01:
-   '    - Variable declerations
-   '  o fun-04 sec-02:
-   '    - Open the output file
-   '  o fun-04 sec-03:
-   '    o Print out the reference alignments
-   '  o fun-04 sec-04:
-   '    - Print out the query aligments
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-  /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-04 Sec-01:
-  ^  - Variable declerations
-  \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
-
-  struct scoresStruct *scoreST = 0;
-  char *startStr = "Alt:";
-     /*To distingush alterantives from primary*/
-
-  /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-04 Sec-03:
-  ^  - Print out reference alternative alignments positions
-  \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
-
-  /*Print out the alternative alignment header*/
-  fprintf(outFILE, "%s score fristRefBase ", startStr);
-  fprintf(outFILE, " firstQueryBase lastRefBase");
-  fprintf(outFILE, " lastQueryBase\n");
-  scoreST = alnMtxST->refBasesST;
-
-  for(
-    unsigned long ulRefBase = 0;
-    ulRefBase < alnMtxST->lenRefScoresUL;
-    ++ulRefBase
-  ){ /*For all reference bases in the alignment*/
-    /*Check if even need to print out any reference alns*/
-    if(scoreST->scoreL < minScoreL)
-      goto nextRefScore;
-
-    /*Prints out the score, first reference and query base
-    ` in the alignment, and the last reference and query
-    ` base in the alignment
-    */
-    fprintf(
-       outFILE,
-       "%s %li %lu %lu %lu %lu\n",
-       startStr,
-       scoreST->scoreL,
-       scoreST->refStartUL,
-       scoreST->qryStartUL,
-       scoreST->refEndUL,
-       scoreST->qryEndUL
-    );
-
-     nextRefScore:
-    ++scoreST;  /*Move to the next entry*/
-  } /*For all reference bases in the alignment*/
-     
-  /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-  ^ Fun-03 Sec-04:
-  ^  - Print out the query alignments
-  \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
-
-  scoreST = alnMtxST->qryBasesST;
-
-  for(
-    unsigned long ulQryBase = 0;
-    ulQryBase < alnMtxST->lenQueryScoresUL;
-    ++ulQryBase
-  ){ /*For all reference bases in the alignment*/
-
-    /*Check if even need to print out any reference alns*/
-    if(scoreST->scoreL < minScoreL)
-      goto nextQueryScore;
-
-    /*Prints out the score, first reference and query base
-    ` in the alignment, and the last reference and query
-    ` base in the alignment
-    */
-    fprintf(
-       outFILE,
-       "%s %li %lu %lu %lu %lu\n",
-       startStr,
-       scoreST->scoreL,
-       scoreST->refStartUL,
-       scoreST->qryStartUL,
-       scoreST->refEndUL,
-       scoreST->qryEndUL
-    );
-
-    nextQueryScore:
-    ++scoreST;  /*Move to the next entry*/
-  } /*For all reference bases in the alignment*/
-
-  return;
-} /*printAltWaterAlns*/

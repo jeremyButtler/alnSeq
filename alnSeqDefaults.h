@@ -11,7 +11,7 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings*/
-#define defVersion 20230830  /*Version number for alnSeq*/
+#define defVersion 20230908  /*Version number for alnSeq*/
 
 // Aligment method being used
 #define defUseNeedle 1  /*do Needleman-Wunsch alignment*/
