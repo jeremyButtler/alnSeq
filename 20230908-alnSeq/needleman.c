@@ -93,30 +93,18 @@ struct alnMatrixStruct * NeedlemanAln(
    long *scoreRowLP = 0; /*matrix to use in alignment*/
    long *scoreOnLP = 0;  /*Score I am working on*/
 
-   /*Gap penalities*/
-   short gapExtendS = settings->gapExtendS;
-
-   #ifndef NOGAPOPEN
-      short gapOpenS = settings->gapOpenS;
-   #endif
-
    /*Direction matrix (one cell holds a single direction)*/
    #if !defined BYTEMATRIX && !defined NOGAPOPEN
       struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
       struct twoBitAry insDir;     /*Direction above cell*/
-      uint8_t dirUC = 0;     /*Temporarly holds directoin*/
    #elif !defined BYTEMATRIX
       struct twoBitAry *dirMatrix = 0;/*Direction matrix*/
-      uint8_t dirUC = 0;     /*Temporarly holds directoin*/
    #elif !defined NOGAPOPEN 
       char *dirMatrix = 0;/*Direction matrix*/
       char *insDir;       /*Direction above cell*/
-      char dirUC = 0;     /*Temporarly holds directoin*/
    #else
       char *dirMatrix = 0;    /*Direction matrix*/
-      char dirUC = 0;     /*Temporarly holds directoin*/
    #endif
-
 
    /*Structure to return*/
    struct alnMatrixStruct *retMtxST = 0;
@@ -195,9 +183,9 @@ struct alnMatrixStruct * NeedlemanAln(
 
    /*2nd score (first indel in matrix)*/
    #ifdef NOGAPOPEN
-      *scoreOnLP = gapExtendS;
+      *scoreOnLP = settings->gapExtendI;
    #else
-      *scoreOnLP = gapOpenS;
+      *scoreOnLP = settings->gapOpenI;
    #endif
 
    /*Set up scores for remaning cells in the first row*/
@@ -206,7 +194,7 @@ struct alnMatrixStruct * NeedlemanAln(
 
    while(refIterStr < refEndStr)
    { /*loop; till have initalized the first row*/
-     *scoreOnLP = *(scoreOnLP - 1) + gapExtendS;
+     *scoreOnLP = *(scoreOnLP - 1) + settings->gapExtendI;
 
      /*Move to the next cell (ref base)*/
      #if !defined BYTEMATRIX
@@ -225,30 +213,20 @@ struct alnMatrixStruct * NeedlemanAln(
    ^ Fun-01 Sec-04:
    ^  - Fill the matrix with scores
    ^  o fun-01 sec-04 sub-01:
-   ^    - Find the initial scores
+   ^    - Set up for filling the rest of the matrix
    ^  o fun-01 sec-04 sub-02:
-   ^    - Get the pointers to the correct positions
+   ^    - Fill in the first cell (indel column)
    ^  o fun-01 sec-04 sub-03:
-   ^    - Get scores for next match
+   ^    - Get scores for insertion, deletion, match
    ^  o fun-01 sec-04 sub-04:
-   ^    - Find the best score
+   ^    - Move to the next refernce/query base
    ^  o fun-01 sec-04 sub-05:
-   ^    - Find the next deletion score
-   ^  o fun-01 sec-04 sub-06:
-   ^    - Find the next insertion score
-   ^  o fun-01 sec-04 sub-07:
-   ^    - Move to the next reference base
-   ^  o fun-01 sec-04 sub-08:
-   ^    - Find best score for 2nd to last column (ref)
-   ^  o fun-01 sec-04 sub-09:
-   ^    - Update the indel columns directoin
-   ^  o fun-01 sec-04 sub-09:
-   ^    - Find the first scores for the new row
+   ^    - Handle the first cell (indel col) in new row
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
    /******************************************************\
-   * Fun-01 Sec-04 Sub-01:
-   *  - Find the initial scores
+   ^ Fun-01 Sec-04 Sub-01:
+   ^  - Set up for filling the rest of the matrix
    \******************************************************/
 
    qryIterStr = qryStartStr;
@@ -266,24 +244,19 @@ struct alnMatrixStruct * NeedlemanAln(
 
    /*Fill in the current indel column for this row*/
    #ifndef NOGAPOPEN
-      *scoreOnLP = gapOpenS;
-      /**scoreOnLP = settings->gapExtendS;
+      *scoreOnLP = settings->gapOpenI;
+      /**scoreOnLP = settings->gapExtendI;
       ` This was the old version. However, this was a
       ` mistake and can result in slightly worse alignments
       ` (when alignments have many gaps).
       */
    #else
-      *scoreOnLP = gapExtendS;
+      *scoreOnLP = settings->gapExtendI;
    #endif
 
-   delScoreL = *scoreOnLP + gapExtendS;
+   delScoreL = *scoreOnLP + settings->gapExtendI;
    ++scoreOnLP;
-   insScoreL = *scoreOnLP + gapExtendS;
-
-   /******************************************************\
-   * Fun-01 Sec-04 Sub-02:
-   *  - Get the pointers to the correct positions
-   \******************************************************/
+   insScoreL = *scoreOnLP + settings->gapExtendI;
 
    #if !defined BYTEMATRIX && !defined NOGAPOPEN
       changeTwoBitElm(dirMatrix, defMvIns);
@@ -303,8 +276,13 @@ struct alnMatrixStruct * NeedlemanAln(
    #endif
 
    /******************************************************\
+   * Fun-01 Sec-04 Sub-02:
+   *  - Fill in the first cell (indel column)
+   \******************************************************/
+
+   /******************************************************\
    * Fun-01 Sec-04 Sub-03:
-   *  - Get scores for next match
+   *  - Get scores for insertion, deletion, match
    \******************************************************/
 
    /*Starting on the first sequence row*/
@@ -332,33 +310,28 @@ struct alnMatrixStruct * NeedlemanAln(
            );
            nextSnpSL += *scoreOnLP;
 
-          /***********************************************\
-          * Fun-01 Sec-04 Sub-04:
-          *  - Find the best score
-          \***********************************************/
-
            /*Find the best score*/
-           charMaxScore(
-              *scoreOnLP,
-              dirUC,
-              snpScoreL,
-              insScoreL,
-              delScoreL,
-              settings->bestDirC
-           ); /*Update the score and direction*/
-
            #if !defined BYTEMATRIX
-              changeTwoBitElm(dirMatrix, dirUC);
+              twoBitMaxScore(
+                dirMatrix,
+                settings,
+                &insScoreL,
+                &snpScoreL,
+                &delScoreL,
+                scoreOnLP
+              ); /*Update the score and direction*/
            #else
-              *dirMatrix = dirUC;
+              charMaxScore(
+                dirMatrix,
+                settings,
+                &insScoreL,
+                &snpScoreL,
+                &delScoreL,
+                scoreOnLP
+              ); /*Update the score and direction*/
            #endif
 
-
-          /***********************************************\
-          * Fun-01 Sec-04 Sub-05:
-          *  - Find the next deletion score
-          \***********************************************/
-
+           /*Find the next deletion score*/
            /*Need to move the direction here, so I have
            ` the previous bases direction.
            */
@@ -377,16 +350,12 @@ struct alnMatrixStruct * NeedlemanAln(
                  settings
               );
            #else
-              delScoreL = *scoreOnLP+settings->gapExtendS;
+              delScoreL = *scoreOnLP+settings->gapExtendI;
            #endif
 
-          /***********************************************\
-          * Fun-01 Sec-04 Sub-06:
-          *  - Find the next insertion score
-          \***********************************************/
-
-           /*Is one score ahead of the just filled score*/
-
+           /*Find the next insertion score (Is one score
+           ` ahead of the just filled score).
+           */
            ++scoreOnLP;
 
            #if !defined BYTEMATRIX && !defined NOGAPOPEN
@@ -404,38 +373,9 @@ struct alnMatrixStruct * NeedlemanAln(
                  settings
               );
            #else
-              insScoreL = *scoreOnLP +settings->gapExtendS;
+              insScoreL = *scoreOnLP +settings->gapExtendI;
            #endif
 
-
-           /*Resulted in a slower program*/
-           /*#ifndef NOGAPOPEN
-              #ifndef BYTEMATRIX
-                 insScoreL =
-                      *scoreOnLP
-                    + (gapDiffI & -(getTwoBitElm(&insDir) != defMvSnp))
-                    + gapOpenS;
-              #else
-                 insScoreL =
-                      *scoreOnLP
-                    + (gapDiffI & -(*insDir != defMvSnp))
-                    + gapOpenS;
-              #endif
-
-              #ifdef BRANCHED
-                 if(dirUC != defMvSnp)
-                    insScoreL = *scoreOnLP + gapExtendS;
-                 else insScoreL = *scoreOnLP + gapOpenS;
-              #endif
-           #else
-              insScoreL = *scoreOnLP + gapExtendS;
-           #endif*/
-
-           /**********************************************\
-           * Fun-01 Sec-04 Sub-07:
-           *  - Move to the next reference base
-           \**********************************************/
- 
            /*Move to the next direction*/
            #if !defined BYTEMATRIX && !defined NOGAPOPEN
               twoBitMvToNextElm(dirMatrix);
@@ -448,32 +388,47 @@ struct alnMatrixStruct * NeedlemanAln(
            #else
               ++dirMatrix;
            #endif
-      
-           ++refIterStr; /*Next reference base*/
+
+           /**********************************************\
+           * Fun-01 Sec-04 Sub-04:
+           *  - Move to the next refernce/query base
+           \**********************************************/
+       
+           /*Move to the next reference base*/
+           ++refIterStr;
        } /*loop; compare one query to all reference bases*/
 
        /**************************************************\
-       * Fun-01 Sec-04 Sub-08:
-       *  - Find best score for 2nd to last column (ref)
+       * Fun-01 Sec-04 Sub-05:
+       *  - Find the best score for the last base
        \**************************************************/
 
-       charMaxScore(
-          *scoreOnLP,
-          dirUC,
-          nextSnpSL,
-          insScoreL,
-          delScoreL,
-          settings->bestDirC
-       ); /*Update the score and direction*/
-
+       /*Find the best score for the last base. In this
+       ` case, this score can only apply to indels. So,
+       ` I need to move off it to avoid overwirting it
+       */
        #if !defined BYTEMATRIX
-          changeTwoBitElm(dirMatrix, dirUC);
+          twoBitMaxScore(
+            dirMatrix,
+            settings,
+            &insScoreL,
+            &nextSnpSL,
+            &delScoreL,
+            scoreOnLP
+          ); /*Update the score and direction*/
        #else
-          *dirMatrix = dirUC;
+          charMaxScore(
+            dirMatrix,
+            settings,
+            &insScoreL,
+            &nextSnpSL,
+            &delScoreL,
+            scoreOnLP
+          ); /*Update the score and direction*/
        #endif
 
        /**************************************************\
-       *  Fun-01 Sec-04 Sub-09:
+       *  Fun-01 Sec-04 Sub-05:
        *   - Update the indel columns directoin
        \**************************************************/
 
@@ -505,8 +460,8 @@ struct alnMatrixStruct * NeedlemanAln(
        #endif
 
        /**************************************************\
-       * Fun-01 Sec-04 Sub-10:
-       *  - Find the first scores for the new row
+       * Fun-01 Sec-04 Sub-06:
+       *  - Find the first bases scores
        \**************************************************/
 
        /*Move to indel column and apply gap extension*/
@@ -519,65 +474,32 @@ struct alnMatrixStruct * NeedlemanAln(
           + *scoreOnLP;
 
        /*Update the indel column and find next deletion*/
-       *scoreOnLP += gapExtendS;
-       delScoreL = *scoreOnLP + gapExtendS;
+       *scoreOnLP += settings->gapExtendI;
+       delScoreL = *scoreOnLP + settings->gapExtendI;
        ++scoreOnLP; /*Move to the first base pair*/
 
-       /*At this point insDir is on the first base*/
-       #if !defined BYTEMATRIX && !defined NOGAPOPEN
-          indelScore(
-             insScoreL,
-             getTwoBitElm(&insDir),
-             *scoreOnLP,
-             settings
-          );
+      /*At this point insDir is on the first base*/
+      #if !defined BYTEMATRIX && !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            getTwoBitElm(&insDir),
+            *scoreOnLP,
+            settings
+         );
 
-          twoBitMvToNextElm(&insDir);
-       #elif !defined NOGAPOPEN
-          indelScore(
-             insScoreL,
-             *insDir,
-             *scoreOnLP,
-             settings
-          );
+         twoBitMvToNextElm(&insDir);
+      #elif !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            *insDir,
+            *scoreOnLP,
+            settings
+         );
 
-          ++insDir;
-       #elif !defined BYTEMATRIX
-          insScoreL = *scoreOnLP + settings->gapExtendS;
-       #endif
-
-       /*#ifndef NOGAPOPEN
-          #ifndef BYTEMATRIX
-             insScoreL =
-                  *scoreOnLP
-                + (gapDiffI & -(getTwoBitElm(&insDir) != defMvSnp))
-                + gapOpenS;
-
-             twoBitMvToNextElm(&insDir);
-          #else
-             insScoreL =
-                  *scoreOnLP
-                + (gapDiffI & -(*insDir != defMvSnp))
-                + gapOpenS;
-
-             dirUC = *insDir;
-             ++insDir;
-          #endif
-
-          #ifdef BRANCHED
-             if(dirUC != defMvSnp)
-                insScoreL = *scoreOnLP + gapExtendS;
-             else insScoreL = *scoreOnLP + gapOpenS;
-          #else
-             insScoreL =
-                  *scoreOnLP
-                + (gapDiffI & -(dirUC != defMvSnp))
-                + gapOpenS;
-          #endif
-       #else
-          insScoreL = *scoreOnLP + gapExtendS;
-       #endif*/
-
+         ++insDir;
+      #elif !defined BYTEMATRIX
+         insScoreL = *scoreOnLP + settings->gapExtendI;
+      #endif
       /*At this piont insDir is on the second base*/
    } /*loop; fill the direction matrix with socres*/
 

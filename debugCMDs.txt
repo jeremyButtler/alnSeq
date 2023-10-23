@@ -2,13 +2,14 @@ set confirm off
 set confirm off
 #break alnSeq.c:400
 #break alnStruct.c:353
-#break hirschberg.c:112
-break memWater.c:313
+break hirschberg.c:112
+#break waterman.c:265
 
 define runcmd
-  #run -use-hirschberg -query test-query.fasta -ref test-ref.fasta
+  run -use-hirschberg -query test-qry.fa -ref test-ref.fa
   #run -query-ref-scan -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Small-ref.fasta
-  run -use-mem-water -only-scores -query test-qry.fa -ref test-ref.fa
+  #run -use-mem-water -only-scores -query test-qry.fa -ref test-ref.fa
+  #run -use-water -ref tmpRef.fa -query tmpQry.fa
 end
 
 runcmd

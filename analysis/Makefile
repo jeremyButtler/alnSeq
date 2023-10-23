@@ -1,6 +1,4 @@
-all: ssw bio-alignment alnSeq
-20230722: ssw bio-alignment seq-align 20230722alnSeq
-20230811: ssw bio-alignment 20230811alnSeq
+all: ssw bio-alignment sequence_align biopython alnSeq
 
 CC=gcc
 CXX=g++
@@ -18,30 +16,18 @@ seq-align:
 	git clone --recursive https://github.com/noporpoise/seq-align;
 	make CC=$(CC) -C seq-align || gmake CC=$(CC) -C seq-align;
 
+biopython:
+	pip install biopython --update;
+
+sequence_align:
+	pip install sequence_align;
+
 alnSeq:
 	make -C ../ benchmark;
 	mv ../alnSeqTwoBit ./;
 	mv ../alnSeqByte ./;
 	mv ../alnSeqMid ./;
 	mv ../alnSeqFast ./;
-
-20230811alnSeq:
-	make -C ../ 20230812benchmark;
-	mv ../alnSeqHirschByte ./;
-	mv ../alnSeqHirschTwoBit ./;
-
-
-20230811alnSeq:
-	make -C ../ 20230812benchmark;
-	mv ../alnSeqHirschByte ./;
-	mv ../alnSeqHirschTwoBit ./;
-
-20230722alnSeq:
-	make -C ../ 20230722benchmark;
-	mv ../alnSeqOFast ./;
-	mv ../alnSeqO3 ./;
-	mv ../alnSeqO2 ./;
-	mv ../alnSeqO0 ./;
 
 clean:
 	rm -r -f bio-alignment || printf "";
@@ -57,16 +43,9 @@ clean:
 	rm alnSeqTwoBit || printf "";
 	rm alnSeqFast || printf "";
 	rm alnSeqMid || printf "";
+	pip remove sequence_align || printf "";
 
 # Requires emboss be installed separately
 run:
-	bash 20230827-benchmarking/20230827-benchAln.sh;
-	Rscript 20230827-benchmarking/20230827-alnSeq-benchmarking.r;
-
-run20230811:
-	bash 20230811-benchmarking/20230811-benchAln.sh;
-	Rscript 20230811-benchmarking/20230811-alnSeq-benchmarking.r;
-
-run20230722:
-	bash 20230722-benchmarking/20230722-benchAln.sh;
-	Rscript 20230722-benchmarking/20230722-alnSeq-benchmarking.r;
+	bash 20231022-benchmarking/20231022-benchAln.sh;
+	Rscript 20231022-benchmarking/20231022-alnSeq-benchmarking.r;

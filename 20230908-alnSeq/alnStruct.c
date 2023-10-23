@@ -1586,14 +1586,14 @@ char pEMBOSSHead(
       fprintf(
          outFILE,
          "# Gap_penalty: %i\n",
-         setting->gapOpenS
+         setting->gapOpenI
       );
    #endif
 
    fprintf(
      outFILE,
      "# Extend_penalty: %i\n",
-     setting->gapExtendS
+     setting->gapExtendI
    );
 
    /******************************************************\
@@ -1735,14 +1735,14 @@ void pExpandCigHead(
       fprintf(
         outFILE,
         "# Gap open: %i\n",
-         setting->gapOpenS
+         setting->gapOpenI
       );
    #endif
 
    fprintf(
       outFILE,
       "# Gap extend: %i\n",
-      setting->gapExtendS
+      setting->gapExtendI
    );
 
    fprintf(outFILE, "#\n"); /*Separator*/

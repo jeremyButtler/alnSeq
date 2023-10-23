@@ -729,12 +729,12 @@ char * checkInput(
 
         #if !defined NOGAPOPEN
            else if(strcmp(tmpCStr, "-gapopen") == 0)
-               settings->gapOpenS =
+               settings->gapOpenI =
                    strtol(singleArgCStr, &tmpCStr, 10);
         #endif
 
         else if(strcmp(tmpCStr, "-gapextend") == 0)
-          settings->gapExtendS =
+          settings->gapExtendI =
                 strtol(singleArgCStr, &tmpCStr, 10);
 
         else if(strcmp(tmpCStr, "-print-aligned") == 0)
@@ -865,37 +865,37 @@ char * checkInput(
         #elif defined DELSNPINS
         #elif defined DELINSSNP
         #else
-           else if(strcmp(tmpCStr, "-snp-ins-del") == 0)
+           else if(strcmp(tmpCStr, "-match-ins-del") == 0)
            { /*Else if matches->insertions->deletions*/
                settings->bestDirC = defSnpInsDel;
                --intArg;
            } /*Else if matches->insertions->deletions*/
 
-           else if(strcmp(tmpCStr, "-snp-del-ins") == 0)
+           else if(strcmp(tmpCStr, "-match-del-ins") == 0)
            { /*Else if matches->deletions->insertions*/
                settings->bestDirC = defSnpDelIns;
                --intArg;
            } /* Else if matches->deletions->insertions*/
 
-           else if(strcmp(tmpCStr, "-ins-snp-del") == 0)
+           else if(strcmp(tmpCStr, "-ins-match-del") == 0)
            { /*Else if insertions->matches->deletions*/
                settings->bestDirC = defInsSnpDel;
                --intArg;
            } /*Else if insertions->matches->deletions*/
 
-           else if(strcmp(tmpCStr, "-del-snp-ins") == 0)
+           else if(strcmp(tmpCStr, "-del-match-ins") == 0)
            { /*Else if deletions->matches->insertions*/
                settings->bestDirC = defDelSnpIns;
                --intArg;
            } /*Else if deletions->matches->insertions*/
 
-           else if(strcmp(tmpCStr, "-ins-del-snp") == 0)
+           else if(strcmp(tmpCStr, "-ins-del-match") == 0)
            { /*Else if insertions->deletions->matches*/
                settings->bestDirC = defInsDelSnp;
                --intArg;
            } /*Else if insertions->deletions->matches*/
 
-           else if(strcmp(tmpCStr, "-del-ins-snp") == 0)
+           else if(strcmp(tmpCStr, "-del-ins-match") == 0)
            { /*Else if deletions->insertions->matches*/
                settings->bestDirC = defDelInsSnp;
                --intArg;
@@ -1357,8 +1357,8 @@ void printHelpMesg(
    #else
 
       if(defBestDir == defSnpInsDel)
-         fprintf(outFILE, "  -snp-ins-del: [Yes]\n");
-      else  fprintf(outFILE, "  -snp-ins-del: [No]\n");
+         fprintf(outFILE, "  -match-ins-del: [Yes]\n");
+      else  fprintf(outFILE, "  -match-ins-del: [No]\n");
 
       fprintf(
          outFILE,
@@ -1368,8 +1368,8 @@ void printHelpMesg(
       fprintf(outFILE, " insertions over deletions.\n");
 
       if(defBestDir == defSnpDelIns)
-         fprintf(outFILE, "  -snp-del-ins: [Yes]\n");
-      else  fprintf(outFILE, "  -snp-del-ins: [No]\n");
+         fprintf(outFILE, "  -match-del-ins: [Yes]\n");
+      else  fprintf(outFILE, "  -match-del-ins: [No]\n");
 
       fprintf(
          outFILE,
@@ -1379,8 +1379,8 @@ void printHelpMesg(
       fprintf(outFILE, " deletions over insertions.\n");
 
       if(defBestDir == defInsSnpDel)
-         fprintf(outFILE, "  -ins-snp-del: [Yes]\n");
-      else  fprintf(outFILE, "  -ins-snp-del: [No]\n");
+         fprintf(outFILE, "  -ins-match-del: [Yes]\n");
+      else  fprintf(outFILE, "  -ins-match-del: [No]\n");
 
       fprintf(
          outFILE,
@@ -1390,8 +1390,8 @@ void printHelpMesg(
       fprintf(outFILE, " matches/SNPs over deletions.\n");
 
       if(defBestDir == defInsDelSnp)
-         fprintf(outFILE, "  -ins-del-snp: [Yes]\n");
-      else  fprintf(outFILE, "  -ins-del-snp: [No]\n");
+         fprintf(outFILE, "  -ins-del-match: [Yes]\n");
+      else  fprintf(outFILE, "  -ins-del-match: [No]\n");
 
       fprintf(
          outFILE,
@@ -1401,8 +1401,8 @@ void printHelpMesg(
       fprintf(outFILE, " deletions over matches/SNPs.\n");
 
       if(defBestDir == defDelSnpIns)
-         fprintf(outFILE, "  -del-snp-ins: [Yes]\n");
-      else  fprintf(outFILE, "  -del-snp-ins: [No]\n");
+         fprintf(outFILE, "  -del-match-ins: [Yes]\n");
+      else  fprintf(outFILE, "  -del-match-ins: [No]\n");
 
       fprintf(
          outFILE,
@@ -1412,8 +1412,8 @@ void printHelpMesg(
       fprintf(outFILE, " matches/SNPs over insertions.\n");
 
       if(defBestDir == defDelInsSnp)
-         fprintf(outFILE, "  -del-ins-snp: [Yes]\n");
-      else  fprintf(outFILE, "  -del-ins-snp: [No]\n");
+         fprintf(outFILE, "  -del-ins-match: [Yes]\n");
+      else  fprintf(outFILE, "  -del-ins-match: [No]\n");
 
       fprintf(
          outFILE,

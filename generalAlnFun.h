@@ -101,8 +101,8 @@ char checkIfBasesMatch(
    (retScore) = 0 - ((dirC) == defMvSnp); \
    (retScore) = \
         (oldScore) \
-      + ((settings)->gapOpenI & (retScore)) \
-      + ((settings)->gapExtendI & (~(retScore))); \
+      + ((settings)->gapOpenS & (retScore)) \
+      + ((settings)->gapExtendS & (~(retScore))); \
     /* Branchless, apply a gap opening and extension
     `   penalty. This is faster then my old switch
     `   statment method.
@@ -187,16 +187,31 @@ char checkIfBasesMatch(
 }
 
 /*--------------------------------------------------------\
-| Macro-04: snpInsDel
-| Use:
-|  - Selects the max score and direction for max score.
-|  - This macro perfers snps and then insertions when max
-|    scores are equal.
+| Set-01: Maximize score/direction (non-vector)
+|  - Selects the max score and direction selected for the
+|    max score.
+|  o set-01 macro-04 a: insDelSnp (branched)
+|  o set-01 macro-05 a: delInsSnp (branched)
+|  o set-01 macro-06 a: insSnpDel (branched)
+|  o set-01 macro-07 a: delSnpIns (branched)
+|  o set-01 macro-08 a: snpInsDel (branched)
+|  o set-01 macro-09 a: snpDelIns (branched)
+|
+|  o Set-01 Macro-04 b: insDelSnp (no braching)
+|  o set-01 macro-05 b: delInsSnp (no branching)
+|  o set-01 macro-06 b: insSnpDel (no branching)
+|  o set-01 macro-07 b: delSnpIns (no branching)
+|  o set-01 macro-08 b: snpInsDel (no branching)
+|  o set-01 macro-09 b: snpDelIns (no branching)
+| Variations:
+|  - The default is branchless (no ifs, set b), but a
+|    branched variation (if statements, set a) can be used
+|    with -DBRANCHED 
 | Input:
-|  o maxDir
-|    - This will hold the direction of the max score
 |  o maxSc:
 |    - This will hold the max score
+|  o maxDir
+|    - This will hold the direction of the max score
 |  o insSc:
 |    - Score for having an insertion at this position
 |  o snpSc
@@ -208,370 +223,377 @@ char checkIfBasesMatch(
 |    o Sets maxDir to the direction of the max score
 |    - Sets maxSc to the max score
 \--------------------------------------------------------*/
-#define snpInsDel(maxDir, maxSc, insSc, snpSc, delSc){\
-   max(maxSc, (snpSc), (insSc)); \
-   ifMax((maxDir), (snpSc), (insSc), defMvSnp, defMvIns);\
-   ifMax((maxDir), (maxSc), (delSc), (maxDir), defMvDel);\
-   max((maxSc), (maxSc), (delSc)); \
-}
+
+/*branched or banchless score/direction maximize*/
+#ifdef BRANCHED
+   /*-----------------------------------------------------\
+   | Set-01 Macro-04 a: insDelSnp
+   \-----------------------------------------------------*/
+   #define insDelSnp(maxSc, maxDir, snpSc, insSc, delSc){\
+      if((delSc) > (insSc))\
+         {(maxSc) = (delSc); (maxDir) = (defMvDel);}\
+      else {(maxSc) = (insSc); (maxDir) = (defMvIns);}\
+      if((snpSc) > (maxSc))\
+         {(maxSc) = (snpSc); (maxDir) = (defMvSnp);}\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-05 a: delInsSnp
+   \-----------------------------------------------------*/
+   #define delInsSnp(maxSc, maxDir, snpSc, insSc, delSc){\
+      if((insSc) > (delSc))\
+         {(maxSc) = (insSc); (maxDir) = (defMvIns);}\
+      else {(maxSc) = (delSc); (maxDir) = (defMvDel);}\
+      if((snpSc) > (maxSc))\
+         {(maxSc) = (snpSc); (maxDir) = (defMvSnp);}\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-06 a: insSnpDel
+   \-----------------------------------------------------*/
+   #define insSnpDel(maxSc, maxDir, snpSc, insSc, delSc){\
+      if((snpSc) > (insSc))\
+         {(maxSc) = (snpSc); (maxDir) = (defMvSnp);}\
+      else {(maxSc) = (insSc); (maxDir) = (defMvIns);}\
+      if((delSc) > (maxSc))\
+         {(maxSc) = (delSc); (maxDir) = (defMvDel);}\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-07 a: delSnpIns
+   \-----------------------------------------------------*/
+   #define delSnpIns(maxSc, maxDir, snpSc, insSc, delSc){\
+      if((snpSc) > (delSc))\
+         {(maxSc) = (snpSc); (maxDir) = (defMvSnp);}\
+      else {(maxSc) = (delSc); (maxDir) = (defMvDel);}\
+      if((insSc) > (maxSc))\
+         {(maxSc) = (insSc); (maxDir) = (defMvIns);}\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-08 a: snpInsDel
+   \-----------------------------------------------------*/
+   #define snpInsDel(maxSc, maxDir, snpSc, insSc, delSc){\
+      if((insSc) > (snpSc))\
+         {(maxSc) = (insSc); (maxDir) = (defMvIns);}\
+      else {(maxSc) = (snpSc); (maxDir) = (defMvSnp);}\
+      if((delSc) > (maxSc))\
+         {(maxSc) = (delSc); (maxDir) = (defMvDel);}\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-09 a: snpDelIns
+   \-----------------------------------------------------*/
+   #define snpDelIns(maxSc, maxDir, snpSc, insSc, delSc){\
+      if((delSc) > (snpSc))\
+         {(maxSc) = (delSc); (maxDir) = (defMvDel);}\
+      else {(maxSc) = (snpSc); (maxDir) = (defMvSnp);}\
+      if((insSc) > (maxSc))\
+         {(maxSc) = (insSc); (maxDir) = (defMvIns);}\
+   }
+
+#else
+   /*-----------------------------------------------------\
+   | Set-01 Macro-04 b: insDelSnp
+   \-----------------------------------------------------*/
+   #define insDelSnp(maxSc, maxDir, snpSc, insSc, delSc){\
+      max((maxSc), (insSc), (delSc));            /*5 Op*/\
+      (maxDir) = (snpSc) > (maxSc);              /*1 Op*/\
+      max((maxSc), (maxSc), (snpSc));            /*5 Op*/\
+      (maxDir) +=                                /*4 Op*/\
+         ( ( (insSc) == (maxSc) ) | (maxDir) ) + defMvDel;\
+      /*Logic:
+      ` maxDir = snp > max
+      `   1 if snp was selected, else 0 (ins/del)
+      ` defMvDel = 1
+      ` (ins == max) | maxDir
+      `   1 if insertion or snp was selected, else 0 (del)
+      ` For an snp 1 += (0 | 1) + 1 = 3
+      ` For an ins 0 += (1 | 0) + 1 = 2
+      ` For an del 0 += (0 | 0) + 1 = 1
+      */\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-05 b: delInsSnp
+   \-----------------------------------------------------*/
+   #define delInsSnp(maxSc, maxDir, snpSc, insSc, delSc){\
+      max((maxSc), (delSc), (insSc));             /*5 Op*/\
+      maxDir = (snpSc) > (maxSc);                 /*1 Op*/\
+      max((maxSc), (maxSc), (snpSc));             /*5 Op*/\
+      (maxDir) +=                                 /*3 Op*/\
+         ( (delSc) != (maxSc) ) + defMvDel;\
+      /*Logic:
+      ` maxDir = snp > max
+      `   maxDir is 1 if snp was selected, else 0
+      ` defMvDel = 1
+      ` del != maxSc
+      `   1 if a deletion (ins/snp) was selected
+      ` For an snp 1 += (1) + 1 = 3
+      ` For an ins 0 += (1) + 1 = 2
+      ` For an del 0 += 0 + 1 = 1
+      */\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-06 a: insSnpDel
+   \-----------------------------------------------------*/
+   #define insSnpDel(maxSc, maxDir, snpSc, insSc, delSc){\
+      max(maxSc, (insSc), (snpSc));               /*5 Op*/\
+      (maxDir) = (delSc) <= (maxSc);              /*1 Op*/\
+        /*1 if kept score is not a deletion, else 0*/\
+      max((maxSc), (maxSc), (delSc));             /*5 Op*/\
+      (maxDir) +=                                 /*4 Op*/\
+         ( ( (snpSc) > (insSc) ) & maxDir ) + defMvDel;\
+      /*Logic:
+      ` maxDir del <= max
+      `   1 if an insertion or snp, else 0 (deletion)
+      ` defMvDel = 1
+      ` (snp > ins) & maxDir
+      `   1 if an snp is selected, else 0 (ins/del)
+      ` For an snp 1 += (1 & 1) + 1 = 3
+      ` For an ins 1 += (0 & 1) + 1 = 2
+      ` For an del 0 += (0/1 & 0) + 1 = 1
+      */\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-07 b: delSnpIns
+   \-----------------------------------------------------*/
+   #define delSnpIns(maxSc, maxDir, snpSc, insSc, delSc){\
+      max((maxSc), (snpSc), (insSc));             /*5 Op*/\
+      (maxDir) = (maxSc) <= (delSc);              /*1 Op*/\
+      max((maxSc), (delSc), (maxSc));             /*5 Op*/\
+      (maxDir) =                                  /*4 Op*/\
+          defMvSnp\
+        - ( ( (insSc) > (snpSc) ) | (maxDir) )\
+        - (maxDir);\
+      /*Logic:
+      `  maxDir is 1 if a deletion is selected (max <= del)
+      `  defMvSnp = 3
+      `  (ins > snp) | (maxDir)
+      `     1 if insertion or deletion selected, else 0
+      `  -maxDir
+      `     Is 1 if deletion was selected
+      ` For an del I get 3 - (0/1 | 1) - 1 = 1
+      ` For an ins I get 3 - (1 | 0) - 0 = 2
+      ` For an snp I get 3 - (0 | 0) - 0 = 3
+      */\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-08 b: snpInsDel
+   \-----------------------------------------------------*/
+   #define snpInsDel(maxSc, maxDir, snpSc, insSc, delSc){\
+      max((maxSc), (snpSc), (insSc));             /*5 Op*/\
+      (maxDir) = ((delSc) <= (maxSc));            /*1 Op*/\
+        /*1 if deletion not choosen, else 0*/\
+      max((maxSc), (maxSc), (delSc));             /*5 Op*/\
+      (maxDir) +=                                 /*3 Op*/\
+         ( (snpSc) == (maxSc) ) + defMvDel;\
+      /*Logic
+      ` maxDir = delSc <= maxSc
+      `   1 if an insertion or snp was selected, else 0 (del)
+      ` snp == max
+      `   1 if the snp was selected.
+      ` For an snp 1 += (1) + 1 = 3
+      ` For an ins 1 += (0) + 1 = 2
+      ` For an del 0 += (0) + 1 = 1
+      */\
+   }
+
+   /*-----------------------------------------------------\
+   | Set-01 Macro-09 b: snpDelIns
+   \-----------------------------------------------------*/
+   #define snpDelIns(maxSc, maxDir, snpSc, insSc, delSc){\
+      max((maxSc), (delSc), (insSc));             /*5 Op*/\
+      maxDir = (snpSc) < (maxSc);                 /*1 Op*/\
+      max((maxSc), (snpSc), (maxSc));             /*5 Op*/\
+      (maxDir) =                                  /*4 Op*/\
+           defMvSnp /*Always 3*/\
+         - (maxDir) \
+         - ( ( (delSc) == (maxSc) ) & (maxDir) );\
+        /*Logic
+        ` maxDir = snp < max
+        `   1 if deletion/insertion selected, else 0 (snp)
+        ` defMvSnp is always 3
+        ` (del == max) & maxDir
+        `   1 if a deletin was selected, else 0 (snp/ins)
+        ` For an snp (over ins/snp)   3 - 0 - (0/1 & 0) = 3
+        ` For an ins (ignore if eqal) 3 - 1 - (0 & 0) = 2
+        ` For an del (over ins)       3 - 1 - (1 & 1) = 1
+        */\
+   }
+#endif /*branched or banchless score/diretion maximize*/
 
 /*--------------------------------------------------------\
-| Macro-05: snpDelIns
+| Name: charMaxScore (Macro-10:)
 | Use:
-|  - Selects the max score and direction for max score.
-|  - This macro perfers snps and then deletions when max
-|    scores are equal.
+|  - This finds the max score based on the users
+|    preferences for direction
 | Input:
-|  o maxDir
-|    - This will hold the direction of the max score
-|  o maxSc:
-|    - This will hold the max score
-|  o insSc:
-|    - Score for having an insertion at this position
-|  o snpSc
-|    - Score for having an SNP/match at this position
-|  o delSc:
-|    - Score for having an deletion at this position
-| Output:
-|  - Sets:
-|    o Sets maxDir to the direction of the max score
-|    - Sets maxSc to the max score
-\--------------------------------------------------------*/
-#define snpDelIns(maxDir, maxSc, insSc, snpSc, delSc){\
-   max(maxSc, (snpSc), (delSc)); \
-   ifMax((maxDir), (snpSc), (delSc), defMvSnp, defMvDel);\
-   ifMax((maxDir), (maxSc), (insSc), (maxDir), defMvIns);\
-   max((maxSc), (maxSc), (insSc)); \
-}
-
-/*--------------------------------------------------------\
-| Macro-06: insSnpDel
-| Use:
-|  - Selects the max score and direction for max score.
-|  - This macro perfers insertions and then snps when max
-|    scores are equal.
-| Input:
-|  o maxDir
-|    - This will hold the direction of the max score
-|  o maxSc:
-|    - This will hold the max score
-|  o insSc:
-|    - Score for having an insertion at this position
-|  o snpSc
-|    - Score for having an SNP/match at this position
-|  o delSc:
-|    - Score for having an deletion at this position
-| Output:
-|  - Sets:
-|    o Sets maxDir to the direction of the max score
-|    - Sets maxSc to the max score
-\--------------------------------------------------------*/
-#define insSnpDel(maxDir, maxSc, insSc, snpSc, delSc){\
-   max(maxSc, (insSc), (snpSc)); \
-   ifMax((maxDir), (insSc), (snpSc), defMvIns, defMvSnp);\
-   ifMax((maxDir), (maxSc), (delSc), (maxDir), defMvDel);\
-   max((maxSc), (maxSc), (delSc)); \
-}
-
-/*--------------------------------------------------------\
-| Macro-07: insDelSnp
-| Use:
-|  - Selects the max score and direction for max score.
-|  - This macro perfers indels and then deletions when max
-|    scores are equal.
-| Input:
-|  o maxDir
-|    - This will hold the direction of the max score
-|  o maxSc:
-|    - This will hold the max score
-|  o insSc:
-|    - Score for having an insertion at this position
-|  o snpSc
-|    - Score for having an SNP/match at this position
-|  o delSc:
-|    - Score for having an deletion at this position
-| Output:
-|  - Sets:
-|    o Sets maxDir to the direction of the max score
-|    - Sets maxSc to the max score
-\--------------------------------------------------------*/
-#define insDelSnp(maxDir, maxSc, insSc, snpSc, delSc){\
-   max(maxSc, (insSc), (delSc)); \
-   ifMax((maxDir), (insSc), (delSc), defMvIns, defMvDel);\
-   ifMax((maxDir), (maxSc), (snpSc), (maxDir), defMvSnp);\
-   max((maxSc), (maxSc), (snpSc)); \
-}
-
-/*--------------------------------------------------------\
-| Macro-08: delSnpIns
-| Use:
-|  - Selects the max score and direction for max score.
-|  - This macro perfers deletions and then snps when
-|    max scores are equal.
-| Input:
-|  o maxDir
-|    - This will hold the direction of the max score
-|  o maxSc:
-|    - This will hold the max score
-|  o insSc:
-|    - Score for having an insertion at this position
-|  o snpSc
-|    - Score for having an SNP/match at this position
-|  o delSc:
-|    - Score for having an deletion at this position
-| Output:
-|  - Sets:
-|    o Sets maxDir to the direction of the max score
-|    - Sets maxSc to the max score
-\--------------------------------------------------------*/
-#define delSnpIns(maxDir, maxSc, insSc, snpSc, delSc){\
-   max(maxSc, (delSc), (snpSc)); \
-   ifMax((maxDir), (delSc), (snpSc), defMvDel, defMvSnp);\
-   ifMax((maxDir), (maxSc), (insSc), (maxDir), defMvIns);\
-   max((maxSc), (maxSc), (insSc)); \
-}
-
-/*--------------------------------------------------------\
-| Macro-09: delInsSnp
-| Use:
-|  - Selects the max score and direction for max score.
-|  - This macro perfers insertions and then deletions when
-|    max scores are equal.
-| Input:
-|  o maxDir
-|    - This will hold the direction of the max score
-|  o maxSc:
-|    - This will hold the max score
-|  o insSc:
-|    - Score for having an insertion at this position
-|  o snpSc
-|    - Score for having an SNP/match at this position
-|  o delSc:
-|    - Score for having an deletion at this position
-| Output:
-|  - Sets:
-|    o Sets maxDir to the direction of the max score
-|    - Sets maxSc to the max score
-\--------------------------------------------------------*/
-#define delInsSnp(maxDir, maxSc, insSc, snpSc, delSc){\
-   max(maxSc, (delSc), (insSc)); \
-   ifMax((maxDir), (delSc), (insSc), defMvDel, defMvIns);\
-   ifMax((maxDir), (maxSc), (snpSc), (maxDir), defMvSnp);\
-   max((maxSc), (maxSc), (snpSc)); \
-}
-
-/*--------------------------------------------------------\
+|  - maxScore:
+|    o This will hold the maximum score
+|  - maxDir:
+|    o This will hold the direction of the max score
+|  - snp:
+|    o Score for making an snp/match move
+|  - ins:
+|    o Score for making an insertion move
+|  - del:
+|    o Score for making an deletion move
+|   - pref:
+|     o Direction combination that is prefered when scores
+|       are equal. This can be hardcoded in.
 | Output:
 |  - Modifies
-|    o scoreOnL and dirOnST to hold best score & direction
+|    o maxScore to hold the maxium score
+|    o maxDir to hold the direction of the max score
 \--------------------------------------------------------*/
-static inline void twoBitMaxScore(
-    struct twoBitAry *dirOnST, /*Holds best direction*/
-    struct alnSet *alnSetST,   /*for score selection*/
-    long *insScL,              /*Insertion Score*/
-    long *snpScL,              /*SNP/match score*/
-    long *delScL,              /*Deletion score*/
-    long *retScL               /*Holds best score*/
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-01 TOC: twoBitMaxScore
-   '  - Picks the best score and direction for the current
-   '    base pairs being compared in an alignment. This
-   '    function is set up for two bit arrays.
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+#ifdef INSDELSNP
+   #define charMaxScore(maxScore,maxDir,snp,ins,del,pref)\
+     {insDelSnp((maxScore),(maxDir),(snp),(ins),(del))}
 
-   uint8_t dirUC = 0;
+#elif defined DELINSSNP
+   #define charMaxScore(maxScore,maxDir,snp,ins,del,pref)\
+     {delInsSnp((maxScore),(maxDir),(snp),(ins),(del))}
 
-   #if defined SNPINSDEL
-      snpInsDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
-      changeTwoBitElm(dirOnST, dirUC);
-      return;
-   #elif defined SNPDELINS
-      snpDelIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
-      changeTwoBitElm(dirOnST, dirUC);
-      return;
-   #elif defined INSSNPDEL 
-      insSnpDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
-      changeTwoBitElm(dirOnST, dirUC);
-      return;
-   #elif defined INSDELSNP
-      insDelSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
-      changeTwoBitElm(dirOnST, dirUC);
-      return;
-   #elif defined DELSNPINS
-      delSnpIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
-      changeTwoBitElm(dirOnST, dirUC);
-      return;
-   #elif defined DELINSSNP
-      delInsSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
-      changeTwoBitElm(dirOnST, dirUC);
-      return;
+#elif defined INSSNPDEL 
+   #define charMaxScore(maxScore,maxDir,snp,ins,del,pref)\
+     {insSnpDel((maxScore),(maxDir),(snp),(ins),(del))}
 
-   #else
-    switch(alnSetST->bestDirC)
-    { /*Switch; get an snp/match priority*/
-       case defSnpInsDel:
-          snpInsDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
-          break;
-       case defSnpDelIns:
-          snpDelIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
-          break;
-       case defInsSnpDel: 
-          insSnpDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
-          break;
-       case defInsDelSnp:
-          insDelSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
-          break;
-       case defDelSnpIns:
-          delSnpIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
-          break;
-       case defDelInsSnp:
-          delInsSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
-          break;
-    } /*Switch; get an snp/match priority*/
+#elif defined DELSNPINS
+   #define charMaxScore(maxScore,maxDir,snp,ins,del,pref)\
+     {delSnpIns((maxScore),(maxDir),(snp),(ins),(del))}
 
-    changeTwoBitElm(dirOnST, dirUC);
-    return;
-  #endif
-} /*twoBitMaxScore*/
+#elif defined SNPINSDEL
+   #define charMaxScore(maxScore,maxDir,snp,ins,del,pref)\
+     {snpInsDel((maxScore),(maxDir),(snp),(ins),(del))}
 
-/*--------------------------------------------------------\
-| Output:
-|  - Modifies
-|    o scoreOnL and dirOnC to hold best score & direction
-\--------------------------------------------------------*/
-static inline void charMaxScore(
-    char *dirOnC,              /*Holds best direction*/
-    struct alnSet *alnSetST,   /*for score selection*/
-    long *insScL,              /*Insertion Score*/
-    long *snpScL,              /*SNP/match score*/
-    long *delScL,              /*Deletion score*/
-    long *retScL               /*Holds best score*/
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-02 TOC: charMaxScore
-   '  - Picks the best score and direction for the current
-   '    base pairs being compared in an alignment. This
-   '    function is set up for charters
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+#elif defined SNPDELINS
+   #define charMaxScore(maxScore,maxDir,snp,ins,del,pref)\
+     {snpDelIns((maxScore),(maxDir),(snp),(ins),(del))}
 
-   #if defined SNPINSDEL
-     snpInsDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-     return;
-   #elif defined SNPDELINS
-     snpDelIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-     return;
-   #elif defined INSSNPDEL 
-     insSnpDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-     return;
-   #elif defined INSDELSNP
-     insDelSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-     return;
-   #elif defined DELSNPINS
-     delSnpIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-     return;
-   #elif defined DELINSSNP
-     delInsSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-     return;
-
-   #else
-   switch(alnSetST->bestDirC)
-   { /*Switch; get an snp/match priority*/
-      case defSnpInsDel:
-        snpInsDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        return;
-      case defSnpDelIns:
-        snpDelIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        return;
-      case defInsSnpDel: 
-        insSnpDel(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        return;
-      case defInsDelSnp:
-        insDelSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        return;
-      case defDelSnpIns:
-        delSnpIns(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        return;
-      case defDelInsSnp:
-        delInsSnp(*dirOnC,*retScL,*insScL,*snpScL,*delScL);
-        return;
-   } /*Switch; get an snp/match priority*/
-
-   return;
-   #endif
+#else
+   #define charMaxScore(maxScore,maxDir,snp,ins,del,pref)\
+{\
+   switch(pref)\
+   { /*Switch; get an snp/match priority*/\
+      case defInsDelSnp:\
+        insDelSnp((maxScore),(maxDir),(snp),(ins),(del));\
+        break;\
+      case defDelInsSnp:\
+        delInsSnp((maxScore),(maxDir),(snp),(ins),(del));\
+        break;\
+      case defInsSnpDel:\
+        insSnpDel((maxScore),(maxDir),(snp),(ins),(del));\
+        break;\
+      case defDelSnpIns:\
+        delSnpIns((maxScore),(maxDir),(snp),(ins),(del));\
+        break;\
+      case defSnpInsDel:\
+        snpInsDel((maxScore),(maxDir),(snp),(ins),(del));\
+        break;\
+      case defSnpDelIns:\
+        snpDelIns((maxScore),(maxDir),(snp),(ins),(del));\
+        break;\
+   } /*Switch; get an snp/match priority*/\
 } /*charMaxScore*/
 
+#endif /*For charMaxScore variations*/
+
 /*--------------------------------------------------------\
+| Name: alnMaxScore (Macro-11:)
+| Use: 
+|  - Picks the best score for the current base pairs
+|     being compared in an alignment.
+| Variations:
+|  - This can be complied as a switch statement or a single
+|    direction can be hardcoded in
+| Input:
+|   - maxScore:
+|     o Holds the maximum score
+|   - snp:
+|     o Score for an snp/match
+|   - ins:
+|     o Score for an insertion
+|   - del:
+|     o Score for an deletion
+|   - prefFlag:
+|     o Direction combination that is prefered when scores
+|       are equal. This can be hardcoded in.
 | Output:
-|  - Modifies
-|    o scoreOnL and dirOnC to hold best score & direction
+|   - Modifies
+|     o maxScore to hold the maximum score
 \--------------------------------------------------------*/
-static inline void alnMaxScore(
-    struct alnSet *alnSetST,   /*for score selection*/
-    long *insScL,              /*Insertion Score*/
-    long *snpScL,              /*SNP/match score*/
-    long *delScL,              /*Deletion score*/
-    long *retScL               /*Holds best score*/
-){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
-   ' Fun-03 TOC: alnMaxScore
-   '  - Picks the best score for the current base pairs
-   '    being compared in an alignment.
-   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+ /*Check how maximizes scores*/
+#if defined INSDELSNP
+   #define alnMaxScore(maxScore,snp,ins,del,prefFlag){\
+      max((maxScore), (ins), (del));\
+      max((maxScore), (maxScore), (snp));\
+   }
 
-   #if defined SNPINSDEL
-      max(*retScL, *snpScL, *insScL);
-      max(*retScL, *retScL, *delScL);
-      return;
-   #elif defined SNPDELINS
-      max(*retScL, *snpScL, *delScL);
-      max(*retScL, *retScL, *insScL);
-      return;
-   #elif defined INSSNPDEL
-      max(*retScL, *insScL, *snpScL);
-      max(*retScL, *retScL, *delScL);
-      return;
-   #elif defined INSDELSNP
-      max(*retScL, *insScL, *delScL);
-      max(*retScL, *retScL, *snpScL);
-      return;
-   #elif defined DELSNPINS
-      max(*retScL, *delScL, *snpScL);
-      max(*retScL, *retScL, *insScL);
-      return;
-   #elif defined DELINSSNP
-      max(*retScL, *delScL, *insScL);
-      max(*retScL, *retScL, *snpScL);
-      return;
-   #else
-      switch(alnSetST->bestDirC)
-      { /*Switch; get an snp/match priority*/
-         case defSnpInsDel:
-           max(*retScL, *snpScL, *insScL);
-           max(*retScL, *retScL, *delScL);
-           return;
-         case defSnpDelIns:
-           max(*retScL, *snpScL, *delScL);
-           max(*retScL, *retScL, *insScL);
-           return;
-         case defInsSnpDel: 
-           max(*retScL, *insScL, *snpScL);
-           max(*retScL, *retScL, *delScL);
-           return;
-         case defInsDelSnp:
-           max(*retScL, *insScL, *delScL);
-           max(*retScL, *retScL, *snpScL);
-           return;
-         case defDelSnpIns:
-           max(*retScL, *delScL, *snpScL);
-           max(*retScL, *retScL, *insScL);
-           return;
-         case defDelInsSnp:
-           max(*retScL, *delScL, *insScL);
-           max(*retScL, *retScL, *snpScL);
-           return;
-      } /*Switch; get an snp/match priority*/
+#elif defined DELINSSNP
+   #define alnMaxScore(maxScore,snp,ins,del,prefFlag){\
+      max((maxScore), (del), (ins));\
+      max((maxScore), (maxScore), (snp));\
+   }
 
-      return;
-   #endif
-} /*alnMaxScore*/
+#elif defined INSSNPDEL
+   #define alnMaxScore(maxScore,snp,ins,del,prefFlag){\
+      max((maxScore), (ins), (snp));\
+      max((maxScore), (maxScore), (del));\
+   }
+
+#elif defined DELSNPINS
+   #define alnMaxScore(maxScore,snp,ins,del,prefFlag){\
+      max((maxScore), (del), (snp));\
+      max((maxScore), (maxScore), (ins));\
+   }
+
+#elif defined SNPINSDEL
+   #define alnMaxScoreore(maxScore,snp,ins,del,prefFlag){\
+      max((maxScore), (snpScore), (insScore));\
+      max((maxScore), (maxScore), (delScore));\
+   }
+
+#elif defined SNPDELINS
+   #define alnMaxScore(maxScore,snp,ins,del,prefFlag){\
+      max((maxScore), (snp), (del));\
+      max((maxScore), (maxScore), (ins));\
+   }
+
+#else
+   #define alnMaxScore(maxScore,snp,ins,del,prefFlag){\
+      switch(prefFlag)\
+      { /*Switch; get an snp/match priority*/\
+         case defSnpInsDel:\
+           max((maxScore), (snp), (ins));\
+           max((maxScore), (maxScore), (del));\
+           break;\
+         case defSnpDelIns:\
+           max((maxScore), (snp), (del));\
+           max((maxScore), (maxScore), (ins));\
+           break;\
+         case defInsSnpDel:\
+           max((maxScore), (ins), (snp));\
+           max((maxScore), (maxScore), (del));\
+           break;\
+         case defInsDelSnp:\
+           max((maxScore), (ins), (del));\
+           max((maxScore), (maxScore), (snp));\
+           break;\
+         case defDelSnpIns:\
+           max((maxScore), (del), (snp));\
+           max((maxScore), (maxScore), (ins));\
+           break;\
+         case defDelInsSnp:\
+           max((maxScore), (del), (ins));\
+           max((maxScore), (maxScore), (snp));\
+           break;\
+      } /*Switch; get an snp/match priority*/\
+   } /*alnMaxScoreore*/
+#endif /*Check how maximizes scores*/
 
 #endif
 

@@ -7,6 +7,8 @@ This log records how alnSeq has changed between versions.
 
 # TODO or to fix list
 
+- Fix the twobit Hirschberg and memory efficent Waterman.
+- Fix the query/ref scans.
 - Vector support for memory efficient Waterman and
   Hirschberg.
 - Add in a match matrix. Currently I am using a switch
@@ -35,13 +37,37 @@ These ideas are a future visions that are not worth the
 
 # Log
 
+## 20231022
+
+- Changed the default settings for alnSeq to favor
+  insertions, deletions, and then snps/matches. This was
+  to deal with an error I caught in some of my alignments.
+- Set the scoreing step in the Hirschberg to only recored
+  if direction was a gap or snp (instead of ins, del, or
+  snp). This speeds up the Hirschberg at no cost to
+  accuracy.
+  - This change broke the twobit compiled Hirschberg
+    (-DHIRSCHWOBIT). My best guess it this is an error in
+    my if defines.
+- Changed how I found the max direction in the Needleman,
+  Waterman, and memory waterman programs. This reduced the
+  number of operations and provided a small speed increase.
+  - Old way was a maximize function.
+  - This change broke the query scans and twobit memory
+    efficent Smith Waterman (-DTWOBITMSW). I suspect that
+    this may be a copy/paste error, but I could be wrong.
+
 ## 20230908
 
 - Fixed an issue in the memory efficent Watermans were the
   alternative alignments were not printing out the starting
   alignments.
   - This is still a bit broken for the non-memory efficent
-    Waterman
+    Waterman. This was due to an issue with the Hirschberg
+    adding bases at the end for stich (my
+    artic-benchmarking repository). I have been unable to
+    replicate this error, so it may have been an issue
+    with stich.
 
 ## 20230831
 

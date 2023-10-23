@@ -1,3 +1,8 @@
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Sec-01:
+#  - Variable declerations
+#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 scriptDirStr="$(dirname "$0")";
 smallTestQueryStr="$scriptDirStr/../genomes/Small-query.fasta";
 smallTestRefStr="$scriptDirStr/../genomes/Small-ref.fasta";
@@ -26,11 +31,54 @@ iCnt=0;
 # --algo nw # needelman
 # --in query.fasta,ref.fasta
 
+# sequence_align
+# pip install sequence_align
+# run script
+
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Sec-02:
+#  - Print header
+#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 {
     printf "Program\tref\tquery\talgorithm\tflags";
     printf "\telapsedTime\tuserTime\tsystemTime";
     printf "\tmaxResidentMemory\tCPU\n";
 } > "$statsFileStr";
+
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Sec-03:
+#  - Run tests
+#  o sec-03 sub-01:
+#    - Check which reference and query I am using
+#  o sec-03 sub-02:
+#    - alnSeq run two-bit needleman/waterman tests
+#  o sec-03 sub-03:
+#    - alnSeq run mem-water tests without scaning (slow)
+#  o sec-03 sub-04:
+#    - alnSeq mem-water tests with scanning (realy slow)
+#  o sec-03 sub-05:
+#    - alnSeq run hirschberg
+#  o sec-03 sub-06:
+#    - bio-align run hirschberg
+#  o sec-03 sub-07:
+#    - run ssw_test (complete smith waterman library)
+#  o sec-03 sub-08:
+#    - run blank python test & sequence_align hirschberg
+#  o sec-03 sub-09:
+#    - Determine if alignment is to large for some tests
+#  o sec-03 sub-10:
+#    - Run sequence_align and biopython (aligner) needle
+#  o sec-03 sub-11:
+#    - Run byte versions of alnSeq
+#  o sec-03 sub-12:
+#    - Run bioaligment needle & emboss (needle/water)
+#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+#**********************************************************
+# Sec-03 Sub-01:
+#  - Check which reference and query I am using
+#**********************************************************
 
 for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKillerTestRefStr"; do
 # For all references
@@ -67,6 +115,12 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
          continue; # null entry??
        fi # done
 
+
+     #*****************************************************
+     # Sec-03 Sub-02:
+     #  - alnSeq run two-bit needleman/waterman tests
+     #*****************************************************
+
        # Two bit version of alnSeq
        /usr/bin/time \
            -f "alnSeq\t$refInStr\t$queryInStr\tneedle\ttwo-bit\t%e\t%U\t%S\t%M\t%P" \
@@ -89,15 +143,116 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
               -out "tmp.aln";
 
        /usr/bin/time \
-           -f "alnSeq\t$refInStr\t$queryInStr\tscan\ttwo-bit\t%e\t%U\t%S\t%M\t%P" \
+           -f "alnSeq\t$refInStr\t$queryInStr\tscan-water\ttwo-bit\t%e\t%U\t%S\t%M\t%P" \
            -o "$statsFileStr" \
            -a \
            "$scriptDirStr/../alnSeqTwoBit" \
               -query-ref-scan-water \
+              -use-water \
               -query "$strQuery" \
               -ref "$strRef" \
               -out "tmp.aln";
 
+
+     #*****************************************************
+     # Sec-03 Sub-03:
+     #  - alnSeq run mem-water tests without scaning (slow)
+     #*****************************************************
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tmem-water\ttwo-bit\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqTwoBit" \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tmem-water\tbyte\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqByte" \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tmem-water\tmid\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqMid" \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+     #*****************************************************
+     # Sec-03 Sub-04:
+     #  - alnSeq mem-water tests with scanning (realy slow)
+     #*****************************************************
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tscan-mem-water\ttwo-bit\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqTwoBit" \
+              -query-ref-scan-water \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tscan-mem-water\tbyte\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqByte" \
+              -query-ref-scan-water \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tscan-mem-water\tmid\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqMid" \
+              -query-ref-scan-water \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tmem-water\tfast\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqFast" \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+       /usr/bin/time \
+           -f "alnSeq\t$refInStr\t$queryInStr\tscan-mem-water\tfast\t%e\t%U\t%S\t%M\t%P" \
+           -o "$statsFileStr" \
+           -a \
+           "$scriptDirStr/../alnSeqFast" \
+              -query-ref-scan-water \
+              -use-mem-water \
+              -query "$strQuery" \
+              -ref "$strRef" \
+              -out "tmp.aln";
+
+     #*****************************************************
+     # Sec-03 Sub-05:
+     #  - alnSeq run hirschberg
+     #*****************************************************
 
        /usr/bin/time \
            -f "alnSeq\t$refInStr\t$queryInStr\thirschberg\tbyte\t%e\t%U\t%S\t%M\t%P" \
@@ -141,6 +296,11 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
               -ref "$strRef" \
               -out "tmp.aln";
 
+     #*****************************************************
+     # Sec-03 Sub-06:
+     #  - bio-align run hirschberg
+     #*****************************************************
+
        # bio alignment with heirschenberg
        /usr/bin/time \
            -f "bio-align\t$refInStr\t$queryInStr\thirschberg\tNA\t%e\t%U\t%S\t%M\t%P" \
@@ -148,8 +308,13 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
            -a \
            "$scriptDirStr/../bio-alignment/bin/bio-alignment" \
               --in "$strQuery,$strRef" \
-          --algo hb \
-              > tmp.aln;
+              --algo hb \
+            > tmp.aln;
+
+     #*****************************************************
+     # Sec-03 Sub-07:
+     #  - run ssw_test (complete smith waterman library)
+     #*****************************************************
 
        /usr/bin/time \
            -f "ssw_test\t$refInStr\t$queryInStr\twater\tNA\t%e\t%U\t%S\t%M\t%P" \
@@ -160,6 +325,42 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
              "$strQuery" \
              "$strRef" \
            > "tmp.aln";
+
+     #*****************************************************
+     # Sec-03 Sub-08:
+     #  - run blank python test & sequence_align hirschberg
+     #*****************************************************
+
+       # Python libraries
+       # Load up the cache for python
+       python3 "$scriptDirStr/../scripts/alignment-python-blankLoad.py" \
+          "$strRef" \
+          "$strQuery";
+       python3 "$scriptDirStr/../scripts/alignment-python-blankLoad.py" \
+          "$strRef" \
+          "$strQuery";
+       python3 "$scriptDirStr/../scripts/alignment-python-blankLoad.py" \
+          "$strRef" \
+          "$strQuery";
+
+       # Get the no alignment times
+       # load in sequence / print out / memory of loadin
+       /usr/bin/time \
+           -f "python\t$refInStr\t$queryInStr\tblank\tNA\t%e\t%U\t%S\t%M\t%P" \
+          python3 "$scriptDirStr/../scripts/alignment-python-blankLoad.py" \
+          "$strRef" \
+          "$strQuery";
+
+       /usr/bin/time \
+           -f "sequence_align\t$refInStr\t$queryInStr\thirschberg\tNA\t%e\t%U\t%S\t%M\t%P" \
+          python3 "$scriptDirStr/../scripts/sequence_align-hirsch.py" \
+          "$strRef" \
+          "$strQuery";
+
+     #*****************************************************
+     # Sec-03 Sub-09:
+     #  - Determine if alignment is to large for some tests
+     #*****************************************************
 
        # The byte matrix can not support the ram killer alignment
        if [[ "$strRef" == "$ramKillerTestRefStr" ]]; then
@@ -173,6 +374,28 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
            continue;
          fi # if alignment is to large
        fi # If the other probrams would run out of memory
+
+     #*****************************************************
+     # Sec-03 Sub-10:
+     #  - Run sequence_align and biopython (aligner) needle
+     #*****************************************************
+
+       /usr/bin/time \
+           -f "sequence_align\t$refInStr\t$queryInStr\tneedle\tNA\t%e\t%U\t%S\t%M\t%P" \
+          python3 "$scriptDirStr/../scripts/sequence_align-needle.py" \
+          "$strRef" \
+          "$strQuery";
+
+       /usr/bin/time \
+           -f "biopython\t$refInStr\t$queryInStr\tneedle\tNA\t%e\t%U\t%S\t%M\t%P" \
+          python3 "$scriptDirStr/../scripts/biopython-pairwiseAligner.py" \
+          "$strRef" \
+          "$strQuery";
+
+     #*****************************************************
+     # Sec-03 Sub-11:
+     #  - Run byte versions of alnSeq
+     #*****************************************************
 
        # Byte version of alnSeq
        /usr/bin/time \
@@ -268,6 +491,11 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
               -out "tmp.aln";
 
     
+     #*****************************************************
+     # Sec-03 Sub-12:
+     #  - Run bioaligment needle & emboss (needle/water)
+     #*****************************************************
+     #
        # bio-alignment Regular
        /usr/bin/time \
            -f "bio-align\t$refInStr\t$queryInStr\tneedle\tNA\t%e\t%U\t%S\t%M\t%P" \
@@ -300,6 +528,7 @@ for strRef in "$smallTestRefStr" "$midTestRefStr" "$largeTestRefStr" "$ramKiller
           -gapextend -4 \
           -gapopen -1 \
               -out "tmp.aln";
+
     done # While I have replicates to run
   done  # For all queries
 done # For all references

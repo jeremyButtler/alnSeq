@@ -139,6 +139,144 @@ void printAltWaterAlns(
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o scoreOnL to hold the best score
+|    o dirOnUC to hold the best direction
+\--------------------------------------------------------*/
+static inline void waterTwoBitMaxScore(
+    struct twoBitAry *dirOnST, /*Holds best direction*/
+    struct alnSet *alnSetST,   /*for score selection*/
+    long *insScL,              /*Insertion Score*/
+    long *snpScL,              /*SNP/match score*/
+    long *delScL,              /*Deletion score*/
+    long *retScL               /*Holds best score*/
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-06 TOC: updateDirScoreWaterSingle
+   '  - Picks the best score and direction for the current
+   '    base pairs being compared in a Waterman Smith
+   '    alignment
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    uint8_t dirUC = 0;
+    unsigned long maskUL = 0;
+
+    #if defined SNPINSDEL
+       snpInsDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+    #elif defined SNPDELINS
+       snpDelIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+    #elif defined INSSNPDEL 
+       insSnpDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+    #elif defined INSDELSNP
+       insDelSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+    #elif defined DELSNPINS
+       delSnpIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+    #elif defined DELINSSNP
+       delInsSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+    #else
+      switch(alnSetST->bestDirC)
+      { /*Switch; get an snp/match priority*/
+        case defSnpInsDel:
+          snpInsDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+        case defSnpDelIns:
+          snpDelIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+        case defInsSnpDel: 
+          insSnpDel(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+        case defInsDelSnp:
+          insDelSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+        case defDelSnpIns:
+          delSnpIns(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+        case defDelInsSnp:
+          delInsSnp(dirUC,*retScL,*insScL,*snpScL,*delScL);
+          break;
+      } /*Switch; get an snp/match priority*/
+    #endif
+
+    /*Faster than an if check (almost 30% faster). This
+    ` makes it pretty close to the needleman times
+    */
+    maskUL = 0 - (*retScL > 0);
+    dirUC = dirUC & maskUL;
+    *retScL = *retScL & maskUL;
+    changeTwoBitElm(dirOnST, dirUC);
+
+    return;
+} /*waterTwoBitMaxScore*/
+
+/*--------------------------------------------------------\
+| Output:
+|  - Modifies:
+|    o scoreOnL to hold the best score
+|    o dirOnUC to hold the best direction
+\--------------------------------------------------------*/
+static inline void waterByteMaxScore(
+    char *dirC,                /*Holds best direction*/
+    struct alnSet *alnSetST,   /*for score selection*/
+    long *insScL,              /*Insertion Score*/
+    long *snpScL,              /*SNP/match score*/
+    long *delScL,              /*Deletion score*/
+    long *retScL               /*Holds best score*/
+){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
+   ' Fun-06 TOC: updateDirScoreWaterSingle
+   '  - Picks the best score and direction for the current
+   '    base pairs being compared in a Waterman Smith
+   '    alignment
+   \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+   unsigned long maskUL = 0;
+
+   #if defined SNPINSDEL
+      snpInsDel(*dirC,*retScL,*insScL,*snpScL,*delScL);
+   #elif defined SNPDELINS
+      snpDelIns(*dirC,*retScL,*insScL,*snpScL,*delScL);
+   #elif defined INSSNPDEL 
+      insSnpDel(*dirC,*retScL,*insScL,*snpScL,*delScL);
+   #elif defined INSDELSNP
+      insDelSnp(*dirC,*retScL,*insScL,*snpScL,*delScL);
+   #elif defined DELSNPINS
+      delSnpIns(*dirC,*retScL,*insScL,*snpScL,*delScL);
+   #elif defined DELINSSNP
+      delInsSnp(*dirC,*retScL,*insScL,*snpScL,*delScL);
+   #else
+     switch(alnSetST->bestDirC)
+     { /*Switch; get an snp/match priority*/
+       case defSnpInsDel:
+         snpInsDel(*dirC,*retScL,*insScL,*snpScL,*delScL);
+         break;
+       case defSnpDelIns:
+         snpDelIns(*dirC,*retScL,*insScL,*snpScL,*delScL);
+         break;
+       case defInsSnpDel: 
+         insSnpDel(*dirC,*retScL,*insScL,*snpScL,*delScL);
+         break;
+       case defInsDelSnp:
+         insDelSnp(*dirC,*retScL,*insScL,*snpScL,*delScL);
+         break;
+       case defDelSnpIns:
+         delSnpIns(*dirC,*retScL,*insScL,*snpScL,*delScL);
+         break;
+       case defDelInsSnp:
+         delInsSnp(*dirC,*retScL,*insScL,*snpScL,*delScL);
+         break;
+     } /*Switch; get an snp/match priority*/
+   #endif
+
+   /*Faster than an if check (almost 30% faster). This
+   ` makes it pretty close to the needleman times
+   */
+   maskUL = 0 - (*retScL > 0);
+   *dirC = *dirC & maskUL;
+   *retScL = *retScL & maskUL;
+
+   return;
+} /*waterByteMaxScore*/
+
+/*--------------------------------------------------------\
 | Name: updateStartePos
 | Fun-06 TOC:
 | Call: updateStartPos(

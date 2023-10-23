@@ -92,15 +92,15 @@ typedef struct alnSet
    char bestDirC;
 
    /*General alignment variables*/
-   short gapOpenS;    /*Penalty for starting an indel*/
-   short gapExtendS;  /* Penalty for extending an indel*/
+   int32_t gapOpenI;    /*Penalty for starting an indel*/
+   int32_t gapExtendI;  /* Penalty for extending an indel*/
 
    /*If the user does not want to convert the sequence*/
    #ifdef NOSEQCNVT
-       short snpPenaltyS[26][26]; /*Scoring matrix*/
+       int16_t snpPenaltyC[26][26]; /*Scoring matrix*/
        /*No null, subtract 1*/
    #else
-       short snpPenaltyS[27][27]; /*Scoring matrix*/
+       int16_t snpPenaltyC[27][27]; /*Scoring matrix*/
        /*Do not subtract 1, that way 0 is null*/
    #endif
      /* Size is due to wanting a look up table that can
@@ -108,7 +108,7 @@ typedef struct alnSet
      `  0. 
      `  How to get score
      `  score =
-     `   snpPenaltyS[(uint8_t) (base1 & defClearNonAlph)-1]
+     `   snpPenaltyC[(uint8_t) (base1 & defClearNonAlph)-1]
      `              [(uint8_t) (base2 & defClearNonAlph)-1]
      */
 
@@ -175,12 +175,12 @@ static inline int16_t getBaseScore(
 
    #ifdef NOSEQCNVT
       return
-          alnSetST->snpPenaltyS
+          alnSetST->snpPenaltyC
               [(uint8_t) (*queryBaseC & defClearNonAlph)-1]
               [(uint8_t) (*refBaseC & defClearNonAlph) -1];
    #else /*Else the base is pre-converted*/
       return
-         alnSetST->snpPenaltyS
+         alnSetST->snpPenaltyC
             [(uint8_t) *queryBaseC][(uint8_t) *refBaseC];
    #endif
 

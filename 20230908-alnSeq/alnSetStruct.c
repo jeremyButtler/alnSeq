@@ -70,8 +70,8 @@ void initAlnSet(
    alnSetST->bestDirC = defBestDir;
 
    /*General alignment variables*/
-   alnSetST->gapOpenS = defGapOpen;
-   alnSetST->gapExtendS = defGapExtend;
+   alnSetST->gapOpenI = defGapOpen;
+   alnSetST->gapExtendI = defGapExtend;
 
    /*Waterman specific variables*/
    alnSetST->refQueryScanBl = defQueryRefScan;
@@ -81,7 +81,7 @@ void initAlnSet(
    for(uint8_t colUC = 0; colUC < 26; ++colUC)
    { // loop for all columns in the comparison matrix
        for(uint8_t rowUC = 0; rowUC < 26; ++rowUC)
-           alnSetST->snpPenaltyS[colUC][rowUC] = 0;
+           alnSetST->snpPenaltyC[colUC][rowUC] = 0;
            // Most of these cells will never be used
            // But are needed to build the table
    } // loop for all columns in the comparison matrix
@@ -440,13 +440,13 @@ void setBasePairScore(
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    #ifdef NOSEQCNVT
-      alnSetST->snpPenaltyS
+      alnSetST->snpPenaltyC
           [(uint8_t) (*queryBaseC & defClearNonAlph) - 1]
           [(uint8_t) (*refBaseC & defClearNonAlph) - 1]
           =
           newScoreC;
    #else
-      alnSetST->snpPenaltyS
+      alnSetST->snpPenaltyC
           [(uint8_t) (*queryBaseC & defClearNonAlph)]
           [(uint8_t) (*refBaseC & defClearNonAlph)]
           =

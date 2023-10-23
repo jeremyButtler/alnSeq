@@ -124,9 +124,13 @@ struct scoresStruct * memWaterAln(
    long delScoreL = 0;   /*Score for doing an deletion*/
    long nextSnpSL = 0;   /*Score for the next match/snp*/
 
-   // Marks when to reset score buffer (every second row)
+   /*Marks when to reset score buffer (every second row)*/
    long *scoreRowLP = 0; /*matrix to use in alignment*/
    long *scoreOnLP = 0;  /*Score I am working on*/
+   unsigned long maskUL = 0; /*used to find if score > 0*/
+
+   /*Gap penalities*/
+   short gapExtendS = settings->gapExtendS;
 
    /******************************************************\
    * Fun-01 Sec-01 Sub-03:
@@ -138,11 +142,13 @@ struct scoresStruct * memWaterAln(
       struct twoBitAry *dirRow = 0;/*Holds directions*/
       unsigned char lastDirC = 0;
       unsigned char lastLastDirC = 0;
+      uint8_t dirUC = 0;
    #else
       char *dirRow = 0;  /*Holds directions*/
       char *firstDir = 0; /*Holds directions*/
       char lastDirC = 0;
       char lastLastDirC = 0;
+      char dirUC = 0;
    #endif
 
    struct scoresStruct *bestScoreST = 0;
@@ -359,33 +365,38 @@ struct scoresStruct * memWaterAln(
        nextSnpSL += *scoreOnLP;
 
        /**************************************************\
-       * Fun-01 Sec-04 Sub-06:
+       * Fun-01 Sec-04 Sub-05:
        *  - Find the best score for the last round
        \**************************************************/
 
        lastDirC = lastLastDirC;
+
        #if defined TWOBITMSW
           lastLastDirC = getTwoBitElm(dirRow);
-          waterTwoBitMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &snpScoreL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the scores*/
-
        #else
           lastLastDirC = *dirRow;
-          waterByteMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &snpScoreL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the scores*/
        #endif
+
+       charMaxScore(
+          *scoreOnLP,
+          dirUC,
+          snpScoreL,
+          insScoreL,
+          delScoreL,
+          settings->bestDirC
+       );
+
+       /*Check if keeping the score*/
+       maskUL = -(*scoreOnLP > 0);
+       dirUC &= maskUL;
+       *scoreOnLP &= maskUL;
+
+       #if defined TWOBITSW
+          changeTwoBitElm(dirMatrix, dirUC);
+       #else
+          *dirRow = dirUC;
+       #endif
+
        /**************************************************\
        * Fun-01 Sec-04 Sub-06:
        *  - Find the the next deletion score
@@ -409,7 +420,7 @@ struct scoresStruct * memWaterAln(
              settings
           );
        #else
-          delScoreL = *scoreOnLP + settings->gapExtendI;
+          delScoreL = *scoreOnLP + settings->gapExtendS;
        #endif
 
        /**************************************************\
@@ -445,7 +456,6 @@ struct scoresStruct * memWaterAln(
             refIterStr - refST->seqCStr - 1;
           bestScoreST->qryEndUL= qryIterStr-qryST->seqCStr;
        } /*If this is the current best score*/
-
 
        /***********************************************\
        * Fun-01 Sec-04 Sub-09:
@@ -488,7 +498,7 @@ struct scoresStruct * memWaterAln(
              settings
           );
        #else
-          insScoreL = *scoreOnLP + settings->gapExtendI;
+          insScoreL = *scoreOnLP + settings->gapExtendS;
        #endif
      } /*loop; compare one query to one reference base*/
 
@@ -502,24 +512,25 @@ struct scoresStruct * memWaterAln(
        ` I need to move off it to avoid overwirting it
        */
        lastDirC = lastLastDirC;
-       #if defined TWOBITMSW
-          waterTwoBitMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &nextSnpSL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the score and direction*/
+
+       charMaxScore(
+          *scoreOnLP,
+          dirUC,
+          nextSnpSL,
+          insScoreL,
+          delScoreL,
+          settings->bestDirC
+       );
+
+       /*Check if keeping the score*/
+       maskUL = -(*scoreOnLP > 0);
+       dirUC &= maskUL;
+       *scoreOnLP &= maskUL;
+
+       #if defined TWOBITSW
+          changeTwoBitElm(dirMatrix, dirUC);
        #else
-          waterByteMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &nextSnpSL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the score and direction*/
+          *dirRow = dirUC;
        #endif
 
      /****************************************************\
@@ -571,11 +582,11 @@ struct scoresStruct * memWaterAln(
       */
       #if defined TWOBITMSW
          twoBitMvXElmFromStart(dirRow, 0);
-         changeTwoBitElm(dirRow, defMvIns);
+         changeTwoBitElm(dirRow, defMvStop);
          twoBitMvToNextElm(dirRow);
       #else
          dirRow = firstDir;
-         *dirRow = defMvIns;
+         *dirRow = defMvStop;
          ++dirRow;
       #endif
 
@@ -595,27 +606,28 @@ struct scoresStruct * memWaterAln(
 
       /*Update the indel column and find next deletion*/
       lastLastDirC = 0;
-      *scoreOnLP += settings->gapExtendI;
-      delScoreL = *scoreOnLP + settings->gapExtendI;
+      *scoreOnLP = 0; /*First column is always insertion*/
+      delScoreL = *scoreOnLP + gapExtendS;
       ++scoreOnLP; /*Move to the first base pair*/
 
-     #if defined TWOBITMSW && !defined NOGAPOPEN
-        indelScore(
-           insScoreL,
-           getTwoBitElm(dirRow),
-           *scoreOnLP,
-           settings
-        );
-     #elif !defined NOGAPOPEN
-        indelScore(
-           insScoreL,
-           *dirRow,
-           *scoreOnLP,
-           settings
-        );
-     #else
-        insScoreL = *scoreOnLP + settings->gapExtendI;
-     #endif
+      /*At this point insDir is on the first base*/
+      #if defined TWOBITMSW && !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            getTwoBitElm(dirRow),
+            *scoreOnLP,
+            settings
+         );
+      #elif !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            *dirRow,
+            *scoreOnLP,
+            settings
+         );
+      #else
+         insScoreL = *scoreOnLP + settings->gapExtendS;
+      #endif
    } /*loop; compare query base against all ref bases*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -749,9 +761,13 @@ struct alnMatrixStruct * memWaterAltAln(
    long delScoreL = 0;   /*Score for doing an deletion*/
    long nextSnpSL = 0;   /*Score for the next match/snp*/
 
-   // Marks when to reset score buffer (every second row)
+   /*Marks when to reset score buffer (every second row)*/
    long *scoreRowLP = 0; /*matrix to use in alignment*/
    long *scoreOnLP = 0;  /*Score I am working on*/
+   unsigned long maskUL = 0; /*used to find if score > 0*/
+
+   /*Gap penalities*/
+   short gapExtendS = settings->gapExtendS;
 
    /******************************************************\
    * Fun-02 Sec-01 Sub-03:
@@ -763,11 +779,13 @@ struct alnMatrixStruct * memWaterAltAln(
       struct twoBitAry *dirRow = 0;/*Holds directions*/
       unsigned char lastDirC = 0;
       unsigned char lastLastDirC = 0;
+      uint8_t dirUC = 0; /*Temporarly holds direction*/
    #else
       char *dirRow = 0;  /*Holds directions*/
       char *firstDir = 0; /*Holds directions*/
       char lastDirC = 0;
       char lastLastDirC = 0;
+      char dirUC = 0; /*Temporarly holds direction*/
    #endif
 
    /*The structure to return (has results)*/
@@ -1034,32 +1052,36 @@ struct alnMatrixStruct * memWaterAltAln(
        nextSnpSL += *scoreOnLP;
 
        /**************************************************\
-       * Fun-02 Sec-04 Sub-06:
+       * Fun-02 Sec-04 Sub-05:
        *  - Find the best score for the last round
        \**************************************************/
 
        lastDirC = lastLastDirC;
+
        #if defined TWOBITMSW
           lastLastDirC = getTwoBitElm(dirRow);
-          waterTwoBitMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &snpScoreL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the scores*/
-
        #else
           lastLastDirC = *dirRow;
-          waterByteMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &snpScoreL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the scores*/
+       #endif
+
+       charMaxScore(
+          *scoreOnLP,
+          dirUC,
+          snpScoreL,
+          insScoreL,
+          delScoreL,
+          settings->bestDirC
+       );
+
+       /*Check if keeping the score*/
+       maskUL = -(*scoreOnLP > 0);
+       dirUC &= maskUL;
+       *scoreOnLP &= maskUL;
+
+       #if defined TWOBITSW
+          changeTwoBitElm(dirMatrix, dirUC);
+       #else
+          *dirRow = dirUC;
        #endif
 
        /**************************************************\
@@ -1085,7 +1107,7 @@ struct alnMatrixStruct * memWaterAltAln(
              settings
           );
        #else
-          delScoreL = *scoreOnLP + settings->gapExtendI;
+          delScoreL = *scoreOnLP + settings->gapExtendS;
        #endif
 
        /**************************************************\
@@ -1163,7 +1185,7 @@ struct alnMatrixStruct * memWaterAltAln(
              settings
           );
        #else
-          insScoreL = *scoreOnLP + settings->gapExtendI;
+          insScoreL = *scoreOnLP + settings->gapExtendS;
        #endif
      } /*loop; compare one query to one reference base*/
 
@@ -1177,24 +1199,25 @@ struct alnMatrixStruct * memWaterAltAln(
        ` I need to move off it to avoid overwirting it
        */
        lastDirC = lastLastDirC;
-       #if defined TWOBITMSW
-          waterTwoBitMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &nextSnpSL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the score and direction*/
+
+       charMaxScore(
+          *scoreOnLP,
+          dirUC,
+          nextSnpSL,
+          insScoreL,
+          delScoreL,
+          settings->bestDirC
+       );
+
+       /*Check if keeping the score*/
+       maskUL = -(*scoreOnLP > 0);
+       dirUC &= maskUL;
+       *scoreOnLP &= maskUL;
+
+       #if defined TWOBITSW
+          changeTwoBitElm(dirMatrix, dirUC);
        #else
-          waterByteMaxScore(
-            dirRow,
-            settings,
-            &insScoreL,
-            &nextSnpSL,
-            &delScoreL,
-            scoreOnLP
-          ); /*Update the score and direction*/
+          *dirRow = dirUC;
        #endif
 
      /****************************************************\
@@ -1249,11 +1272,11 @@ struct alnMatrixStruct * memWaterAltAln(
       */
       #if defined TWOBITMSW
          twoBitMvXElmFromStart(dirRow, 0);
-         changeTwoBitElm(dirRow, defMvIns);
+         changeTwoBitElm(dirRow, defMvStop);
          twoBitMvToNextElm(dirRow);
       #else
          dirRow = firstDir;
-         *dirRow = defMvIns;
+         *dirRow = defMvStop;
          ++dirRow;
       #endif
 
@@ -1263,7 +1286,7 @@ struct alnMatrixStruct * memWaterAltAln(
       \**************************************************/
 
       /*Move to indel column and apply gap extension*/
-      scoreOnLP = scoreRowLP;
+      *scoreOnLP = 0; /*First column is always insertion*/
       ++qryIterStr; /*Move to the next query base*/
 
       /*Find the next score for an snp/match*/
@@ -1273,27 +1296,27 @@ struct alnMatrixStruct * memWaterAltAln(
 
       /*Update the indel column and find next deletion*/
       lastLastDirC = 0;
-      *scoreOnLP += settings->gapExtendI;
-      delScoreL = *scoreOnLP + settings->gapExtendI;
+      *scoreOnLP += gapExtendS;
+      delScoreL = *scoreOnLP + gapExtendS;
       ++scoreOnLP; /*Move to the first base pair*/
 
-     #if defined TWOBITMSW && !defined NOGAPOPEN
-        indelScore(
-           insScoreL,
-           getTwoBitElm(dirRow),
-           *scoreOnLP,
-           settings
-        );
-     #elif !defined NOGAPOPEN
-        indelScore(
-           insScoreL,
-           *dirRow,
-           *scoreOnLP,
-           settings
-        );
-     #else
-        insScoreL = *scoreOnLP + settings->gapExtendI;
-     #endif
+      #if defined TWOBITMSW && !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            getTwoBitElm(dirRow),
+            *scoreOnLP,
+            settings
+         );
+      #elif !defined NOGAPOPEN
+         indelScore(
+            insScoreL,
+            *dirRow,
+            *scoreOnLP,
+            settings
+         );
+      #else
+         insScoreL = *scoreOnLP + settings->gapExtendS;
+      #endif
    } /*loop; compare query base against all ref bases*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\

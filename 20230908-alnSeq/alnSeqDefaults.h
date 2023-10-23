@@ -11,7 +11,7 @@
 #define ALNSEQDEFAULTS_H
 
 /*Gereral find co-infections settings*/
-#define defVersion 20231022  /*Version number for alnSeq*/
+#define defVersion 20230908  /*Version number for alnSeq*/
 
 // Aligment method being used
 #define defUseNeedle 1  /*do Needleman-Wunsch alignment*/
@@ -49,7 +49,6 @@
    /*Minimun is 40 characters*/
 
 /*Alignment matrix movements*/
-/*Do not change these values*/
 #define defMvStop 0    /*Stop*/
 #define defMvDel 1     /*Move left (deletion)*/
 #define defMvIns 2     /*Move up (insertion)*/
@@ -68,7 +67,7 @@
 #define defDelSnpIns 4
 #define defDelInsSnp 5
 
-#define defBestDir defInsDelSnp
+#define defBestDir defInsSnpDel
 
 /*Scoring variables*/
 #define defGapOpen -10  /*Penalty for starting indel*/

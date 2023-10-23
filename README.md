@@ -1,4 +1,5 @@
 # Use
+
 AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
   that, depending on flags used when compiling can run
   with memory usage of O(n \* m / 4) Bytes to O(n \* m)
@@ -21,10 +22,19 @@ This program is dual licensed for MIT and CC0. Pick the
 
 # Current work
 
-Right now I am working on seeing how the choice of
-  reference used with the artic pipeline affects the output
-  consensuses results. I am hoping to get to this project
-  after I finish this current project up.
+Right now I am back to work on this project. Things will
+  go a bit slowly, but I hope to get this finshed.
+
+Currently I need to fix what I broke in my most recent
+  update. The broken programs are the query/ref scans, the
+  two bit Hirschberg (only used if you compliled with
+  -DHIRSCHTWOBIT), and the two bit memory efficent Smith
+  Waterman (only used if you compiled with -DTWOBITMSW).
+  To get around this I included the last version of alnSeq
+  (20230908) in this repository, which does work.
+
+The update did make the Hirschberg faster, and provided
+  a small speed boost to the other programs.
 
 # Building and running alnSeq
 
@@ -53,7 +63,8 @@ make fast
   # alnSeq behave somewhat similar to bio-alignment.
 make mid
   # This command disables directional selection and two
-  # bit arrays, but keeps the gap opening penalty.
+  # bit arrays, but keeps the gap opening penalty. I would
+  # recomend using this command.
 ```
 
 ## Extra build options
@@ -201,6 +212,9 @@ The more memory efficient Waterman is slow, but it also
   cost of the alternative alignment and Hirschberg steps.
 
 ## Some light benchmarking
+
+**I hope to get some updated benchmarking results up
+  tonight**
 
 I picked out three programs to compare alnSeq to. The first
   is emboss, which is a more commonly used toolkit. The

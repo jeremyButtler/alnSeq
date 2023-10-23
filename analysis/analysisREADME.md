@@ -14,10 +14,10 @@ You will have to install emboss separately, but this
   `apt-get install emboss` for Debian. The remaining
   packages can be downloaded and compiled by using the
   make file in this directory. The Makefile downloads
-  bio-alignment and the
-  Complete-Striped-Smith-Waterman-Library. You can remove
-  these folders and the compiled alnSeq binaries with
-  `make clean`.
+  bio-alignment, sequence_align, and the
+  Complete-Striped-Smith-Waterman-Library. It also updates
+  your current version of biopython. You can remove
+  everything (except biopython) with `make clean`.
 
 This Makefile has been tested for downloading and compiling
   bio-alignment and the
