@@ -55,30 +55,38 @@
 
 /*--------------------------------------------------------\
 | Output:
+|  - Modifies:
+|    o refRetStr to have reference sequence
+|      - This allocates memory on heap and frees old
+|        memory. So, make sure refRetStr = 0
+|    o qryRetStr to have reference sequence
+|      - This allocates memory on heap and frees old
+|        memory. So, make sure qryRetStr = 0
 |  - Returns:
-|    o Heap alloacted C-string with alignment for the
-|      input sequence
-|    o 0 for memory allocation errors
+|    o -1 for memory allocation errors
+|    o 0 for succes
 \--------------------------------------------------------*/
-char * alnSTToSeq(
-    struct seqStruct *seqST,/*Has sequence to work with*/
-    char qryBl,             /*1: working on query; 0: ref*/
+char alnSTToSeq(
+    struct seqStruct *refST,/*Has sequence to work with*/
+    struct seqStruct *qryST,/*Has sequence to work with*/
     struct alnStruct *alnST,/*Has alignment array*/
-    char extAlnRegionBl     /*1: Only keep aligned region*/
+    char extAlnRegionBl,    /*1: Only keep aligned region*/
+    char **refRetStr,       /*Will hold aligned reference*/
+    char **qryRetStr        /*Will hold the aligned query*/
 ){ /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: alnSTToSeq
-   '  - Makes an alignment for an single sequence
-   '    (reference or query)
-   '  o fun-01 Sec-01:
+   '  - Makes an alignment for both the reference and query
+   '    sequence
+   '  o fun-01 sec-01:
    '    - Variable declerations 
-   '  o fun-01 Sec-02:
+   '  o fun-01 sec-02:
    '    - Allocate memory & identify if ref or query seq
-   '  o fun-01 Sec-03:
-   '    - Add softmasking to the start
-   '  o fun-01 Sec-04:
-   '    - Make the aligned sequence
-   '  o fun-01 Sec-05:
-   '    - Add soft masking to the end
+   '  o fun-01 sec-03:
+   '    - Find the starting position of the alignment
+   '  o fun-01 sec-04:
+   '    - Add the sequences to the buffers
+   '  o fun-01 sec-05:
+   '    - Clean up and return
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -86,149 +94,226 @@ char * alnSTToSeq(
    ^  - Variable declerations 
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   char *baseStr = seqST->seqCStr;
-   char *tmpRetStr = 0;
-   char *alignedSeqStr = 0;/*Returned aligned sequence*/
-   char *seqAlnStr = 0;  /*Alignment array for sequence*/
-   char *otherAlnStr = 0;/*Other sequence in alignment*/
+   char *refSeqStr = 0;
+   char *qrySeqStr = 0;
 
-   unsigned long seqStartUL = 0;
-   unsigned long otherStartUL = 0;
+   char *refAlnStr = 0;  /*Alignment array for sequence*/
+   char *qryAlnStr = 0;  /*Other sequence in alignment*/
+
+   char *tmpRefStr = 0;
+   char *tmpQryStr = 0;
+
+   unsigned long refBaseUL = 0;
+   unsigned long qryBaseUL = 0;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-02:
    ^  - Allocate memory & identify if ref or query sequence
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   alignedSeqStr =
-     calloc(
-       alnST->qryLenUL + alnST->refLenUL + 2,
-       sizeof(char)
-   ); /*Allocate and initialize the alignment array*/
+   /*Allocate and initialize the alignment array*/
+   if(*refRetStr != 0) free(*refRetStr);
+   if(*qryRetStr != 0) free(*refRetStr);
 
-   if(seqAlnStr == 0) return 0;  // memory error
+   *refRetStr = 0;
+   *qryRetStr = 0;
 
-   tmpRetStr = alignedSeqStr;
+   *refRetStr = calloc(alnST->lenAlnUL, sizeof(char));
+   if(*refRetStr == 0) return -1;
 
-   if(qryBl)
-   { /*If I am building a query sequence*/
-     seqAlnStr = alnST->qryAlnStr;
-     otherAlnStr = alnST->refAlnStr;
+   *qryRetStr = calloc(alnST->lenAlnUL, sizeof(char));
 
-     seqStartUL = alnST->qryStartAlnUL;
-     otherStartUL = alnST->refStartAlnUL;
-   } /*If I am building a query sequence*/
+   if(*qryRetStr == 0)
+   { /*If: I had a memory error for the query*/
+      free(*refRetStr);
+      *refRetStr = 0;
+      return -1;
+   } /*If: I had a memory error for the query*/
 
-   else seqAlnStr = alnST->qryAlnStr;
-   { /*If I am building an reference sequence*/
-     seqAlnStr = alnST->refAlnStr;
-     otherAlnStr = alnST->qryAlnStr;
-
-     seqStartUL = alnST->refStartAlnUL;
-     otherStartUL = alnST->qryStartAlnUL;
-   } /*If I am building an reference sequence*/
+   tmpRefStr = *refRetStr;
+   tmpQryStr = *qryRetStr;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-03:
-   ^  - Add softmasking to the start
+   ^  - Find the starting position of the alignment
    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   while(otherStartUL > seqStartUL)
-   { /*While I have softmasked bases only for reference*/
-     if(!extAlnRegionBl)
-     { /*If I am returing the complete sequence*/
-       *tmpRetStr = '-';
-       ++tmpRetStr;
-     } /*If I am returing the complete sequence*/
+   refSeqStr = refST->seqCStr;
+   qrySeqStr = qryST->seqCStr;
 
-     ++otherAlnStr;
-     --otherStartUL;
-   } /*While I have softmasked bases only for reference*/
+   refAlnStr = alnST->refAlnStr;     
+   qryAlnStr = alnST->qryAlnStr;     
 
-   while(*seqAlnStr == defSoftMaskFlag)
-   { /*While I have softmasking at the start*/
-     if(!extAlnRegionBl)
-     { /*If I am returing the complete sequence*/
-       *tmpRetStr = *baseStr;
-       ++tmpRetStr;
-     } /*If I am returing the complete sequence*/
+   if(extAlnRegionBl)
+   { /*If: I am only keeping aligned positions*/
+      refSeqStr += alnST->refStartAlnUL;     
+      qrySeqStr += alnST->qryStartAlnUL;     
 
-     ++baseStr;
-     ++seqAlnStr;
+      refAlnStr += alnST->refStartAlnUL;     
+      qryAlnStr += alnST->qryStartAlnUL;     
+   } /*If: I am only keeping aligned positions*/
 
-     if(*otherAlnStr == defSoftMaskFlag) ++otherAlnStr;
-   } /*While I have softmasking at the start*/
+    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+    ^ Fun-01 Sec-04:
+    ^  - Add the sequences to the buffer
+    ^  o fun-01 sec-04 sub-01:
+    ^    - Check if finshed making the alignment
+    ^  o fun-01 sec-04 sub-02:
+    ^    - Check if the query has an insertion or is masked
+    ^  o fun-01 sec-04 sub-03:
+    ^    - Check for reference softmasks entries
+    ^  o fun-01 sec-04 sub-04:
+    ^    - Check for deletions
+    ^  o fun-01 sec-04 sub-05:
+    ^    - Check for SNPs
+    ^  o fun-01 sec-04 sub-06:
+    ^    - Check for matches
+    ^  o fun-01 sec-04 sub-07:
+    ^    - Move to next base
+    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-01 Sec-04:
-   ^  - Make the aligned sequence
-   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+    /*****************************************************\
+    * Fun-01 Sec-04 Sub-01:
+    *  - Check if finshed making the alignment
+    \*****************************************************/
 
-   while(*seqAlnStr != defEndAlnFlag)
-   { /*While I have query bases to add*/
-     if(*otherAlnStr == defGapFlag)
-     { /*If I have an gap in the other sequence*/
-       ++otherAlnStr;
-       continue;
-     } /*If I have an gap in the other sequence*/
+    while(
+       *refAlnStr != defEndAlnFlag ||
+       *qryAlnStr != defEndAlnFlag
+    ){ /*Loop: copy all bases*/
+       /*Check if only keeping the aligned portion*/
 
-     if(*otherAlnStr == defSoftMaskFlag) break;
-       
-     switch(*seqAlnStr)
-     { /*Switch; check the error type*/
-       case defEndAlnFlag:   goto makeAlnSeqCleanUp;
-       case defSoftMaskFlag: goto makeAlnSeqCleanUp;
+      if(extAlnRegionBl)
+      { /*If: I am only keeping the aligned region*/
+         /*Cehck if I have finshed the aligned region*/
+         if(
+           qryBaseUL > alnST->qryEndAlnUL + 1 &&
+           refBaseUL > alnST->refEndAlnUL + 1
+         ) goto alnSTToSeqFinshed;
+         /*+1 to account for index 1*/
+      } /*If: I am only keeping the aligned region*/
 
-       case defSnpFlag:
-       case defMatchFlag:
-       /*Cases (part): Match and SNP*/
-         ++otherAlnStr;
-         /*Case defGapFlag: has the rest of the case*/
-       /*Cases (part): Match and SNP*/
+      /***************************************************\
+      * Fun-01 Sec-04 Sub-02:
+      *  - Check if the query has an insertion or is masked
+      \***************************************************/
 
-       case defGapFlag:
-       /*Cases: Match, SNP, Gap*/
-         ++seqAlnStr;
-         *tmpRetStr = *baseStr;
-         ++tmpRetStr;
-         ++baseStr;
-         break;
-       /*Cases: Match, SNP, Gap*/
-     } /*Switch; check the error type*/
-   } /*While I have bases or an alignment to copy over*/
+       if(
+             *qryAlnStr == defGapFlag
+          || *qryAlnStr == defSoftMaskFlag
+       ) { /*If the reference has a gap*/
+          *tmpRefStr = '-';
+          *tmpQryStr = *qrySeqStr;
 
-   /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
-   ^ Fun-01 Sec-05:
-   ^  - Add soft masking to the end
-   \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+          ++qryAlnStr;
+          ++qrySeqStr;
+          ++qryBaseUL;
 
-  makeAlnSeqCleanUp:
+          goto incBuffAlnSTToSeq;
+       } /*If the reference has a gap*/
 
-  /*Check if I am only extracting the aligned region*/
-  if(extAlnRegionBl) goto makeAlnSeqEnd;
+       /**************************************************\
+       * Fun-01 Sec-04 Sub-03:
+       *  - Check for reference softmasks entries
+       \**************************************************/
 
-  while(*seqAlnStr == defEndAlnFlag)
-  { /*While I have query softmaksing to add to the end*/
-    if(*otherAlnStr != defEndAlnFlag) ++otherAlnStr;
-    *tmpRetStr = *baseStr;
-    ++tmpRetStr;
-    ++baseStr;
-    ++seqAlnStr;
-  } /*While I have query softmaksing to add to the end*/
+       switch(*refAlnStr)
+       { /*Switch: Check if ref is gap,softmask,snp,match*/
+          case defEndAlnFlag: break;
+          case defSoftMaskFlag:
+          /*Case: Reference has a softmasked base*/
+             /*Already check if query was sofmasked*/
+             *tmpQryStr = '-';
+             *tmpRefStr = *refSeqStr;
 
-  while(*otherAlnStr != defEndAlnFlag)
-  { /*While I have reference softmaksing to add to end*/
-    *tmpRetStr = *baseStr;
-    ++tmpRetStr;
-    ++baseStr;
-    ++otherAlnStr;
-  } /*While I have softmaksing to add to end*/
+             ++refAlnStr;
+             ++refSeqStr;
+             ++refBaseUL;
+             break;
+          /*Case: Reference has a softmasked base*/
 
-  makeAlnSeqEnd:
+          /***********************************************\
+          * Fun-01 Sec-04 Sub-04:
+          *  - Check for deletions
+          \***********************************************/
+         
+          case defGapFlag:
+          /*Case: deletion (reference maps to gap)*/
+             *tmpQryStr = '-';
+             *tmpRefStr = *refSeqStr;
 
-  *tmpRetStr = '\0'; // Make into a c-string
+             ++refAlnStr;
+             ++refSeqStr;
+             ++refBaseUL;
 
-  return alignedSeqStr;
+             break;
+          /*Case: deletion (reference maps to gap)*/
+
+          /***********************************************\
+          * Fun-01 Sec-04 Sub-05:
+          *  - Check for SNPs
+          \***********************************************/
+
+          case defSnpFlag:
+          /*Case: Reference and query have snps*/
+             *tmpQryStr = *qrySeqStr;
+             *tmpRefStr = *refSeqStr;
+
+             ++refAlnStr;
+             ++refSeqStr;
+             ++refBaseUL;
+
+             ++qryAlnStr;
+             ++qrySeqStr;
+             ++qryBaseUL;
+
+             break;
+          /*Case: Reference and query have snps*/
+
+          /***********************************************\
+          * Fun-01 Sec-04 Sub-06:
+          *  - Check for matches
+          \***********************************************/
+
+          case defMatchFlag:
+          /*Case: Reference and query have a match*/
+             *tmpQryStr = *qrySeqStr;
+             *tmpRefStr = *refSeqStr;
+
+             ++refAlnStr;
+             ++refSeqStr;
+             ++refBaseUL;
+
+             ++qryAlnStr;
+             ++qrySeqStr;
+             ++qryBaseUL;
+
+             break;
+          /*Case: Reference and query have a match*/
+       } /*Switch: Check if ref is gap,softmask,snp,match*/
+
+       /**************************************************\
+       * Fun-03 Sec-05 Sub-07:
+       *  - Move to next base
+       \**************************************************/
+
+       incBuffAlnSTToSeq:
+
+       /*Incurment buffers*/
+       ++tmpQryStr;
+       ++tmpRefStr;
+    }  /*Loop: Print out all bases*/
+
+    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
+    ^ Fun-01 Sec-05:
+    ^  - Clean up
+    \<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
+
+   alnSTToSeqFinshed:
+
+   *tmpRefStr = '\0'; /*Make into a c-string*/
+   *tmpQryStr = '\0'; /*Make into a c-string*/
+   return 0;
 } /*alnSTToSeq*/
 
 /*--------------------------------------------------------\

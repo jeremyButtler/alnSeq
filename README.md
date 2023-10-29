@@ -7,6 +7,9 @@ AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
   traditional Smith Waterman and Needleman Wunsch
   alignment. AlnSeq also includes an Hirschberg alignment.
 
+AlnSeq is a standalone program that can also be compiled
+  as a python library.
+
 There are faster and less memory hungry Waterman Smith
   implementations than alnSeq. One example is the stripped
   Waterman Smith alignment, which I think reduces both
@@ -25,7 +28,7 @@ This program is dual licensed for MIT and CC0. Pick the
 Right now I am back to work on this project. Things will
   go a bit slowly, but I hope to get this finshed.
 
-Currently I need to fix what I broke in my most recent
+Currently I need to fix what I broke in my 20231022
   update. The broken programs are the query/ref scans, the
   two bit Hirschberg (only used if you compliled with
   -DHIRSCHTWOBIT), and the two bit memory efficent Smith
@@ -33,12 +36,14 @@ Currently I need to fix what I broke in my most recent
   To get around this I included the last version of alnSeq
   (20230908) in this repository, which does work.
 
-The update did make the Hirschberg faster, and provided
-  a small speed boost to the other programs.
+The 20231022 update did make the Hirschberg faster, and
+  provided a small speed boost to the other programs.
 
 # Building and running alnSeq
 
-## How to build alnSeq
+## C standalone
+
+### How to complie alnSeq as a standalone
 
 ```
 # How to install this program
@@ -67,7 +72,7 @@ make mid
   # recomend using this command.
 ```
 
-## Extra build options
+### Standalone, extra build options (standalone only)
 
 The flags alnSeq can be compiled with are:
 
@@ -75,7 +80,7 @@ The flags alnSeq can be compiled with are:
   - disable gap opening penalty
   - This is faster, but may produce lower quality
     alignments.
-- -DBYTEMATRIX
+- -DBYTEMATRIX (default option)
   - Waterman and Needleman use a byte matrix instead of
     a two bit array matrix
   - Alignment takes half the time, but also takes 4x more
@@ -104,8 +109,8 @@ The flags alnSeq can be compiled with are:
   - -DSNPINSDEL
   - -DSNPDELINS
   - -DINSSNPDEL
-  - -DINSDELSNP
   - -DDELSNPINS
+  - -DINSDELSNP (on by default)
   - -DDELINSSNP
 
 You can compile with these flags using
@@ -114,7 +119,7 @@ You can compile with these flags using
   the `make fast` command, which uses make
   `CFLAGS="-DNOGAPOPEN -DINSSNPDEL -DBYTEMATRIX"`.
 
-## How to run alnSeq
+### How to run standalone alnSeq
 
 ```
 # help message
@@ -155,6 +160,62 @@ alnSeq -print-aligned -query query.fasta -ref ref.fasta -out out.aln
 ## Print positions for non EMBOSS files
 alnSeq -print-positions -query query.fasta -ref ref.fasta -out out.aln
 ```
+
+## Python library
+
+## How to complie alnSeq as a python library
+
+For python alnSeq is compiled with -DBYTEMATRIX and
+  -DINSDELSNP. This install expects a gcc compile
+  (minigw or cygin for windows).
+
+You can change the compiler used with CC, but nothing else.
+
+```
+# Global install (need root permision)
+make python
+
+# Local install (requires pip)
+make python local
+```
+
+### Using the python functions
+
+The python wrapper functions take in an reference and
+  query sequence and return an aligned reference and query
+  sequence. The returned item is a list, which has the
+  reference sequence (ret[0]), the query sequence (ret[1]),
+  and a score (ret[2]; is always 0 for the Hirschberg).
+
+Required arguments are a reference (first argument or
+  ref = sequence) and query sequence (second argument or
+  query = sequence).
+
+Optional arguments include:
+
+- gap opening score (gapOpen = -10)
+- gap extension score (gapExtend = -1)
+- reference start position (refStart = 0)
+- reference ending position (refEnd = length(seq) - 1)
+- query start position (queryStart = 0)
+- query ending position (queryEnd = length(seq) - 1)
+- The path to a scoring matrix
+  (scoreMatrix = /path/to/matrix.txt)
+   - see scoring-matrix.txt for an example.
+- The Waterman Smith alignment prints out only the aligned
+  regions. This can be disabled with fullAln=True.
+
+`alignedRef,alignedQuery = alnSeqfunction(refSeq,querySeq)`
+
+Function names:
+
+- alnSeqHirsch (Hirschberg)
+- alnSeqNeedle (Needleman Wunsch)
+  - chrashes. Do no use.
+- alnSeqWater (Waterman Smith)
+  - chrashes. Do no use.
+  - Chrashing with gc_collect_main
+  - Prints alignent
 
 # Explaining alnSeq
 
@@ -215,6 +276,8 @@ The more memory efficient Waterman is slow, but it also
 
 **I hope to get some updated benchmarking results up
   tonight**
+
+**I need to make new graphs**
 
 I picked out three programs to compare alnSeq to. The first
   is emboss, which is a more commonly used toolkit. The

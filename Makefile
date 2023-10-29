@@ -6,13 +6,16 @@ CC=cc
 # acidentally.
 COREFLAGS=\
   -Wall\
-  --std=c99 \
+  --std=c99\
   -static\
   -O3
 
 # These are here for the user to overwrite
 #CFLAGS=-DBLANK
-CFLAGS=-DBLANK
+CFLAGS=\
+   -DBLANK\
+   -DBYTEMATRIX\
+   -DINSDELSNP
 
 DEBUGFLAGS=\
    -DNOSEQCNVT\
@@ -39,6 +42,11 @@ SOURCE=\
 all:
 	$(CC) $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
 
+python:
+	CC=$(CC) make -C pythonPkg/ python;
+pythonlocal:
+	CC=$(CC) make -C pythonPkg/ pythonlocal;
+
 debug:
 	$(CC) -Wall  -static --std=c99 -O0 -ggdb $(DEBUGFLAGS) $(SOURCE) -o alnSeqDebug
 	# Used to use -g, but -ggdb provides more info for gdb
@@ -56,24 +64,13 @@ cc:
 # These settings are here for quick compiling
 fast:
 	$(CC) $(COREFLAGS) -DNOGAPOPEN -DBYTEMATRIX -DINSSNPDEL $(CFLAGS) $(SOURCE) -o alnSeqFast
-mid:
-	$(CC) $(COREFLAGS) -DBYTEMATRIX -DINSDELSNP $(CFLAGS) $(SOURCE) -o alnSeqMid
 
 benchmark:
 	$(CC) $(COREFLAGS) -DHIRSCHTWOBIT $(SOURCE) -o alnSeqTwoBit
 	$(CC) $(COREFLAGS) -DBYTEMATRIX $(SOURCE) -o alnSeqByte
 	$(CC) $(COREFLAGS) -DBYTEMATRIX -DINSSNPDEL $(SOURCE) -o alnSeqMid
 	$(CC) $(COREFLAGS) -DBYTEMATRIX -DNOGAPOPEN -DINSSNPDEL $(SOURCE) -o alnSeqFast
-
-20230812benchmark:
-	$(CC) $(COREFLAGS) $(SOURCE) -o alnSeqHirschByte
-	$(CC) $(COREFLAGS) -DHIRSCHTWOBIT $(SOURCE) -o alnSeqHirschTwoBit
-
-20230722benchmark:
-	$(CC) -static -Ofast $(SOURCE) -o alnSeqOFast || gcc -static -Ofast $(SOURCE) -o alnSeqOFast || egcc -static -Ofast $(SOURCE) -o alnSeqOFast || cc -static -Ofast $(SOURCE) -o alnSeqOFast
-	$(CC) -static -O3    $(SOURCE) -o alnSeqO3 || gcc -static -O3 $(SOURCE) -o alnSeqO3 || egcc -static -O3 $(SOURCE) -o alnSeqO3 || cc -static -O3 $(SOURCE) -o alnSeqO3
-	$(CC) -static -O2    $(SOURCE) -o alnSeqO2 || gcc -static -O2 $(SOURCE) -o alnSeqO2 || egcc -static -O2 $(SOURCE) -o alnSeqO2 || cc -static -O2 $(SOURCE) -o alnSeqO2
-	$(CC) -static -O0    $(SOURCE) -o alnSeqO0 || gcc -static -O0 $(SOURCE) -o alnSeqO0 || egcc -static -O0 $(SOURCE) -o alnSeqO0 || cc -static -O0 $(SOURCE) -o alnSeqO0
+	CC="$(CC)" make -C pythonPkg/ pythonlocal;
 
 clean:
 	rm alnSeqDebug || printf ""; # Only thing to clean up

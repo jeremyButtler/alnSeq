@@ -545,39 +545,6 @@ struct alnMatrixStruct * NeedlemanAln(
        #elif !defined BYTEMATRIX
           insScoreL = *scoreOnLP + settings->gapExtendS;
        #endif
-
-       /*#ifndef NOGAPOPEN
-          #ifndef BYTEMATRIX
-             insScoreL =
-                  *scoreOnLP
-                + (gapDiffI & -(getTwoBitElm(&insDir) != defMvSnp))
-                + gapOpenS;
-
-             twoBitMvToNextElm(&insDir);
-          #else
-             insScoreL =
-                  *scoreOnLP
-                + (gapDiffI & -(*insDir != defMvSnp))
-                + gapOpenS;
-
-             dirUC = *insDir;
-             ++insDir;
-          #endif
-
-          #ifdef BRANCHED
-             if(dirUC != defMvSnp)
-                insScoreL = *scoreOnLP + gapExtendS;
-             else insScoreL = *scoreOnLP + gapOpenS;
-          #else
-             insScoreL =
-                  *scoreOnLP
-                + (gapDiffI & -(dirUC != defMvSnp))
-                + gapOpenS;
-          #endif
-       #else
-          insScoreL = *scoreOnLP + gapExtendS;
-       #endif*/
-
       /*At this piont insDir is on the second base*/
    } /*loop; fill the direction matrix with socres*/
 

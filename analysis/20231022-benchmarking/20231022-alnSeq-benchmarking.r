@@ -50,7 +50,7 @@ saveGraph = function(
 dataDT =
   setDT(                        # convert to a data table
     read.csv(
-      "20231022-alnSeq-bench-stats.tsv", # File with data
+      "20231022-alnSeq-bench-stats-clean.tsv", # has data
       sep = "\t",               # for tsv files
       header = TRUE             # Has header
 )); # Read in my data
@@ -83,6 +83,24 @@ graphObj = NULL;      # Holds the output graph
 # query-ramKiller is 199984 bases
 # reference-ramKiller is 199982 bases
 
+dataDT$lenQry = dataDT$query;
+dataDT$lenRef = dataDT$ref;
+
+# Add in the reference and query sizes
+dataDT$lenQry = gsub("small", 1761, dataDT$lenQry);
+dataDT$lenRef = gsub("small", 1767, dataDT$lenRef);
+dataDT$lenQry = gsub("mid", 11141, dataDT$lenQry);
+dataDT$lenRef = gsub("mid", 10884, dataDT$lenRef);
+dataDT$lenQry = gsub("large", 28030, dataDT$lenQry);
+dataDT$lenRef = gsub("large", 28030, dataDT$lenRef);
+dataDT$lenQry = gsub("ramKiller", 199984, dataDT$lenQry);
+dataDT$lenRef = gsub("ramKiller", 199982, dataDT$lenRef);
+
+dataDT$lenQry = as.numeric(dataDT$lenQry);
+dataDT$lenRef = as.numeric(dataDT$lenRef);
+dataDT$numBases = dataDT$lenQry * dataDT$lenRef;
+
+# Not using right know, but here if needed
 dataDT$test=paste(dataDT$query, dataDT$ref, sep = "-");
 dataDT$test = gsub("ramKiller", "huge", dataDT$test);
 
@@ -136,6 +154,13 @@ dataDT$catagory = gsub("scan", "water", dataDT$algorithm);
 dataDT$catagory =gsub("needle.*","needle",dataDT$catagory);
 dataDT$catagory =gsub("water.*", "water", dataDT$catagory);
 
+tmpDT = dataDT[dataDT$catagory == "blank",];
+tmpDT$catagory=gsub("blank.*","hirschberg",tmpDT$catagory);
+dataDT = rbind(dataDT, tmpDT);
+dataDT$catagory =gsub("blank.*", "needle",dataDT$catagory);
+
+
+
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
 # Sec-04:
 #  - Make the time graph
@@ -147,26 +172,24 @@ dataDT$catagory =gsub("water.*", "water", dataDT$catagory);
 noFlagsData =
    dataDT[
       (
-         dataDT$flags == "two-bit" &
-         dataDT$flags != "hirschberg"
-      ) |
-      (
-         dataDT$flags == "byte" &
-         dataDT$flags == "hirschberg"
-      ) |
-      dataDT$flags == "fast" |
-      is.na(dataDT$flags)
+       dataDT$flags == "mid" |
+       is.na(dataDT$flags)
+      ) &
+      dataDT$query != "ramKiller" &
+      dataDT$ref != "ramKiller" &
+      dataDT$catagory != "mem-water"
       ,
 ];
 
-noFlagsData$key = gsub("-byte", "", noFlagsData$key);
-noFlagsData$key = gsub("-two-bit", "", noFlagsData$key);
+noFlagsData$key = gsub(".*-mid", "alnSeq-mid", noFlagsData$key);
+#noFlagsData$key = gsub("-two-bit", "", noFlagsData$key);
 
 graphObj = 
   ggplot(
     data = noFlagsData,
     aes(
-      x = test,
+      #x = test,
+      x = numBases,
       y = elapsedTime, # time in seconds
       color = key,
       shape = key    
@@ -186,6 +209,8 @@ graphObj = graphObj + facet_grid(cols = vars(catagory));
 
 # Transform y-axis by log10, so trends are more clear
 graphObj = graphObj + scale_y_sqrt();
+#graphObj = graphObj + scale_y_log10();
+graphObj = graphObj + scale_x_log10();
 
 graphObj =
   graphObj +
@@ -208,6 +233,7 @@ graphObj =
   theme(axis.text.x = element_text(angle = 90)
 ); # Rotate x-axis text 90 degrees
 
+stop();
 saveGraph("20230827-alnSeq-time");
 
 #dev.off(); # remove all plots

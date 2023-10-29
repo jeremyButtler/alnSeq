@@ -336,7 +336,7 @@ int main(
    } // If reference file could not be opened
 
 
-   // Read in the query sequence
+   /*Read in the query sequence*/
    initSeqST(&queryST);
    errUC = readFaSeq(faFILE, &queryST);
    fclose(faFILE);

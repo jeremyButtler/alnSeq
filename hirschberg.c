@@ -1719,8 +1719,8 @@ struct alnStruct * twoBitAlnToAlnST(
    char *qryAlnStr = 0;
    uint8_t bitUC = 0;
 
-   long refIndexUL = 0;
-   long qryIndexUL = 0;
+   unsigned long refIndexUL = 0;
+   unsigned long qryIndexUL = 0;
 
    long refFirstAlnBaseL = -1;
    long refLastAlnBaseL = 0;
@@ -1843,6 +1843,8 @@ struct alnStruct * twoBitAlnToAlnST(
       ++refIndexUL;
    } /*Loop: Add reference aligned bases to alnStruct*/
 
+   *refAlnStr = defEndAlnFlag;
+
    if(refFirstAlnBaseL >= 0) /*Start of alignment*/
       alnST->refStartAlnUL = refFirstAlnBaseL;
    else alnST->refStartAlnUL = refST->lenSeqUL;
@@ -1916,6 +1918,8 @@ struct alnStruct * twoBitAlnToAlnST(
       ++qryIndexUL;
       ++qryAlnStr;
    } /*Loop: Add query aligned bases to alnStruct*/
+
+   *qryAlnStr = defEndAlnFlag;
 
    if(qryFirstAlnBaseL >= 0) /*Start of alignment*/
       alnST->qryStartAlnUL = qryFirstAlnBaseL;
@@ -1991,5 +1995,5 @@ struct alnStruct * twoBitAlnToAlnST(
        ++qryAlnStr;
     } /*Loop: Apply mask to starting query bases*/
 
-    return alnST;
+   return alnST;
 } /*twoBitAlnToAlnST*/

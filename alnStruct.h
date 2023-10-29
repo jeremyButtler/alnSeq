@@ -112,30 +112,38 @@ typedef struct alnStruct
 
 /*--------------------------------------------------------\
 | Output:
-|  - Returns
-|    o Heap alloacted C-string with alignment for the
-|      input sequence
-|    o 0 for memory allocation errors
+|  - Modifies:
+|    o refRetStr to have reference sequence
+|      - This allocates memory on heap and frees old
+|        memory. So, make sure refRetStr = 0
+|    o qryRetStr to have reference sequence
+|      - This allocates memory on heap and frees old
+|        memory. So, make sure qryRetStr = 0
+|  - Returns:
+|    o -1 for memory allocation errors
+|    o 0 for succes
 \--------------------------------------------------------*/
-char * alnSTToSeq(
-    struct seqStruct *seqST,/*Has sequence to work with*/
-    char qryBl,             /*1: working on query; 0: ref*/
+char alnSTToSeq(
+    struct seqStruct *refST,/*Has sequence to work with*/
+    struct seqStruct *qryST,/*Has sequence to work with*/
     struct alnStruct *alnST,/*Has alignment array*/
-    char extAlnRegionBl     /*1: Only keep aligned region*/
+    char extAlnRegionBl,    /*1: Only keep aligned region*/
+    char **refRetStr,       /*Will hold aligned reference*/
+    char **qryRetStr        /*Will hold the aligned query*/
 ); /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\
    ' Fun-01 TOC: alnSTToSeq
-   '  - Makes an alignment for an single sequence
-   '    (reference or query)
-   '  o fun-01 Sec-01:
+   '  - Makes an alignment for both the reference and query
+   '    sequence
+   '  o fun-01 sec-01:
    '    - Variable declerations 
-   '  o fun-01 Sec-02:
+   '  o fun-01 sec-02:
    '    - Allocate memory & identify if ref or query seq
-   '  o fun-01 Sec-03:
-   '    - Add softmasking to the start
-   '  o fun-01 Sec-04:
-   '    - Make the aligned sequence
-   '  o fun-01 Sec-05:
-   '    - Add soft masking to the end
+   '  o fun-01 sec-03:
+   '    - Find the starting position of the alignment
+   '  o fun-01 sec-04:
+   '    - Add the sequences to the buffers
+   '  o fun-01 sec-05:
+   '    - Clean up and return
    \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /*--------------------------------------------------------\

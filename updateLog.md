@@ -21,6 +21,7 @@ This log records how alnSeq has changed between versions.
   locations. I think I am one position off with lastDirC.
 - Fix scores ouput by memWater. They seem to be a bit to
   high at times.
+- Fix Waterman and Needleman python library chrashes
 
 # Ideas that would be cool, but not worth working on
 
@@ -36,6 +37,19 @@ These ideas are a future visions that are not worth the
 - Add a filter for alternative alignments.
 
 # Log
+
+## 20231029
+
+- Changed complile settings for alnSeq to have -DBYTEMATRIX
+  and -DINSDELSNP. These can be disabled by overwriting
+  the CFLAGS or CFLAGS="-DBLANK".
+- Set up alnSeq to be a library in Python (pythonPkg).
+  - Supported: Hirschberg, Needleman Wunsch, and
+    Smith Waterman
+- Fixed a minor bug in the Hirschberg conversion to an
+  alnStruct function. In rare cases it caused an infinite
+  loop.
+- Add in python library compile option.
 
 ## 20231022
 
