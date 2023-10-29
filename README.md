@@ -211,11 +211,7 @@ Function names:
 
 - alnSeqHirsch (Hirschberg)
 - alnSeqNeedle (Needleman Wunsch)
-  - chrashes. Do no use.
 - alnSeqWater (Waterman Smith)
-  - chrashes. Do no use.
-  - Chrashing with gc_collect_main
-  - Prints alignent
 
 # Explaining alnSeq
 
@@ -278,6 +274,11 @@ The more memory efficient Waterman is slow, but it also
   tonight**
 
 **I need to make new graphs**
+
+I will also be comparing alnSeq to biopythons
+  Align.PairwiseAlign. This is not a fair comparison, since
+  biopython also includes a gap closing score. This extra
+  score calculation will slow biopython down.
 
 I picked out three programs to compare alnSeq to. The first
   is emboss, which is a more commonly used toolkit. The

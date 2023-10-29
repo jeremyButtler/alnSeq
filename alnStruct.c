@@ -105,6 +105,7 @@ char alnSTToSeq(
 
    unsigned long refBaseUL = 0;
    unsigned long qryBaseUL = 0;
+   unsigned long buffSizeUL = 0;
 
    /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
    ^ Fun-01 Sec-02:
@@ -118,10 +119,22 @@ char alnSTToSeq(
    *refRetStr = 0;
    *qryRetStr = 0;
 
-   *refRetStr = calloc(alnST->lenAlnUL, sizeof(char));
+   if(extAlnRegionBl) buffSizeUL = alnST->lenAlnUL;
+   else
+      buffSizeUL = 
+           alnST->numInssUL
+         + alnST->numDelsUL
+         + alnST->numSnpsUL
+         + alnST->numMatchesUL
+         + alnST->refStartAlnUL
+         + alnST->qryStartAlnUL
+         + (alnST->refLenUL - alnST->refEndAlnUL)
+         + (alnST->qryLenUL - alnST->qryEndAlnUL);
+   
+   *refRetStr = calloc(buffSizeUL + 1, sizeof(char));
    if(*refRetStr == 0) return -1;
 
-   *qryRetStr = calloc(alnST->lenAlnUL, sizeof(char));
+   *qryRetStr = calloc(buffSizeUL + 1, sizeof(char));
 
    if(*qryRetStr == 0)
    { /*If: I had a memory error for the query*/
@@ -151,6 +164,9 @@ char alnSTToSeq(
 
       refAlnStr += alnST->refStartAlnUL;     
       qryAlnStr += alnST->qryStartAlnUL;     
+
+      refBaseUL = alnST->refStartAlnUL;
+      qryBaseUL = alnST->qryStartAlnUL;
    } /*If: I am only keeping aligned positions*/
 
     /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\
@@ -187,10 +203,9 @@ char alnSTToSeq(
       { /*If: I am only keeping the aligned region*/
          /*Cehck if I have finshed the aligned region*/
          if(
-           qryBaseUL > alnST->qryEndAlnUL + 1 &&
-           refBaseUL > alnST->refEndAlnUL + 1
+           qryBaseUL > alnST->qryEndAlnUL &&
+           refBaseUL > alnST->refEndAlnUL 
          ) goto alnSTToSeqFinshed;
-         /*+1 to account for index 1*/
       } /*If: I am only keeping the aligned region*/
 
       /***************************************************\
