@@ -18,7 +18,7 @@ There are faster and less memory hungry Waterman Smith
   for an very fast striped Waterman Smith aligner. This
   one does have an issue when the alignment exceeds 33,000
   bases. However, I think there are alternatives without
-  these issues.
+  this issues.
 
 This program is dual licensed for MIT and CC0. Pick the
   license which works best for you.
@@ -182,7 +182,7 @@ make python local
 ### Using the python functions
 
 The python wrapper functions take in an reference and
-  query sequence and return an aligned reference and query
+  query sequence and returns an aligned reference and query
   sequence. The returned item is a list, which has the
   reference sequence (ret[0]), the query sequence (ret[1]),
   and a score (ret[2]; is always 0 for the Hirschberg).
@@ -268,17 +268,121 @@ The more memory efficient Waterman is slow, but it also
   best alignment. This means for you have to pay the time
   cost of the alternative alignment and Hirschberg steps.
 
-## Some light benchmarking
+# Some light benchmarking
 
-**I hope to get some updated benchmarking results up
-  tonight**
+## Benchmarking setup
 
-**I need to make new graphs**
+For each benchmark I am using four different lengths of
+  genomes. The small genome is ~1700 bases, the Mid genome
+  is ~10000 bases, the large genome is roughly ~27000
+  bases, and the huge genome (or ramkiller) is around
+  ~199980 bases. However, I am currently removing the huge
+  genomes from my graphs (in datasets), because not all
+  programs can align them in under 32 Gb.
 
-I will also be comparing alnSeq to biopythons
-  Align.PairwiseAlign. This is not a fair comparison, since
-  biopython also includes a gap closing score. This extra
-  score calculation will slow biopython down.
+Each test size has a reference and query, which are similar
+  and aligned to each other 10 times. I am also aligning
+  each size to all the other genome sizes. In these cases
+  I do two runs, one with the smaller size as the reference
+  and the other with the larger size as the reference. Each
+  test/run is replicated 10 times.
+
+For the python test I am using Align.PairwiseAlign from
+  biopython 1.82, sequence_aligner
+  [https://github.com/kensho-technologies/sequence_align](
+   https://github.com/kensho-technologies/sequence_align),
+  and the python library for alnSeq (this repository).
+  I am using pairwiseAlign from biopython because it is was
+  the faster aligner in the benchmark done in the
+  sequence_aligner repository. I am using sequence_aligner,
+  because it is one of the more popular python Needleman
+  libraries.
+
+For the standalone test I am using EMBOSS version 6.6.0.0,
+  bioalignment, ssw_test, and alnSeq.  EMBOSS was used
+  because it is a large toolkit. Bioalignment was used
+  because it was a popular Hirschberg, ssw_test was used
+  because it is one of the faster Smith Waterman.
+
+Time, memory, and CPU usage were recorded with gnu time
+  (/usr/bin/time -f "%e\t%M\t%P"). Programs were
+  benchmarked on a computer with an Intel i7-6700K CPU
+  (4.00GHz) with 32 Gb of memory.
+
+## Python library results
+
+![Time usage in seconds to align genomes with each
+  python library.
+](analysis/20231029-benchmark/20231029-alnSeqPy-time.svg)
+
+Figure 1: Time usage in seconds to align genomes with
+  each python library.
+
+We compared the time usage it took biopython's pairwise
+  aligner, sequence aligner, and alnSeq to align 1700
+  nucleotide to 27000 nucleotide long genomes. We found
+  that alnSeq was slightly faster than biopython, which
+  was often faster than sequence_aligner (Figure 1).
+  However, biopython was slower than sequence_aligner for
+  the small/small genome alignment (Figure 1).
+
+![Memory usage in seconds to align genomes with each
+  python library.
+](analysis/20231029-benchmark/20231029-alnSeqPy-memory.svg)
+
+Figure 2: Memory usage in seconds to align genomes with
+  each python library.
+
+We compared the memory usage of pairwise aligner from
+  biopython, sequence_aligner, and alnSeq. We found that
+  alnSeq and biopython used less memory than
+  sequence_aligner when the same algorithms were compared
+  (Needleman to Needleman or Hirschberg to Hirschbergj)
+  (Figure 2). Biopython used more memory for the smaller
+  alignments than alnSeq, but the memory difference became
+  very small as larger genomes were aligned (Figure 2). 
+
+As expected the Needleman aligners used more memory than
+  the Hirschberg aligners (Figure 2).
+
+![Percent CPU used to align genomes with each python
+  library.
+](analysis/20231029-benchmark/20231029-alnSeqPy-CPU.svg)
+
+Figure 3: Percentage of CPU used to align genomes with each
+  python library.
+
+The CPU usage was compared for all three python libraries.
+  As expected both alnSeq and sequence_aligner used 100%
+  (one thread) (Figure 3). However, biopython used at least
+  two threads. The impact of the extra threads used by
+  biopython seemed to decrease as larger genomes were
+  aligned (Figure 3).
+
+Overall, it looks like the pairwise aligner from biopython
+  was better than sequence_aligner for the non-Hirschberg 
+  alignment. Biopython also has settings for gap extension
+  and gap opening scores, while alnSeq only applies the
+  gap extension penalties, and sequence_aligner applies
+  neither. Compared to alnSeq, biopython had similar
+  speed, which means that biopython would and would likely
+  be as fast or faster than alnSeq if it did not use gap
+  ending penalties.
+
+What it really comes down to is this. If memory is a
+  concern, then use the Hirschberg from alnSeq. However,
+  if memory is not a concern, then use biopython.
+
+I will note there could be better, programs I did not test
+  on github. Also, I did not benchmark local alignments
+  (both biopython and alnSeq have this option). However,
+  for local aligners, I expect ssw_test to be better than
+  biopython (unless it uses ssw) or alnSeq.
+
+## Standalone benchmark
+
+**I need to make new graphs to reflect the 20231022
+  update**
 
 I picked out three programs to compare alnSeq to. The first
   is emboss, which is a more commonly used toolkit. The
