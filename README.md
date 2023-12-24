@@ -265,7 +265,7 @@ To reduce duplicates I only recored scores that are for
               Highest       Highest
                Score         Score
           +----------------------------+
-Stajrt of |             |              |
+Stajt of  |             |              |
   Full    | Upper left  | Upper right  | Parital alignments
 Alignment |             |              |
           |____________________________|
