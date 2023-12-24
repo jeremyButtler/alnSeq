@@ -1,19 +1,52 @@
 set confirm off
-set confirm off
-#break alnSeq.c:400
-#break alnStruct.c:353
-break hirschberg.c:112
-#break waterman.c:265
+#break alnSeq.c:256
+#break alnSeq.c:798
+#break memWater/memWater.h:252
+#break needleman/needleman.h:107
+#break general/alnStruct.h:561
+
 
 define runcmd
-  run -use-hirschberg -query test-qry.fa -ref test-ref.fa
-  #run -query-ref-scan -query analysis/genomes/Small-query.fasta -ref analysis/genomes/Small-ref.fasta
-  #run -use-mem-water -only-scores -query test-qry.fa -ref test-ref.fa
-  #run -use-water -ref tmpRef.fa -query tmpQry.fa
+  run -query-ref-scan -use-water -two-bit -min-score 5 -ref test-ref.fa -query test-qry.fa
 end
 
 runcmd
 
+#print alignment array from Hirschberg
+define phirschaln
+   set $arry = $arg0
+   set $gapCnt = 0
+   set $snpCnt = 0
+
+   while(*$arry > 0)
+      set $gapCnt = $gapCnt + (*$arry == 1)
+      set $snpCnt = $snpCnt + (*$arry == 2)
+      set $arry = $arry + 1
+   end
+
+   printf "Gaps: %i\n", $gapCnt
+   printf "Snps: %i\n", $snpCnt
+end
+
+# Print alterntative alignments
+define pAltAln
+   set $scores = $arg0->scoreAryL
+   set $start = $arg0->startIndexAryUL
+   set $end = $arg0->endIndexAryUL
+   set $lenAry = $arg0->lenArraysUL
+   set $indexOn = 0
+
+   while($indexOn < $lenAry)
+      printf "%i", *$scores
+      printf "\t%i", *$start
+      printf "\t%i\n", *$end
+      set $scores = ++$scores
+      set $start = ++$start
+      set $end = ++$end
+      set $indexOn = ++$indexOn
+   end
+end
+   
 # Print number of gaps/snps/matches in alignment
 define sumaln
    set $alnStr = $arg0

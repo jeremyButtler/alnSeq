@@ -1,7 +1,6 @@
 CC=cc
 CFLAGS=\
-   -DBYTEMATRIX\
-   -DINSDELSNP
+   -DDELINSSNP
 
 python:
 	CFLAGS="$(CFLAGS)" CC=$(CC) python3 setup.py install;
@@ -15,6 +14,12 @@ pythonlocal:
 	rm -r build;
 	rm -r alnSeq.*egg*;
 	#rm alnSeq.*.so;
+
+# In case you cannot install with pip
+libfile:
+	CFLAGS="$(CFLAGS)" CC=$(CC) python3 setup.py build;
+	mv build/*lib*/*.so ./;
+	rm -r build;
 
 debug:
 	CFLAGS="$(CFLAGS) -O0" CC=$(CC) python3 setup-debug.py build;

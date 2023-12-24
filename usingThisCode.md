@@ -7,6 +7,12 @@ This is here to give you an idea of the functions and data
 This is not the best guide and does not cover everything,
   but I hope it will help.
 
+## Note
+
+See minExamples for a minimal C example. It currently is
+  only for the Needleman without gap extension penalties,
+  but should give you an idea on the flow of this code.
+
 ## Reading in sequences
 
 Sequences are stored in the seqStruct, which is struct-01
@@ -16,48 +22,48 @@ Sequences are stored in the seqStruct, which is struct-01
   buffer storing the id, sequence, and q-score.
 
 An seqStruct should be initialized with the initSeqST
-  function (fun-08 in seqStruct.h) only for the first use.
+  function (fun-07 in seqStruct.h) only for the first use.
   After initialization use the blankSeqST() function 
-  (fun-10 seqStruct.h) to reset the structure to no
+  (fun-08 seqStruct.h) to reset the structure to no
   sequence.
 
-Use the freeSeqST function (fun-07 seqStruct.h) to clean
-  up. freeSeqST takes a pointer to an seqStruct structure
-  and a variable to mark if the structure is on the heap
-  or stack. If heapBl is set to 1, then the input structure
-  will be freed, but if not, then only the buffers will be
-  freed. freeSeqST(seqStruct, 1) does not set the pointer
-  to the seqStruct to 0, you must do this.
+Use the freeSeqST function (fun-09 general/seqStruct.h)
+  to clean  up a heap allocated seqStruct. freeSeqST takes
+  a pointer to an seqStruct structure to free. Use
+  blankSeqST (fun-08 general/seqStruct.h) to free an
+  seqStruct that is on the stack (the sequence will be
+  on the heap).
 
 A sequence can be read in from a fastq file using the
-  readFqSeq function (fun-03 in seqStruct.h) or fasta file
-  using the readFaSeq function (fun-04 in seqStruct.h).
-  Both functions take a pointer to the FILE with the
-  sequence and a pointer to an seqStruct structure. The
-  FILE pointer will be set to the next entry in the
-  fasta/fastq file.
+  readFqSeq function (fun-02 in general/seqStruct.h) or
+  fasta file using the readFaSeq function
+  (fun-03 in general/seqStruct.h). Both functions take a
+  pointer to the FILE with the sequence and a pointer to
+  an seqStruct structure. The FILE pointer will be set to
+  the next entry in the  fasta/fastq file.
 
 If you compiled alnSetStruct.c without -DNOSEQCNVT, then
   you will also need to run seqToLookupIndex()
-  (Fun-06 in alnSetStruct.c/h) to convert the sequence to
-  each base to the look up index's for base comparisons.
+  (Fun-09 in general/alnSetStruct.h) to convert each base
+  in a sequence to its index in the look up table. You can
   You can reconvert the sequence back to nucleotides with
-  lookupIndexToSeq() (Fun-07 in alnSetStruct.c/h). However,
-  all output bases will be in uppercase. These functions
-  do nothing when -DNOSEQCNVT is used.
+  lookupIndexToSeq() (Fun-10 in general/alnSetStruct/h).
+  Both lookupIndexToSeq and seqToLookUpIndex require a
+  c-string (seqStruct.seqCStr), which is modified.
+  Sll output bases will be in uppercase. These
+  functions do nothing when -DNOSEQCNVT is used.
 
 You can reverse complement a sequence using the
-  reverseComplementSeq() function (fun-01 in seqStruct.h).
+  reverseComplementSeq() function
+  (fun-05 in general/seqStruct.h).
 
 ```
 /*Here is an example.*/
 
 FILE faFILE = fopen("sequence.fasta", "r");
-struct seqStruct *sequence = 0;
+struct seqStruct sequence;
 
 if(faFILE == 0) return 0;
-
-sequence=malloc(sizeof(struct seqStruct));
 
 if(sequence == 0)
 {
@@ -71,80 +77,97 @@ switch(readFaSeq(faFILE, &sequence))
 { /*Switch: Check what kind of error*/
   case 0:
     fclose(faFILE);
-    freeSeqST(sequence, 1);
+    freeSeqSTStack(&sequence);
     sequence = 0;
     return 0;        /*EOF*/
 
   case 1:
     fclose(faFILE);
-    return sequence;
-
+    break;
   case 2:
     fclose(faFILE);
-    freeSeqST(sequence, 1);
+    freeSeqSTStack(&sequence);
     sequence = 0;
     return 0;        /*invalid file*/
 
   case 64:
     fclose(faFILE);
-    freeSeqST(sequence, 1);
+    freeSeqSTStack(&sequence);
     sequence = 0;
     return 0;       /*memory error*/
 } /*Switch: Check what kind of error*/
 
 /*Only if aligning sequences*/
-seqToLookupIndex(&sequence);
+seqToLookupIndex(sequence.seqCStr);
 
-/*Do something with the index's here*/
+/*Do alignment*/
 
-lookupIndexToSeq(&sequence)
+lookupIndexToSeq(sequence.seqCStr);
+
+/*Do something with the alignment*/
+
+freeSeqSTStack(sequence);
 ```
 
 ## Alignment settings
 
 Settings for the alignment settings are stored in the
-  alnSet structure (struct-01 alnSetStruct.h). This
-  structure holds the output line wrap size, which
+  alnSet structure (struct-01 general/alnSetStruct.h).
+  This structure holds the output line wrap size, which
   alignment to run, if you are doing a reference/query
   scan, the scoring matrix, the gap extension penalty, the
   gap starting penalty, the min score to keep an
   alternative alignment, and the order to prefer a single
   direction. The default values for these settings can all
-  be modified in alnSeqDefaults.h.
+  be modified in general/alnSeqDefaults.h.
   
 You can initialize an alnSet structure using the
-  initAlnSet() function (fun-01 in alnSetStruct.h). This 
-  will set all values in the alnSet structure to the
-  default values in alnSeqDefaults.h.
+  initAlnSet() function
+  (fun-11 in general/alnSetStruct.h). This will set all
+  values in the alnSet structure to the default values in
+  alnSeqDefaults.h.
 
 For changing the scoring matrix you can use the
-  setBasePairScore() function (fun-02 in alnSetStruct.h) to
-  change the value for individual base pairs in a matrix or
-  use the readInScoreFile() function
-  (fun-04 alnSetStruct.h) to read in a scoring matrix. This
-  scoring matrix is different than the normal format, so
-  see scoring-matrix.txt for an example of my format.
+  setBasePairScore() function
+  (fun-01 in general/alnSetStruct.h) to change the value
+  for individual base pairs in a matrix or use the
+  readInScoreFile() function
+  (fun-07 general/alnSetStruct.h) to read in a scoring
+  matrix. This scoring matrix is different than the normal
+  format, so see scoring-matrix.txt for an example of my
+  format.
+
+For changing the match matrix (used in determing if had an
+  match or a snp) you can use the setIfBpMatch() function
+  (fun-02 in general/alnSetStruct.h) to change the value
+  for individual base pairs in a matrix or use the
+  readInMatchFile() function
+  (fun-08 general/alnSetStruct.h) to read in a match
+  matrix. This scoring matrix is different than the normal
+  format, so see match-matrix.txt for an example of my
+  format. Each match is treated as a 1 for is a match
+  or 0 for is not a match.
 
 Changing the non-scoring values for an alnSet structure
   requires you to manually change them. If the value ends
   in Bl, then it should only ever be a 1 or 0.
 
-Finally you can free the alnSet structure using the 
-  freeAlnSet() function (fun-03 in alnSetStruct.h). This
-  takes in a pointer to an alnSet structure and a 1 or 0.
-  If you use a 1, then the alnSet structure will not be
-  freed, but if you use a 0 it will be freed. Just remember
-  to set the pointer to null calling freeAlnSet(alnSet, 0);
+Finally you can free the alnSet structure that was put on
+  the heap using the freeAlnSet() function
+  (fun-04 in general/alnSetStruct.h). This takes in a
+  pointer to an alnSet structure. Currently the alnSet
+  structure does not allocate variables on the heap.
+  However, there is a stack free (freeAlnSetStack)
+  function (fun-03 general/alnSetStruct.h) which is
+  present for future uses.
 
 ```
 An example
 
-struct alnSet *settings = 0;
+struct alnSet settings;
 FILE *matrixFILE = fopen("scoring-matrix.txt", "r");
 
 if(matrixFILE == 0) return ERROR;
-
-settings = malloc(sizeof(struct alnSet));
 
 if(settings == 0)
 {
@@ -152,28 +175,79 @@ if(settings == 0)
   return ERROR;
 }
 
-initAlnSet(settings);
-readInScoreFile(alnSetST, matrixFILE);
+initAlnSet(&settings);
+readInScoreFile(&alnSetST, matrixFILE);
 
 /*Do something*/
 
 fclose(matrixFILE);
-freeAlnSet(settings, 0);
+freeAlnSetStack(&settings);
 
 return 0;
 ```
   
 ## Doing an alignment
 
-alnSeq can do either an Needleman Wunsch, Hirschberg, or an
-  Waterman Smith alignment. The Needleman Wunsch alignment
-  is done by the NeedlemanAln function
-  (fun-01 in needle.c/h), the Hirschberg is done by the 
-  Hirschberg function (fun-01 in hirschberg.c/h), the
-  Waterman Smith alignment is done by the WatermanAln
-  function (fun-01 waterman.c/h), and the reference and
-  query scan is done with WatermanAltAln
-  (Fun-02 waterman.h/c).
+### General and default aligners
+
+All alignment programs in alnSeq take three inputs,
+  the query sequence as a seqStruct first, follwed by the
+  reference sequence as an seqStruct, and then an
+  alnSet structure with the alignment settings.
+
+The return  values for each program can very. The
+  Needleman and Waterman alignments return an
+  alnMatrix structure if not doing alignments using or an
+  two bit matrix or alnMatrixTwo bit structerfor
+  alignments using a two bit matrix. The Hirschbeg
+  returns an alnStruct, while the memory efficent
+  waterman returns an alnMatrix structure with the
+  index's for the alignment, but no matrix.
+
+alnSeq can do either an Needleman Wunsch, Hirschberg, or
+  an Waterman Smith alignment. The Needleman Wunsch
+  alignment is done by the NeedlemanAln function
+  (fun-01 in needleman/needleman.h). The Hirschberg
+  is done by Hirschberg()
+  (fun-02 hirschberg.h/hirschberg.h). The Waterman is done
+  WatermanAln (fun-01 waterman/waterman.h). The memory
+  efficent Waterman is the memWater() function
+  (fun-01 memWater/memWater.h).
+
+### Variations for each alignment algorithm
+
+For the Waterman and memWater alignments you can also do
+  a query reference scan; waterScan
+  (fun-01 waterman/waterScan.h) and memWaterScan.h
+  (fun-01 memWater/memWaterScan.h).
+
+ For the Needleman you can also align without
+  gap extension penalties (NeedleAlnNoGap(); fun-01 in
+  needleman/needleNoGap.h), uses a two bit matrix
+  (lower memory, but takes more time)
+  (fun-01 needleman/needleTwoBit.h), and a Needleman that
+  uses a two bit matrix and no gap extension penalty
+  (fun-01 needleman/needleTwoBitNoGap.h)
+
+For the Hirschberg you can also do an alignment without
+  gap extension penalties with HirschbergNoGap (
+  fun-02 in hirschberg/hirschbergNoGap.h).
+
+For the Waterman you can do an alignment without gap
+  extension penalties with WatermanAlnNoGap()
+  (fun-01 in waterman/watermanNoGap.h), with two bit
+  arrays with waterTwoBit() (fun-01 in
+  waterman/waterTwoBit.h), and with two bit arrays and
+  without gap extension penalties with WaterTwoBitNoGap()
+  (fun-01 in waterman/waterTwoBitNoGap.h).
+
+For the query reference Wateman scans you can also not use
+  gap extension penalties with WaterScanNoGap (fun-01
+  waterman/waterScanNoGap.h), using two bit arrays with
+  WaterScanTwoBit (fun-01 waterman/waterScanTwoBit.h), and
+  with two bit arrays and no gap extension penalites
+  with waterScanTwoBitNoGap() (fun-01
+  waterman/waterScanTwoBitNoGap.h).
 
 All alignment functions take an pointer to an seqStruct
   structure with the reference sequence, an pointer to an
@@ -188,36 +262,62 @@ The Needleman Wunsch, Waterman Smith, and query/reference
   extra scores kept for the reference/query scan
   (if was called for).
 
-The Hirschberg returns an alnStruct datatype, which has the
-  alignment. The alignment is stored as a series of gaps,
-  SNPs, and matches for the reference and query separately.
-  To get a printable alignment you would have to call
-  alnSTToSeq (Fun-01 alnStruct.c/h) (I have not tested this
-  function yet).
+For the memory efficent Waterman you can do an alignment
+  that does not use gap extension penalties (only gap
+  open) with memWaterNoGap (fun-01
+  memWater/memWaterNoGap.h). You can also do an alignment
+  with gap extension penalties for the memWater with
+  memWaterScanNoGap() (fun-01
+  memWater/memWaterScanNoGap.h).
 
-The memory efficient Waterman returns a scoresStruct with
-  the best score (fun-01 memWater.c/h). However, the
-  alternative alignment version returns an alnMatrixStruct
-  without a direction matrix (fun-02 memWater.c/h), but
-  with the best score and alternative alignments. You will
-  have to call another aligner to convert the best score to
-  an alignment. Make sure to modify the offset and endAlnUL
-  variables in your seqStructs (reference and query) to the
-  start and end positions in the best score.
+## What to do after the alignment
+
+The Needleman, Waterman, and memory efficient Waterman all
+  the end of the alignment
+  (matrix->bestEndIndexUL). They also return the best
+  score (matrix->bestScoreL). However, the Needleman and
+  Waterman also return a directional matrix
+  (matrix->dirMatrix) which can be converted to an
+  alnStruct (struct-01 general/alnStruct.h) by using
+  the ending index with dirMatrixToAln()
+  (fun-05 general/alnStruct.h) and the ending index
+  position or twoBitDirMatrixToAln()
+  (fun-06 general/alnStruct.h) for matrix's that used two
+  bit arrays. This alnStruct can then be used to get an
+  alignment with alnSTToSeq (fun-04 general/alnStruct.h)
+  or prnted with printAln (fun-15 general/alnStruct.h).
+
+The memory efficent Waterman will also return a starting
+  index (matrix->bestStartIndexUL). The starting and
+  ending index's can be converted to the rerence and query
+  position using indexToCoord() (fun-09 in
+  general/alnMatrixStruct.h). This is a macro that takes
+  in the reference length (matrix->lenRefUL), index,
+  variable to hold the reference coordinate (do not use
+  pointers), and the variable to hold the query coordinate
+  (again do not use pointers).
+
+The query reference scans also modfiy the alnMatrix or
+  alnTwoBitMatrix to hold the scores for each kept base
+  (matrix->scoreAryL), the starting index of each kept
+  score (matrix->startIndexAryUL), the ending index of
+  each kept score (matrix->endIndexAryUL), and a variable
+  telling the number of maximum kept scores
+  (matrix->lenArraysUL).
 
 Once you are finished with the matrix you can free it with
-  the freeAlnMatrixST() function (fun-02 in
-  alnMatrixStruct.h). Just remember to set it to null after
-  freeing.
+  the freeAlnMatrix() function (fun-05 in
+  general/alnMatrixStruct.h) or for matrixs with two bit
+  arrays use freeAlnMatrixTwoBit() (fun-06 in
+  gernal/alnMatrixStruct.h).
 
 ```
 struct seqStruct querySeq;
 struct seqStruct refSeq;
 struct alnSet settings;
 
-struct alnMatrixStruct *matrix = 0;
+struct alnMatrix *matrix = 0;
 struct alnStruct *alignmentST = 0;
-struct scoresStruct *bestScoreST = 0;
 
 FILE *faFILE = 0;
 
@@ -248,11 +348,6 @@ switch(readFaSeq(faFILE, &refSeq))
 /*Check to see if read in sequence & handle errors here*/
 }
 
-/* This is to avoid errors. Originally I wanted to be able
-`  to align in the middle of sequences, but I never set
-`  that option up fully. It would crash the current code.
-`  Note the Hirschberg is set up for changing these values.
-*/
 queryST.endAlnUI = queryST.lenSeqUI;
 queryST.offsetUI = 0;
 
@@ -260,6 +355,15 @@ refST.endAlnUI = refST.lenSeqUI;
 refST.offsetUI = 0;
 
 matrix = WatermanAln(&querySeq, &refSeq, &settings);
+alignmentST =
+    dirMatrixToAln(
+       &refST,
+       &queryST,
+       matrix->bestEndIndexUL,
+       &settings,
+       matrix
+);
+
 /* or matrix = NeedlemanAln(&querySeq,&refSeq,&settings);
 ` or alignmentST = Hirschberg(&querySeq,&refSeq,&settings);
 */
@@ -271,31 +375,23 @@ matrix = WatermanAln(&querySeq, &refSeq, &settings);
 `   // Handle Errors
 `  }
 `
-`  refSeq.offsetUL = bestScoreST->refStartUL;
-`  qrySeq.offsetUL = bestScoreST->qryStartUL;
-
-`  refSeq.endAlnUL = bestScoreST->refEndUL;
-`  qrySeq.endAlnUL = bestScoreST->qryEndUL;
+`  indexToCoord(
+`     matrix->lenRefUL, 
+`     matrix->bestStartIndexUL,
+`     refST.offsetUL,
+`     queryST.offsetUL
+`  );
+`  indexToCoord(
+`     matrix->lenRefUL, 
+`     matrix->bestStartIndexUL,
+`     refST.endAlnUL,
+`     queryST.endAlnUL
+`  );
+`
 `  alignmentST = Hirschberg(&refST, &queryST, &settings);
 */
 
-/* Memory efficent waterman with alternative alignments
-`  matrix = memWaterAltAln(&queryST, &refST, &settings);
-`
-`  if(matrix == 0) 
-`  {
-`   // Handle Errors
-`  }
-`
-`  refSeq.offsetUL = matrix->bestScoreST.refStartUL;
-`  qrySeq.offsetUL = matrix->bestScoreST.qryStartUL;
-`
-`  refSeq.endAlnUL = matrix->bestScoreST.refEndUL;
-`  qrySeq.endAlnUL = matrix->bestScoreST.qryEndUL;
-`  alignmentST = Hirschberg(&refST, &queryST, &settings);
-*/
-
-/*Do something with matrix here*/
+/*Do something with alignment here*/
 
 if(bestScoreST != 0) freeScoresST(bestScoreST, 0);
 if(matrix != 0) freeAlnMatrixST(matrix);
@@ -307,14 +403,14 @@ freeAlnSet(settings, 0);
   
 ## Printing alignments
 
-### Printing alternative alignments
+### Printing alternative alignments from a scan
 
 Alternative alignments can be printed with the
-  printAltWaterAlns function (fun-04 waterman.c/h). This
-  functions takes the alnMatrixStruct returned by
-  WatermanAltAln (not WatermanAln) and memWaterAltAln
-  (not memWaterAln), a min score to keep an alternative
-  alignment, and an output file.
+  printAltWaterAlns function (fun-01 general/genScan.h).
+  This function takes the alnMatrix or alnMatrixTowBit
+  structure returned by WatermanScan and memWaterScan,
+  a min score to keep an alternative alignment, and an
+  output file.
 
 ### Printing primary alignments
 
@@ -324,27 +420,26 @@ To print out the alignment you first have to create an
   alignments. 
 
 Converting the directional matrix to an alignment array 
-  is done with the cnvtDirMatrixToAlnAry() function
-  (fun-02 in alnStruct.h). This function takes in a pointer
-  to an seqStruct structure with the reference sequence,
-  an pointer to an seqStruct structure with the query
-  sequence, a scoreStruct structure
-  (alnMatrixStruct->bestScoreST), and the direction matrix
-  (alnMatrixStruct->dirMatrixST). The returned value is
-  an alnStruct with the alignment.
+  is done with the dirMatrixToAln) or towBitDirMatrixToAln
+  (fun-05 and fun-06 in general/alnStruct.h). These
+  functions take in a pointer to an seqStruct structure
+  with the reference sequence, an pointer to an seqStruct
+  structure with the query  sequence, the index of the end
+  of the alignment (matrix->bestEndIndexUL or
+  matrix->endIndexAryUL[position], and the directional
+  matrix returned from the Needleman or Waterman
+  alignment.
 
 After building the alignment array you can then free the
   alnMatrixStruct structure. Just remember to save the best
-  score before freeing the alnMatrixStruct.
+  score before freeing the alnMatrix structure.
 
 You can print out the alignment stored in the alnStruct
-  using the printAln function (fun-03 in alnStruct.c/h).
+  using the printAln function (fun-15 in
+  general/alnStruct.h).
 
 Just make sure to free the alignment array structure
-  (alnStruct) with freeAlnSt(alnStruct, 1);. Were 1 tells
-  the function to free the structure and variables in the
-  structure. A 0 would just free the variable inside the
-  structure.
+  (alnStruct) with freeAlnST(alnStruct);.
 
 ```
 char *alignedQuery = 0;
@@ -354,7 +449,8 @@ struct alnStruct *alignment = 0;
 
 /*Other variables, such as the output file*/
 
-seqToLookupIndex(&sequence);
+seqToLookupIndex(refSeqST.seqCStr);
+seqToLookupIndex(qrySeqST.seqCStr);
 
 matrix = WatermanAln(refSeqST, querySeqST, settings);
 
@@ -363,14 +459,13 @@ alignment =
   dirMatrixToAlnST(
     refSeq,
     querySeq,
-    matrix->dirMatrixST,
-    matrix->besScoreST,
-    1
+    matrix->bestEndIndexUL,
+    matrix
 ); /*Build the alignment array*/
 
-bestScoreL->matrix->bestScoreST.scoreL;
+bestScoreL = matrix->bestScoreL;
 
-freeAlnMatrixST(matrix);
+freeAlnMatrix(matrix);
 matrix=0;
 
 if(alignment == 0)
@@ -380,7 +475,8 @@ if(alignment == 0)
 
 /*Printing out the structure*/
 
-lookupIndexToSeq(&sequence);
+lookupIndexToSeq(refSeqST.seqCStr);
+lookupIndexToSeq(querySeqST.seqCStr);
 
 printAln(
   outFILE,              /*File to output to*/

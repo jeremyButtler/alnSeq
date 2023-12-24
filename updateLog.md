@@ -7,20 +7,16 @@ This log records how alnSeq has changed between versions.
 
 # TODO or to fix list
 
-- Fix the twobit Hirschberg and memory efficent Waterman.
-- Fix the query/ref scans.
 - Vector support for memory efficient Waterman and
   Hirschberg.
-- Add in a match matrix. Currently I am using a switch
-  table set up for nucleotides to identify matches/snps.
-  - This is used for printing the alignment eqx line, not
-    for finding an optimal alignment (scoring matrix).
-- Need to add a separate file for printing out alternative
-  alignments. It currently prints everything in one file.
-- Fix non-memory efficent Watermans start printing
-  locations. I think I am one position off with lastDirC.
-- Fix scores ouput by memWater. They seem to be a bit to
-  high at times.
+- Fix mem water giving different anwser for reverseing
+  the reference and query. At least for the small
+  test using the query as the reference ignores the
+  the starting insertions.
+- Python wrapper returns a full alignment when doing
+  paritial alignments. This is also true for the
+  C code when specifing a specfic range to align
+- Get the filters for query reference scans working
 
 # Ideas that would be cool, but not worth working on
 
@@ -31,11 +27,48 @@ These ideas are a future visions that are not worth the
 - Get a matrix scan function that recalculates scores on
   fly, so that user can search a completed direction
   matrix.
-  - Also allow a function to be input, so user can decide
-    if printing or not.
 - Add a filter for alternative alignments.
 
 # Log
+
+## 20231224
+
+- Fixed some small errors that were resulting in random
+  indels when alining larger genomes
+- Removed all .c files, except the main file. There are
+  some functions that are set with "static" and so will
+  raise the -unused-function flag in gcc. Use the
+  -Wno-unused-function flag when compiling.
+- Converted loops for alignments into for loops. This gave
+  a minor speed boost for all functions.
+- Fixed query reference scans, and changed the requirement
+  to keep a score to be a snp. I also make sure each score
+  is only recoreded once. For the frist half of the
+  reference it is the reference scores, then thw query.
+  For the last half  it is first recoreded under the query
+  scores, then the reference.
+  - This change has made the scans a bit slower.
+- I am now recording index's instead of query and
+  reference starting positions. This means the maximum
+  alignment size for the memWaters is the maximum size
+  of an unsined int (~ 4 billion) - 1.
+  - This has speed up the memory efficent waterman
+    alignments.
+  - It also would speed up the query reference scans,
+    except I changed how things are recoreded.
+- I have set up a separate function for normal alignments,
+  two bit alignments (-two-bit) (waterman/needleman only),
+  and for  alignments without gap extension penalties
+  (-no-gapExtend).
+  - For python this has been added in the wrapper
+    functions as noGapBool (no gap extension) and
+    twoBitBool (use to bit arrays).
+- Added in the ability to set what counts as a match.
+  See the match-matrix.txt file for an example.
+- alnSeq is now c89 complient
+- Updated usingThisCode.md to reflect the new changes.
+  Not everything will be in there, but it should be
+  a start.
 
 ## 20231029
 

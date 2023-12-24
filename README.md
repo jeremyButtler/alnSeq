@@ -1,17 +1,22 @@
 # Use
 
 AlnSeq uses a Smith Waterman and Needleman Wunsch alignment
-  that, depending on flags used when compiling can run
-  with memory usage of O(n \* m / 4) Bytes to O(n \* m)
-  Bytes. However, the O(n \* m / 4) is twice as slow as a
-  traditional Smith Waterman and Needleman Wunsch
-  alignment. AlnSeq also includes an Hirschberg alignment.
+  that can run with memory usage of O(n \* m / 4) bytes
+  (-two-bit) to O(n \* m) bytes. However, the -two-bit
+  method is twice as slow as a traditional Smith Waterman
+  and Needleman Wunsch alignment. AlnSeq also includes an
+  Hirschberg alignment and a memory efficent Waterman
+  alignment that operates with linear memory usage, but
+  only returns the score, and the starting and ending
+  cooridinates.
 
 AlnSeq is a standalone program that can also be compiled
   as a python library.
 
-There are faster and less memory hungry Waterman Smith
-  implementations than alnSeq. One example is the stripped
+There are faster then any program currently in alnSeq
+  and ususe less memory then alnSeq's traditional
+  Waterman, but not less memory then its memory efficent
+  Waterman. One example is the stripped
   Waterman Smith alignment, which I think reduces both
   scoring and direction matrix to just a few rows. See 
   [https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library](https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library)
@@ -28,16 +33,8 @@ This program is dual licensed for MIT and CC0. Pick the
 Right now I am back to work on this project. Things will
   go a bit slowly, but I hope to get this finshed.
 
-Currently I need to fix what I broke in my 20231022
-  update. The broken programs are the query/ref scans, the
-  two bit Hirschberg (only used if you compliled with
-  -DHIRSCHTWOBIT), and the two bit memory efficent Smith
-  Waterman (only used if you compiled with -DTWOBITMSW).
-  To get around this I included the last version of alnSeq
-  (20230908) in this repository, which does work.
-
-The 20231022 update did make the Hirschberg faster, and
-  provided a small speed boost to the other programs.
+Currently I need to complete vectorizing the Hirschberg
+  and fix some minor bugs.
 
 # Building and running alnSeq
 
@@ -61,46 +58,25 @@ make
 mv alnSeq /path/to/install
 chmod a+x /path/to/install/alnSeq
 
-# Alternative make commands
-make fast
-  # This command disables the opening gap penalty,
-  # directional selection, and two bit arrys. This makes
-  # alnSeq behave somewhat similar to bio-alignment.
-make mid
-  # This command disables directional selection and two
-  # bit arrays, but keeps the gap opening penalty. I would
-  # recomend using this command.
 ```
+
+The compiled alnSeq program in this repository was
+  compild on void linux with musl. It should work on
+  any linux OS.
 
 ### Standalone, extra build options (standalone only)
 
 The flags alnSeq can be compiled with are:
 
-- -DNOGAPOPEN
-  - disable gap opening penalty
-  - This is faster, but may produce lower quality
-    alignments.
-- -DBYTEMATRIX (default option)
-  - Waterman and Needleman use a byte matrix instead of
-    a two bit array matrix
-  - Alignment takes half the time, but also takes 4x more
-    memory.
-- -DHIRSCHTWOBIT
-  - Have the Hirschberg use two bit arrays instead of byte
-    arrays for directions (only relevant if not using
-    -DNOGAPOPEN).
-  - This doubles the time to make an alignment for a very
-    minor decrease in memory usage. 
 - -DNOSEQCNVT
   - This prevents the conversion of each base in the query
     and reference sequences to an index for alignment.
   - This option slows down the alignment slightly. The only
     reason to use this option would be if the input case
     of a sequence matters.
-- -DTWOBITMSW
-  - Compiles the more memory efficient smith waterman with
-    two bit arrays. This will have little effect on memory,
-    but will slow it down.
+- -DWORDS
+  - Use the full (127 elements) ascii table for the scoring
+    and matching matrix.
 - These options force alnSeq to prefer only one direction
   and disables all other options. This does speed up alnSeq
   slightly.
@@ -117,7 +93,7 @@ You can compile with these flags using
   `make CFLAGS="flag"`. You can also compile multiple 
   flags with `make CFLAGS="falg1 flag2"`. One example is
   the `make fast` command, which uses make
-  `CFLAGS="-DNOGAPOPEN -DINSSNPDEL -DBYTEMATRIX"`.
+  `CFLAGS="-DNOSEQCNVT -DDELINSSNP -DWORDS"`.
 
 ### How to run standalone alnSeq
 
@@ -143,6 +119,12 @@ alnSeq -use-water -query query.fasta -ref ref.fasta > out.aln
 ## For a very slow, but more memory efficent Waterman
 alnSeq -use-mem-water -query query.fasta -ref ref.fasta > out.aln
 
+## For no gap penalities (all aligners)
+alnSeq -use-hirschberg -no-gapextend -ref ref.fa -query query.fa > out.aln
+
+## With two bit arrays (Needleman and Waterman only)
+alnSeq -use-needle -two-bit -ref ref.fa -query query.fa > out.aln
+
 # File formatting
 
 ## Output an EMBOSS like file
@@ -165,9 +147,9 @@ alnSeq -print-positions -query query.fasta -ref ref.fasta -out out.aln
 
 ## How to complie alnSeq as a python library
 
-For python alnSeq is compiled with -DBYTEMATRIX and
-  -DINSDELSNP. This install expects a gcc compile
-  (minigw or cygin for windows).
+For python alnSeq is compiled with -DDELINSSNP. This
+  install expects a gcc compile (minigw or cygin for
+  windows).
 
 You can change the compiler used with CC, but nothing else.
 
@@ -191,21 +173,26 @@ Required arguments are a reference (first argument or
   ref = sequence) and query sequence (second argument or
   query = sequence).
 
+`alignedRef,alignedQuery = alnSeqfunction(refSeq,querySeq)`
+
 Optional arguments include:
 
 - gap opening score (gapOpen = -10)
 - gap extension score (gapExtend = -1)
-- reference start position (refStart = 0)
-- reference ending position (refEnd = length(seq) - 1)
-- query start position (queryStart = 0)
-- query ending position (queryEnd = length(seq) - 1)
+- do not use the gap extension score (noGapBool = 1)
+- Use two bit arrays (Needle/Water only) (twoBitBool = 1)
 - The path to a scoring matrix
   (scoreMatrix = /path/to/matrix.txt)
    - see scoring-matrix.txt for an example.
 - The Waterman Smith alignment prints out only the aligned
   regions. This can be disabled with fullAln=True.
 
-`alignedRef,alignedQuery = alnSeqfunction(refSeq,querySeq)`
+These options are not working as expected, do not use:
+
+- reference start position (refStart = 0)
+- reference ending position (refEnd = length(seq) - 1)
+- query start position (queryStart = 0)
+- query ending position (queryEnd = length(seq) - 1)
 
 Function names:
 
@@ -229,12 +216,13 @@ One thing I do want to point out is that there are very
 
 ## The direction matrix
 
-AlnSeq stores each direction in two bits for the Needleman
-  and Waterman alignments. These bits are packed
-  into an 8 bit integer. This reduces the directional
-  matrix size by 4, but comes at the cost of slower speed.
-  This also means that only one direction is stored,
-  instead of all possible alternatives.
+The two bit option for the Needleman and Waterman
+  in alnSeq stores each direction in two bits.
+  These bits are packed into an 8 bit integer. This
+  reduces the directional matrix size by 4, but comes at
+  the cost of slower speed (about 2x slower). This also
+  means that only one direction is stored, instead of all
+  possible alternatives.
 
 ## The scoring matrix (Needleman/Waterman)
 
@@ -249,13 +237,43 @@ AlnSeq also reduces the scoring matrix down to one row,
 AlnSeq also supports alternative alignments with
   -query-ref-scan by storing the best score for each
   reference base and each query base (Starting positions,
-  ending positions, score). The score, starting reference
-  position, starting query position, ending reference
-  position and ending query position are then printed
-  out (currently in the same file before the alignment).
-  There is no filter, so this will print out everything
-  that is at or above -min-score. This includes duplicate
-  scores.
+  ending positions, score). The score, an index for the
+  start of the alignment in a matrix, and an index for
+  the end of the alignment in the matrix. Index's are
+  converted to actual positions on the query and reference
+  and then printed out with the scores. The file to print
+  to by default is the file with the alignment, but this
+  can be changed with -alt-out (use "-alt-out -" to print
+  to stdout). One warning is that there is no filter
+  currently, so this will print out everything that is at
+  or above -min-score. This includes duplicate scores.
+
+To reduce duplicates I only recored scores that are for
+  snps. I also spit out if the reference or query base
+  has priority for the score by the positon on the matrix.
+  If I am on the first half of the refernce I will allow
+  the reference base to keep the score. This increases my
+  chances of getting a score in the lower left quadrent.
+  For the last half of the reference I let the query
+  base have priority for the score. This should increase
+  my chances of getting a score in the upper right
+  quadrent. However, nothing is garunteed.
+
+```
+            Reference       Query
+               Gets          Gets
+              Highest       Highest
+               Score         Score
+          +----------------------------+
+Stajrt of |             |              |
+  Full    | Upper left  | Upper right  | Parital alignments
+Alignment |             |              |
+          |____________________________|
+Parital   |             |              |
+Alignment | Lower left  | Lower right  | Full alignment
+          |             |              |
+          +----------------------------+
+```
 
 ## My memory efficient Waterman
 
@@ -267,10 +285,14 @@ The more memory efficient Waterman is slow, but it also
   the alignment. I then use the Hirschberg to find the
   best alignment. This means for you have to pay the time
   cost of the alternative alignment and Hirschberg steps.
+  If you want to save time you can use "-only-scores" to
+  just print out the scores and starting positions.
 
 # Some light benchmarking
 
 ## Benchmarking setup
+
+NOT UPDATED FOR THE DECEMBER UPDATES
 
 For each benchmark I am using four different lengths of
   genomes. The small genome is ~1700 bases, the Mid genome
@@ -487,7 +509,7 @@ Overall this was a good learning project that I will use
 
 AlnSeq does not use decimals, so if you want decimals for
   the gap extension penalty, so you will have to multiply
-  all scores by 10 to 1000.
+  all scores by 10 (maxium score is 127).
 
 # Thanks
 

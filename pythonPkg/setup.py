@@ -14,31 +14,18 @@ descriptionStr="\
 ";
 
 srcFilesStr = [
-      "../alnSeqDefaults.c",
-      "../cStrToNumberFun.c",
-      "../seqStruct.c", 
-      "../scoresST.c",
-      "../alnSetStruct.c",
-      "../generalAlnFun.c",
-      "../alnMatrixStruct.c",
-      "../alnStruct.c",
-      "../hirschberg.c",
-      "../needleman.c",
-      "../waterman.c",
       "pyAlnSeq.c"
 ]; # Source files to compile library
-      #" ../memWater.c",
 
 compileFlags = [
    "-O3",
-   "-DBYTEMATRIX",
-   "-DINSDELSNP",
+   "-DDELINSSNP",
    "-static",
-   "--std=c99"
+   "-Wno-unused-function"
 ]
 setup(
    name = "alnSeq",
-   version = "20231029",
+   version = "20231222",
    description = descriptionStr,
    author = "https://github.com/jeremyButtler/alnSeq",
    ext_modules=[

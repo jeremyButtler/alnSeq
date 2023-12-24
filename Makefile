@@ -2,45 +2,35 @@ PREFIX=/usr/local/bin
 
 CC=cc
 
-# These are flags I do not want the user to over write,
-# acidentally.
-COREFLAGS=\
+# Flags I want the user to be able to overwrite
+CFLAGS=\
+   -DDELINSSNP
+
+# Flags I do not want the user to overwrite
+CFLAGS+=\
   -Wall\
-  --std=c99\
+  --std=c89\
   -static\
-  -O3
+  -O3\
+  -Wno-unused-function
+
+# -Wno-unused-function is to supress the warnings for
+# some static functions I have
 
 # These are here for the user to overwrite
 #CFLAGS=-DBLANK
-CFLAGS=\
-   -DBLANK\
-   -DBYTEMATRIX\
-   -DINSDELSNP
-
 DEBUGFLAGS=\
-   -DNOSEQCNVT\
-   -DBYTEMATRIX
-   #-DNOGAPOPEN
-# Current options: -DNOSEQCNVT, -DHIRSCHTWOBIT
+   -Wall\
+   --std=c89\
+   -static\
+   -O0\
+   -ggdb\
+   -Wno-unused-function\
+   -DDELINSSNP\
+   -DNOSEQCNVT
 
-SOURCE=\
-  alnSeqDefaults.c \
-  cStrToNumberFun.c \
-  seqStruct.c\
-  scoresST.c\
-  alnSetStruct.c\
-  generalAlnFun.c\
-  alnMatrixStruct.c\
-  alnStruct.c\
-  waterman.c\
-  needleman.c\
-  hirschberg.c\
-  memWater.c\
-  alnSeq.c
- 
-# Build findCoInfct
 all:
-	$(CC) $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
+	$(CC) $(CFLAGS) alnSeq.c -o alnSeq
 
 python:
 	CC=$(CC) make -C pythonPkg/ python;
@@ -48,29 +38,11 @@ pythonlocal:
 	CC=$(CC) make -C pythonPkg/ pythonlocal;
 
 debug:
-	$(CC) -Wall  -static --std=c99 -O0 -ggdb $(DEBUGFLAGS) $(SOURCE) -o alnSeqDebug
-	# Used to use -g, but -ggdb provides more info for gdb
-	bash debug.sh
+	$(CC) $(DEBUGFLAGS) alnSeq.c -o debugAlnSeq.o
+	gdb -x debugCMDs.txt debugAlnSeq.o
 	# edit debugCMDs.txt to change the gdb commands
 
-egcc:
-	#egcc $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
-	egcc $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
-gcc:
-	gcc  $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
-cc:
-	cc   $(COREFLAGS) $(CFLAGS) $(SOURCE) -o alnSeq
-
 # These settings are here for quick compiling
-fast:
-	$(CC) $(COREFLAGS) -DNOGAPOPEN -DBYTEMATRIX -DINSSNPDEL $(CFLAGS) $(SOURCE) -o alnSeqFast
-
-benchmark:
-	$(CC) $(COREFLAGS) -DHIRSCHTWOBIT $(SOURCE) -o alnSeqTwoBit
-	$(CC) $(COREFLAGS) -DBYTEMATRIX $(SOURCE) -o alnSeqByte
-	$(CC) $(COREFLAGS) -DBYTEMATRIX -DINSSNPDEL $(SOURCE) -o alnSeqMid
-	$(CC) $(COREFLAGS) -DBYTEMATRIX -DNOGAPOPEN -DINSSNPDEL $(SOURCE) -o alnSeqFast
-	CC="$(CC)" make -C pythonPkg/ pythonlocal;
 
 clean:
 	rm alnSeqDebug || printf ""; # Only thing to clean up
@@ -88,5 +60,5 @@ clean:
 	# || printf ""; is so it does not error out
 
 install:
-	mv alnSeq $(PREFIX) || mv alnSeqFast $(PREFIX) || mv alnSeqMid $(PREFIX) || printf "Unable to install alnSeq at %s\n Change this with make PREFIX=/path/to/install install\n" $(PREFIX) && exit;
-	chmod a+x $(PREFIX)/alnSeq*;
+	mv alnSeq $(PREFIX) || printf "Unable to install alnSeq at %s\n Change this with make PREFIX=/path/to/install install\n" $(PREFIX) && exit;
+	chmod a+x $(PREFIX)/alnSeq;
